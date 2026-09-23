@@ -1,0 +1,50 @@
+name: Build & Release
+
+# "v" ile başlayan bir etiket gönderildiğinde (ör. v1.0.0) EXE derlenir ve GitHub Releases'a eklenir.
+# Actions sekmesinden elle de çalıştırılabilir (yalnızca derler, indirilebilir "artifact" üretir).
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - name: Kodu al
+        uses: actions/checkout@v4
+
+      - name: .NET 8 SDK
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+
+      - name: EXE derle
+        shell: powershell
+        run: |
+          $v = ''
+          if ($env:GITHUB_REF_TYPE -eq 'tag') { $v = $env:GITHUB_REF_NAME }
+          .\tools\Build-Exe.ps1 -Version $v
+
+      - name: ZIP paketi hazırla
+        shell: powershell
+        run: |
+          $name = if ($env:GITHUB_REF_TYPE -eq 'tag') { "RTX-Windows-Updater-$($env:GITHUB_REF_NAME).zip" } else { 'RTX-Windows-Updater.zip' }
+          Compress-Archive -Path 'RTX Windows Updater.exe' -DestinationPath $name -Force
+          "ZIP_NAME=$name" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
+
+      - name: Artifact yükle
+        uses: actions/upload-artifact@v4
+        with:
+          name: RTX-Windows-Updater
+          path: ${{ env.ZIP_NAME }}
+
+      - name: GitHub Release oluştur
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: ${{ env.ZIP_NAME }}
+          generate_release_notes: true

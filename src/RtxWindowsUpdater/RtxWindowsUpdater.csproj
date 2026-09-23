@@ -1,0 +1,45 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net8.0-windows10.0.19041.0</TargetFramework>
+    <SupportedOSPlatformVersion>10.0.19041.0</SupportedOSPlatformVersion>
+    <UseWPF>true</UseWPF>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <LangVersion>latest</LangVersion>
+
+    <RootNamespace>RtxWindowsUpdater</RootNamespace>
+    <AssemblyName>RTX Windows Updater</AssemblyName>
+    <Product>RTX Windows Updater</Product>
+    <AssemblyTitle>RTX Windows Updater</AssemblyTitle>
+    <Company>E-mre</Company>
+    <Copyright>© E-mre</Copyright>
+    <Version>1.0.0</Version>
+
+    <!-- EXE ikonu (Windows Explorer / görev çubuğu / kısayol) -->
+    <ApplicationIcon>..\..\assets\E-mreLogo.ico</ApplicationIcon>
+    <!-- UAC / DPI / desteklenen OS bildirimleri -->
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+
+    <!-- Tek EXE yayın ayarları (dotnet publish sırasında kullanılır) -->
+    <RuntimeIdentifier>win-x64</RuntimeIdentifier>
+    <SelfContained>true</SelfContained>
+    <PublishSingleFile>true</PublishSingleFile>
+    <IncludeNativeLibrariesForSelfExtract>true</IncludeNativeLibrariesForSelfExtract>
+    <EnableCompressionInSingleFile>true</EnableCompressionInSingleFile>
+    <DebugType>embedded</DebugType>
+    <PublishReadyToRun>false</PublishReadyToRun>
+    <SatelliteResourceLanguages>tr;en</SatelliteResourceLanguages>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="System.Management" Version="8.0.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Resource Include="..\..\assets\E-mreLogo.ico" Link="Assets\E-mreLogo.ico" />
+    <Resource Include="..\..\assets\E-mreLogo.jpg" Link="Assets\E-mreLogo.jpg" />
+  </ItemGroup>
+
+</Project>

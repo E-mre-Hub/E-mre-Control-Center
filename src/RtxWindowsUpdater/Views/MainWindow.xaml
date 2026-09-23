@@ -1,0 +1,611 @@
+<Window x:Class="RtxWindowsUpdater.Views.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="clr-namespace:RtxWindowsUpdater.ViewModels"
+        Title="RTX Windows Updater"
+        Icon="pack://application:,,,/Assets/E-mreLogo.ico"
+        Width="1340" Height="900" MinWidth="1120" MinHeight="760"
+        WindowStartupLocation="CenterScreen"
+        WindowStyle="SingleBorderWindow"
+        ResizeMode="CanResize"
+        Background="{StaticResource B.Bg0}"
+        FontFamily="{StaticResource F.Text}"
+        Foreground="{StaticResource B.Text}"
+        TextOptions.TextFormattingMode="Display"
+        UseLayoutRounding="True">
+
+    <WindowChrome.WindowChrome>
+        <WindowChrome CaptionHeight="46" ResizeBorderThickness="6" GlassFrameThickness="0"
+                      CornerRadius="0" UseAeroCaptionButtons="False" />
+    </WindowChrome.WindowChrome>
+
+    <Window.Resources>
+        <ImageBrush x:Key="LogoBrush" ImageSource="pack://application:,,,/Assets/E-mreLogo.jpg" Stretch="UniformToFill" />
+
+        <!-- Durum ikonu: Tag'e bağlanan durum "meşgul" ise döner -->
+        <Style x:Key="T.StatusIcon" TargetType="TextBlock" BasedOn="{StaticResource T.Icon}">
+            <Setter Property="RenderTransformOrigin" Value="0.5,0.5" />
+            <Setter Property="RenderTransform">
+                <Setter.Value>
+                    <RotateTransform Angle="0" />
+                </Setter.Value>
+            </Setter>
+            <Style.Triggers>
+                <DataTrigger Binding="{Binding Tag, RelativeSource={RelativeSource Self}, Converter={StaticResource StatusIsBusy}}" Value="True">
+                    <DataTrigger.EnterActions>
+                        <BeginStoryboard x:Name="SpinStoryboard" Storyboard="{StaticResource Sb.Spin}" />
+                    </DataTrigger.EnterActions>
+                    <DataTrigger.ExitActions>
+                        <StopStoryboard BeginStoryboardName="SpinStoryboard" />
+                    </DataTrigger.ExitActions>
+                </DataTrigger>
+            </Style.Triggers>
+        </Style>
+
+        <!-- İkon rozeti (kart başlıkları) -->
+        <Style x:Key="IconBadge" TargetType="Border">
+            <Setter Property="Width" Value="40" />
+            <Setter Property="Height" Value="40" />
+            <Setter Property="CornerRadius" Value="11" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="BorderBrush" Value="#FF1E3A66" />
+            <Setter Property="Background">
+                <Setter.Value>
+                    <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
+                        <GradientStop Color="#FF13264A" Offset="0" />
+                        <GradientStop Color="#FF0B1528" Offset="1" />
+                    </LinearGradientBrush>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- Gereksinim satırı -->
+        <DataTemplate x:Key="RequirementRowTemplate" DataType="{x:Type vm:RequirementRowViewModel}">
+            <Border Background="#FF0A1222" BorderBrush="#FF16223A" BorderThickness="1" CornerRadius="11" Padding="14,12" Margin="0,0,0,10">
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <Border Style="{StaticResource IconBadge}" Width="38" Height="38">
+                        <TextBlock Text="{Binding Glyph}" Style="{StaticResource T.Icon}" FontSize="17"
+                                   Foreground="{StaticResource B.Neon}" Effect="{StaticResource Fx.SoftGlow}" />
+                    </Border>
+                    <StackPanel Grid.Column="1" Margin="14,0,10,0" VerticalAlignment="Center">
+                        <TextBlock Text="{Binding Title}" Style="{StaticResource T.H2}" FontSize="14" />
+                        <TextBlock Text="{Binding Detail}" FontSize="12" Foreground="{StaticResource B.Text2}"
+                                   TextTrimming="CharacterEllipsis" Margin="0,2,0,0" ToolTip="{Binding Detail}" />
+                    </StackPanel>
+                    <Border Grid.Column="2" Width="30" Height="30" CornerRadius="15"
+                            Background="{Binding State, Converter={StaticResource StatusSoftBrush}}">
+                        <TextBlock Tag="{Binding State}" Text="{Binding State, Converter={StaticResource StatusGlyph}}"
+                                   Style="{StaticResource T.StatusIcon}" FontSize="13"
+                                   Foreground="{Binding State, Converter={StaticResource StatusBrush}}" />
+                    </Border>
+                </Grid>
+            </Border>
+        </DataTemplate>
+
+        <!-- Bileşen kartı -->
+        <DataTemplate x:Key="ComponentCardTemplate" DataType="{x:Type vm:ComponentCardViewModel}">
+            <Border Style="{StaticResource Card.Interactive}" Margin="8" Padding="0" MinHeight="196">
+                <Grid>
+                    <!-- üst kenarda durum renginde ince neon çizgi -->
+                    <Border Height="2" VerticalAlignment="Top" Margin="18,0" CornerRadius="1"
+                            Background="{Binding Status, Converter={StaticResource StatusBrush}}" Opacity="0.85" />
+                    <Grid Margin="18,18,18,16">
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="*" />
+                            <RowDefinition Height="Auto" />
+                        </Grid.RowDefinitions>
+
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto" />
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+                            <Border Style="{StaticResource IconBadge}">
+                                <TextBlock Text="{Binding Glyph}" Style="{StaticResource T.Icon}" FontSize="18"
+                                           Foreground="{StaticResource B.Neon}" Effect="{StaticResource Fx.SoftGlow}" />
+                            </Border>
+                            <TextBlock Grid.Column="1" Text="{Binding Title}" Style="{StaticResource T.H2}"
+                                       VerticalAlignment="Center" Margin="12,0,0,0" TextTrimming="CharacterEllipsis" />
+                            <Border Grid.Column="2" Width="30" Height="30" CornerRadius="15"
+                                    Background="{Binding Status, Converter={StaticResource StatusSoftBrush}}">
+                                <TextBlock Tag="{Binding Status}" Text="{Binding Status, Converter={StaticResource StatusGlyph}}"
+                                           Style="{StaticResource T.StatusIcon}" FontSize="13"
+                                           Foreground="{Binding Status, Converter={StaticResource StatusBrush}}" />
+                            </Border>
+                        </Grid>
+
+                        <TextBlock Grid.Row="1" Text="{Binding Summary}" Margin="0,16,0,6" FontSize="16" FontWeight="SemiBold"
+                                   TextWrapping="Wrap" Foreground="{Binding Status, Converter={StaticResource StatusBrush}}" />
+
+                        <StackPanel Grid.Row="2">
+                            <TextBlock Text="{Binding Details}" FontSize="12" LineHeight="18" TextWrapping="Wrap"
+                                       Foreground="{StaticResource B.Text2}"
+                                       Visibility="{Binding Details, Converter={StaticResource Visible}}" />
+                            <TextBlock Text="{Binding Reason}" FontSize="12" LineHeight="17" TextWrapping="Wrap" Margin="0,6,0,0"
+                                       MaxHeight="52" TextTrimming="CharacterEllipsis" ToolTip="{Binding Reason}"
+                                       Foreground="{Binding Status, Converter={StaticResource StatusBrush}}" Opacity="0.9"
+                                       Visibility="{Binding Reason, Converter={StaticResource Visible}}" />
+                        </StackPanel>
+
+                        <CheckBox Grid.Row="3" Margin="0,12,0,0" FontSize="12.5"
+                                  Content="Tümünü Güncelle ile birlikte boşalt"
+                                  IsChecked="{Binding DataContext.CleanRecycleBin, RelativeSource={RelativeSource AncestorType=Window}}">
+                            <CheckBox.Style>
+                                <Style TargetType="CheckBox" BasedOn="{StaticResource {x:Type CheckBox}}">
+                                    <Setter Property="Visibility" Value="Collapsed" />
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding Key}" Value="recyclebin">
+                                            <Setter Property="Visibility" Value="Visible" />
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </CheckBox.Style>
+                        </CheckBox>
+                    </Grid>
+                </Grid>
+            </Border>
+        </DataTemplate>
+
+        <!-- Log listesi öğe kabı (seçim vurgusu yok) -->
+        <Style x:Key="LogItem" TargetType="ListBoxItem">
+            <Setter Property="Padding" Value="0" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="ListBoxItem">
+                        <ContentPresenter Margin="0,1" />
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+    </Window.Resources>
+
+    <Grid x:Name="RootGrid">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="46" />
+            <RowDefinition Height="*" />
+        </Grid.RowDefinitions>
+
+        <!-- ================= Arka plan: gradyan + yavaş nefes alan neon ışıklar ================= -->
+        <Rectangle Grid.RowSpan="2" Fill="{StaticResource B.WindowBg}" />
+        <Canvas Grid.RowSpan="2" ClipToBounds="True" IsHitTestVisible="False">
+            <Ellipse x:Name="GlowA" Width="620" Height="620" Canvas.Left="-220" Canvas.Top="-260" Fill="#FF1FB6FF" Opacity="0.10">
+                <Ellipse.Effect><BlurEffect Radius="160" /></Ellipse.Effect>
+            </Ellipse>
+            <Ellipse x:Name="GlowB" Width="700" Height="700" Canvas.Right="-260" Canvas.Bottom="-320" Fill="#FF3D6BFF" Opacity="0.08">
+                <Ellipse.Effect><BlurEffect Radius="180" /></Ellipse.Effect>
+            </Ellipse>
+            <Canvas.Triggers>
+                <EventTrigger RoutedEvent="Loaded">
+                    <BeginStoryboard>
+                        <Storyboard RepeatBehavior="Forever" AutoReverse="True">
+                            <DoubleAnimation Storyboard.TargetName="GlowA" Storyboard.TargetProperty="Opacity" From="0.07" To="0.14" Duration="0:0:6" />
+                            <DoubleAnimation Storyboard.TargetName="GlowB" Storyboard.TargetProperty="Opacity" From="0.10" To="0.05" Duration="0:0:6" />
+                        </Storyboard>
+                    </BeginStoryboard>
+                </EventTrigger>
+            </Canvas.Triggers>
+        </Canvas>
+
+        <!-- ================= Başlık çubuğu ================= -->
+        <Grid Grid.Row="0" Background="Transparent">
+            <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="16,0,0,0">
+                <Rectangle Width="18" Height="18" RadiusX="4" RadiusY="4" Fill="{StaticResource LogoBrush}" />
+                <TextBlock Text="RTX Windows Updater" Margin="10,0,0,0" FontSize="12.5" Foreground="{StaticResource B.Text2}" VerticalAlignment="Center" />
+                <TextBlock Text="{Binding AppVersion}" Margin="8,0,0,0" FontSize="11.5" Foreground="{StaticResource B.Text3}" VerticalAlignment="Center" />
+            </StackPanel>
+            <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Top">
+                <Button Style="{StaticResource Btn.Caption}" Content="&#xE921;" Click="Minimize_Click" ToolTip="Simge durumuna küçült" />
+                <Button x:Name="MaxButton" Style="{StaticResource Btn.Caption}" Content="&#xE922;" Click="Maximize_Click" ToolTip="Büyüt" />
+                <Button Style="{StaticResource Btn.CaptionClose}" Content="&#xE8BB;" Click="Close_Click" ToolTip="Kapat" />
+            </StackPanel>
+        </Grid>
+
+        <!-- ================= İçerik ================= -->
+        <Grid x:Name="ContentHost" Grid.Row="1">
+            <Grid.Style>
+                <Style TargetType="Grid">
+                    <Style.Triggers>
+                        <DataTrigger Binding="{Binding Dialog.IsOpen}" Value="True">
+                            <Setter Property="Effect">
+                                <Setter.Value>
+                                    <BlurEffect Radius="8" />
+                                </Setter.Value>
+                            </Setter>
+                        </DataTrigger>
+                    </Style.Triggers>
+                </Style>
+            </Grid.Style>
+
+            <!-- ============ SAYFA 1: SİSTEM GEREKSİNİMLERİ ============ -->
+            <Grid x:Name="RequirementsPage" Visibility="{Binding IsRequirementsPage, Converter={StaticResource Visible}}">
+                <Grid.RenderTransform><TranslateTransform /></Grid.RenderTransform>
+                <ScrollViewer VerticalScrollBarVisibility="Auto">
+                    <Border Style="{StaticResource Card}" Width="600" Padding="40,36" Margin="0,10,0,40"
+                            HorizontalAlignment="Center" VerticalAlignment="Center">
+                        <StackPanel>
+                            <Grid HorizontalAlignment="Center" Width="96" Height="96">
+                                <Border CornerRadius="24" Background="{StaticResource B.NeonGradient}" Opacity="0.45" Margin="6">
+                                    <Border.Effect><BlurEffect Radius="30" /></Border.Effect>
+                                </Border>
+                                <Rectangle RadiusX="22" RadiusY="22" Fill="{StaticResource LogoBrush}" Stroke="#FF24365C" StrokeThickness="1" />
+                            </Grid>
+                            <TextBlock Text="RTX Windows Updater" Style="{StaticResource T.H1}" HorizontalAlignment="Center" Margin="0,22,0,6" />
+                            <TextBlock Text="Windows 11 ve NVIDIA RTX sistemler için güncelleme merkezi" Style="{StaticResource T.Body}"
+                                       HorizontalAlignment="Center" TextAlignment="Center" />
+
+                            <TextBlock Text="SİSTEM GEREKSİNİMLERİ" Style="{StaticResource T.Label}" Margin="2,32,0,12" />
+                            <ItemsControl ItemsSource="{Binding Requirements}" ItemTemplate="{StaticResource RequirementRowTemplate}" />
+
+                            <!-- Desteklenmiyor -->
+                            <Border Visibility="{Binding ShowUnsupported, Converter={StaticResource Visible}}"
+                                    Background="#1FFF4D61" BorderBrush="#66FF4D61" BorderThickness="1" CornerRadius="11" Padding="16,14" Margin="0,6,0,0">
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto" />
+                                        <ColumnDefinition Width="*" />
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Text="&#xE7BA;" Style="{StaticResource T.Icon}" FontSize="18" Foreground="{StaticResource B.Red}" VerticalAlignment="Top" Margin="0,1,12,0" />
+                                    <TextBlock Grid.Column="1" Text="{Binding UnsupportedMessage}" Style="{StaticResource T.Body}" Foreground="{StaticResource B.Text}" />
+                                </Grid>
+                            </Border>
+
+                            <!-- Yönetici değil -->
+                            <Border Visibility="{Binding ShowElevate, Converter={StaticResource Visible}}"
+                                    Background="#14FFA63D" BorderBrush="#55FFA63D" BorderThickness="1" CornerRadius="11" Padding="16,14" Margin="0,6,0,0">
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto" />
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="Auto" />
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Text="&#xEA18;" Style="{StaticResource T.Icon}" FontSize="18" Foreground="{StaticResource B.Orange}" Margin="0,0,12,0" />
+                                    <TextBlock Grid.Column="1" Style="{StaticResource T.Body}" Foreground="{StaticResource B.Text}" VerticalAlignment="Center"
+                                               Text="Güncellemeleri kontrol edip kurmak için yönetici izni gerekir." />
+                                    <Button Grid.Column="2" Style="{StaticResource Btn.Secondary}" Height="38" Margin="12,0,0,0" Command="{Binding ElevateCommand}">
+                                        <StackPanel Orientation="Horizontal">
+                                            <TextBlock Text="&#xE7EF;" Style="{StaticResource T.Icon}" FontSize="14" Margin="0,0,8,0" />
+                                            <TextBlock Text="Yönetici olarak başlat" FontSize="13" />
+                                        </StackPanel>
+                                    </Button>
+                                </Grid>
+                            </Border>
+
+                            <CheckBox Content="Gereksinimleri kabul ediyorum" Margin="2,24,0,0" IsChecked="{Binding Accepted}"
+                                      IsEnabled="{Binding IsSupported}" />
+
+                            <Button Style="{StaticResource Btn.Primary}" Margin="0,22,0,0" Command="{Binding ContinueCommand}">
+                                <StackPanel Orientation="Horizontal">
+                                    <TextBlock Text="Devam Et" />
+                                    <TextBlock Text="&#xE72A;" Style="{StaticResource T.Icon}" FontSize="14" Margin="12,1,0,0" />
+                                </StackPanel>
+                            </Button>
+                        </StackPanel>
+                    </Border>
+                </ScrollViewer>
+            </Grid>
+
+            <!-- ============ SAYFA 2: ANA EKRAN ============ -->
+            <Grid x:Name="DashboardPage" Visibility="{Binding IsDashboard, Converter={StaticResource Visible}}" Margin="28,6,28,24">
+                <Grid.RenderTransform><TranslateTransform /></Grid.RenderTransform>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="350" />
+                    <ColumnDefinition Width="20" />
+                    <ColumnDefinition Width="*" />
+                </Grid.ColumnDefinitions>
+
+                <!-- Sol sütun -->
+                <ScrollViewer Grid.Column="0" VerticalScrollBarVisibility="Auto" Margin="0,0,-8,0" Padding="0,0,8,0">
+                    <StackPanel>
+                        <!-- Marka -->
+                        <Grid Margin="4,4,0,22">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto" />
+                                <ColumnDefinition Width="*" />
+                            </Grid.ColumnDefinitions>
+                            <Grid Width="52" Height="52">
+                                <Border CornerRadius="14" Background="{StaticResource B.NeonGradient}" Opacity="0.4" Margin="4">
+                                    <Border.Effect><BlurEffect Radius="18" /></Border.Effect>
+                                </Border>
+                                <Rectangle RadiusX="13" RadiusY="13" Fill="{StaticResource LogoBrush}" Stroke="#FF24365C" StrokeThickness="1" />
+                            </Grid>
+                            <StackPanel Grid.Column="1" Margin="14,0,0,0" VerticalAlignment="Center">
+                                <TextBlock Text="RTX Windows Updater" Style="{StaticResource T.H1}" FontSize="20" />
+                                <TextBlock Text="Windows 11 · NVIDIA RTX" FontSize="12" Foreground="{StaticResource B.Text3}" Margin="0,2,0,0" />
+                            </StackPanel>
+                        </Grid>
+
+                        <!-- Sistem Durumu -->
+                        <Border Style="{StaticResource Card}" Padding="18,18,18,8">
+                            <StackPanel>
+                                <TextBlock Text="SİSTEM DURUMU" Style="{StaticResource T.Label}" Margin="2,0,0,12" />
+                                <ItemsControl ItemsSource="{Binding Requirements}" ItemTemplate="{StaticResource RequirementRowTemplate}" />
+                            </StackPanel>
+                        </Border>
+
+                        <!-- İşlemler -->
+                        <Border Style="{StaticResource Card}" Margin="0,18,0,0" Padding="18">
+                            <StackPanel>
+                                <TextBlock Text="İŞLEMLER" Style="{StaticResource T.Label}" Margin="2,0,0,14" />
+                                <Button Style="{StaticResource Btn.Primary}" Command="{Binding StartCheckCommand}">
+                                    <StackPanel Orientation="Horizontal">
+                                        <TextBlock Text="&#xE721;" Style="{StaticResource T.Icon}" FontSize="16" Margin="0,0,10,0" />
+                                        <TextBlock Text="Güncelleme Kontrolünü Başlat" />
+                                    </StackPanel>
+                                </Button>
+                                <Button Style="{StaticResource Btn.Accent}" Margin="0,12,0,0" Command="{Binding UpdateAllCommand}">
+                                    <StackPanel Orientation="Horizontal">
+                                        <TextBlock Text="&#xE896;" Style="{StaticResource T.Icon}" FontSize="16" Margin="0,0,10,0" />
+                                        <TextBlock Text="{Binding UpdateAllText}" />
+                                    </StackPanel>
+                                </Button>
+                                <Grid Margin="2,12,0,0">
+                                    <TextBlock Text="{Binding AvailableSummary}" FontSize="12" Foreground="{StaticResource B.Text3}" VerticalAlignment="Center" />
+                                    <Button Style="{StaticResource Btn.Ghost}" HorizontalAlignment="Right" Command="{Binding CancelCommand}"
+                                            Visibility="{Binding IsBusy, Converter={StaticResource Visible}}">
+                                        <StackPanel Orientation="Horizontal">
+                                            <TextBlock Text="&#xE711;" Style="{StaticResource T.Icon}" FontSize="11" Margin="0,0,7,0" />
+                                            <TextBlock Text="İptal" />
+                                        </StackPanel>
+                                    </Button>
+                                </Grid>
+                            </StackPanel>
+                        </Border>
+
+                        <!-- İlerleme -->
+                        <Border Style="{StaticResource Card}" Margin="0,18,0,4" Padding="18">
+                            <StackPanel>
+                                <Grid Margin="2,0,0,12">
+                                    <TextBlock Text="İLERLEME" Style="{StaticResource T.Label}" />
+                                    <TextBlock HorizontalAlignment="Right" FontSize="12" FontWeight="SemiBold" Foreground="{StaticResource B.Neon}"
+                                               Text="{Binding Progress, StringFormat={}%{0:0}}" />
+                                </Grid>
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto" />
+                                        <ColumnDefinition Width="*" />
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Style="{StaticResource T.Icon}" FontSize="14" Margin="0,0,10,0" Foreground="{StaticResource B.Neon}"
+                                               Text="&#xE895;" RenderTransformOrigin="0.5,0.5"
+                                               Visibility="{Binding IsBusy, Converter={StaticResource Visible}}">
+                                        <TextBlock.RenderTransform><RotateTransform /></TextBlock.RenderTransform>
+                                        <TextBlock.Triggers>
+                                            <EventTrigger RoutedEvent="Loaded">
+                                                <BeginStoryboard Storyboard="{StaticResource Sb.Spin}" />
+                                            </EventTrigger>
+                                        </TextBlock.Triggers>
+                                    </TextBlock>
+                                    <TextBlock Grid.Column="1" Text="{Binding StepText}" FontSize="13" Foreground="{StaticResource B.Text}"
+                                               TextWrapping="Wrap" />
+                                </Grid>
+                                <ProgressBar Style="{StaticResource Progress.Neon}" Margin="0,14,0,2" Minimum="0" Maximum="100"
+                                             Value="{Binding Progress, Mode=OneWay}" />
+                            </StackPanel>
+                        </Border>
+                    </StackPanel>
+                </ScrollViewer>
+
+                <!-- Sağ sütun -->
+                <Grid Grid.Column="2">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="*" MinHeight="200" />
+                    </Grid.RowDefinitions>
+
+                    <Grid Margin="8,10,8,6">
+                        <TextBlock Text="Güncelleme Kategorileri" Style="{StaticResource T.H2}" FontSize="17" />
+                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center">
+                            <Ellipse Width="8" Height="8" Fill="{StaticResource B.Green}" Margin="0,0,6,0" />
+                            <TextBlock Text="Güncel" FontSize="11.5" Foreground="{StaticResource B.Text3}" Margin="0,0,14,0" />
+                            <Ellipse Width="8" Height="8" Fill="{StaticResource B.Orange}" Margin="0,0,6,0" />
+                            <TextBlock Text="Güncelleme mevcut" FontSize="11.5" Foreground="{StaticResource B.Text3}" Margin="0,0,14,0" />
+                            <Ellipse Width="8" Height="8" Fill="{StaticResource B.Red}" Margin="0,0,6,0" />
+                            <TextBlock Text="Hata" FontSize="11.5" Foreground="{StaticResource B.Text3}" Margin="0,0,14,0" />
+                            <Ellipse Width="8" Height="8" Fill="{StaticResource B.Gray}" Margin="0,0,6,0" />
+                            <TextBlock Text="Kontrol edilmedi" FontSize="11.5" Foreground="{StaticResource B.Text3}" />
+                        </StackPanel>
+                    </Grid>
+
+                    <ItemsControl Grid.Row="1" ItemsSource="{Binding Cards}" ItemTemplate="{StaticResource ComponentCardTemplate}">
+                        <ItemsControl.ItemsPanel>
+                            <ItemsPanelTemplate>
+                                <UniformGrid Columns="3" />
+                            </ItemsPanelTemplate>
+                        </ItemsControl.ItemsPanel>
+                    </ItemsControl>
+
+                    <!-- Günlük + bulunan güncellemeler -->
+                    <Border Grid.Row="2" Style="{StaticResource Card}" Margin="8,10,8,4" Padding="20,16,20,14">
+                        <Grid>
+                            <TabControl>
+                                <TabItem>
+                                    <TabItem.Header>
+                                        <StackPanel Orientation="Horizontal">
+                                            <TextBlock Text="&#xE81C;" Style="{StaticResource T.Icon}" FontSize="13" Margin="0,0,8,0" />
+                                            <TextBlock Text="İşlem Günlüğü" />
+                                        </StackPanel>
+                                    </TabItem.Header>
+                                    <Border Background="#FF060A14" CornerRadius="10" BorderBrush="#FF141F36" BorderThickness="1" Padding="12,8">
+                                        <ListBox x:Name="LogList" ItemsSource="{Binding Logs}" Background="Transparent" BorderThickness="0"
+                                                 ItemContainerStyle="{StaticResource LogItem}"
+                                                 ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                                                 VirtualizingPanel.IsVirtualizing="True" VirtualizingPanel.VirtualizationMode="Recycling"
+                                                 FontFamily="{StaticResource F.Mono}" FontSize="12">
+                                            <ListBox.ItemTemplate>
+                                                <DataTemplate>
+                                                    <TextBlock TextWrapping="Wrap">
+                                                        <Run Text="{Binding TimeText, Mode=OneWay, StringFormat='[{0}]'}" Foreground="#FF3E5078" />
+                                                        <Run Text="{Binding Message, Mode=OneWay}" Foreground="{Binding Level, Converter={StaticResource LogBrush}}" />
+                                                    </TextBlock>
+                                                </DataTemplate>
+                                            </ListBox.ItemTemplate>
+                                        </ListBox>
+                                    </Border>
+                                </TabItem>
+                                <TabItem>
+                                    <TabItem.Header>
+                                        <StackPanel Orientation="Horizontal">
+                                            <TextBlock Text="&#xE8FD;" Style="{StaticResource T.Icon}" FontSize="13" Margin="0,0,8,0" />
+                                            <TextBlock Text="Bulunan Güncellemeler" />
+                                        </StackPanel>
+                                    </TabItem.Header>
+                                    <DataGrid ItemsSource="{Binding UpdateRows}">
+                                        <DataGrid.Columns>
+                                            <DataGridTextColumn Header="KATEGORİ" Binding="{Binding Category}" Width="130" />
+                                            <DataGridTextColumn Header="PROGRAM / GÜNCELLEME" Binding="{Binding Name}" Width="*" />
+                                            <DataGridTextColumn Header="MEVCUT" Binding="{Binding CurrentVersion}" Width="140" />
+                                            <DataGridTextColumn Header="YENİ" Binding="{Binding NewVersion}" Width="140" />
+                                            <DataGridTemplateColumn Header="DURUM" Width="230">
+                                                <DataGridTemplateColumn.CellTemplate>
+                                                    <DataTemplate>
+                                                        <TextBlock Text="{Binding Status}" TextTrimming="CharacterEllipsis" ToolTip="{Binding Status}">
+                                                            <TextBlock.Style>
+                                                                <Style TargetType="TextBlock">
+                                                                    <Setter Property="Foreground" Value="{StaticResource B.Green}" />
+                                                                    <Style.Triggers>
+                                                                        <DataTrigger Binding="{Binding UpdateAvailable}" Value="True">
+                                                                            <Setter Property="Foreground" Value="{StaticResource B.Orange}" />
+                                                                        </DataTrigger>
+                                                                    </Style.Triggers>
+                                                                </Style>
+                                                            </TextBlock.Style>
+                                                        </TextBlock>
+                                                    </DataTemplate>
+                                                </DataGridTemplateColumn.CellTemplate>
+                                            </DataGridTemplateColumn>
+                                        </DataGrid.Columns>
+                                    </DataGrid>
+                                </TabItem>
+                            </TabControl>
+                            <Button Style="{StaticResource Btn.Ghost}" HorizontalAlignment="Right" VerticalAlignment="Top" Margin="0,-4,0,0"
+                                    Command="{Binding OpenLogCommand}" ToolTip="{Binding LogFilePath}">
+                                <StackPanel Orientation="Horizontal">
+                                    <TextBlock Text="&#xE838;" Style="{StaticResource T.Icon}" FontSize="13" Margin="0,0,8,0" />
+                                    <TextBlock Text="Log dosyası" />
+                                </StackPanel>
+                            </Button>
+                        </Grid>
+                    </Border>
+                </Grid>
+            </Grid>
+        </Grid>
+
+        <!-- ================= İletişim kutusu katmanı ================= -->
+        <Grid Grid.Row="1" Visibility="{Binding Dialog.IsOpen, Converter={StaticResource Visible}}" Background="#B3020409">
+            <Border x:Name="DialogCard" DataContext="{Binding Dialog}" Style="{StaticResource Card}" Padding="32,30" Width="640"
+                    HorizontalAlignment="Center" VerticalAlignment="Center" MaxHeight="780"
+                    RenderTransformOrigin="0.5,0.5">
+                <Border.RenderTransform>
+                    <ScaleTransform ScaleX="1" ScaleY="1" />
+                </Border.RenderTransform>
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="*" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
+
+                    <StackPanel>
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto" />
+                                <ColumnDefinition Width="*" />
+                            </Grid.ColumnDefinitions>
+                            <Border Width="52" Height="52" CornerRadius="16" BorderThickness="1"
+                                    BorderBrush="{Binding Kind, Converter={StaticResource DialogBrush}}">
+                                <Border.Background>
+                                    <SolidColorBrush Color="#FF0F1C34" />
+                                </Border.Background>
+                                <TextBlock Text="{Binding Glyph}" Style="{StaticResource T.Icon}" FontSize="22"
+                                           Foreground="{Binding Kind, Converter={StaticResource DialogBrush}}" />
+                            </Border>
+                            <TextBlock Grid.Column="1" Text="{Binding Title}" Style="{StaticResource T.H1}" FontSize="22"
+                                       VerticalAlignment="Center" Margin="16,0,0,0" TextWrapping="Wrap" />
+                        </Grid>
+                        <TextBlock Text="{Binding Message}" Style="{StaticResource T.Body}" Margin="0,18,0,0" FontSize="13.5" LineHeight="21" />
+                    </StackPanel>
+
+                    <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" Margin="0,16,0,0">
+                        <StackPanel>
+                            <!-- Onay maddeleri -->
+                            <ItemsControl ItemsSource="{Binding Bullets}">
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate>
+                                        <Border Background="#FF0A1222" CornerRadius="10" Padding="14,11" Margin="0,0,0,8"
+                                                BorderBrush="#FF16223A" BorderThickness="1">
+                                            <Grid>
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="Auto" />
+                                                    <ColumnDefinition Width="*" />
+                                                </Grid.ColumnDefinitions>
+                                                <TextBlock Text="&#xE76C;" Style="{StaticResource T.Icon}" FontSize="11" Foreground="{StaticResource B.Neon}"
+                                                           VerticalAlignment="Top" Margin="0,4,12,0" />
+                                                <TextBlock Grid.Column="1" Text="{Binding}" Style="{StaticResource T.Body}" Foreground="{StaticResource B.Text}" />
+                                            </Grid>
+                                        </Border>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+
+                            <!-- Sonuç satırları -->
+                            <ItemsControl ItemsSource="{Binding Results}">
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate DataType="{x:Type vm:ResultRowViewModel}">
+                                        <Border Background="#FF0A1222" CornerRadius="11" Padding="14,12" Margin="0,0,0,8"
+                                                BorderBrush="#FF16223A" BorderThickness="1">
+                                            <Grid>
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="Auto" />
+                                                    <ColumnDefinition Width="*" />
+                                                    <ColumnDefinition Width="Auto" />
+                                                </Grid.ColumnDefinitions>
+                                                <Border Style="{StaticResource IconBadge}" Width="36" Height="36" VerticalAlignment="Top">
+                                                    <TextBlock Text="{Binding Glyph}" Style="{StaticResource T.Icon}" FontSize="16" Foreground="{StaticResource B.Neon}" />
+                                                </Border>
+                                                <StackPanel Grid.Column="1" Margin="14,0,10,0" VerticalAlignment="Center">
+                                                    <TextBlock Text="{Binding Title}" Style="{StaticResource T.H2}" FontSize="14" />
+                                                    <TextBlock Text="{Binding Summary}" FontSize="12.5" Margin="0,2,0,0" TextWrapping="Wrap"
+                                                               Foreground="{Binding Status, Converter={StaticResource StatusBrush}}" />
+                                                    <TextBlock Text="{Binding Reason, StringFormat='Nedeni: {0}'}" FontSize="12" Margin="0,4,0,0" TextWrapping="Wrap"
+                                                               Foreground="{StaticResource B.Text2}"
+                                                               Visibility="{Binding HasReason, Converter={StaticResource Visible}}" />
+                                                </StackPanel>
+                                                <Border Grid.Column="2" Width="30" Height="30" CornerRadius="15" VerticalAlignment="Top"
+                                                        Background="{Binding Status, Converter={StaticResource StatusSoftBrush}}">
+                                                    <TextBlock Text="{Binding Status, Converter={StaticResource StatusGlyph}}" Style="{StaticResource T.Icon}" FontSize="13"
+                                                               Foreground="{Binding Status, Converter={StaticResource StatusBrush}}" />
+                                                </Border>
+                                            </Grid>
+                                        </Border>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                        </StackPanel>
+                    </ScrollViewer>
+
+                    <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,18,0,0">
+                        <Button Style="{StaticResource Btn.Secondary}" Margin="0,0,10,0" Command="{Binding TertiaryCommand}"
+                                Visibility="{Binding HasTertiary, Converter={StaticResource Visible}}">
+                            <StackPanel Orientation="Horizontal">
+                                <TextBlock Text="&#xE777;" Style="{StaticResource T.Icon}" FontSize="14" Margin="0,0,8,0" />
+                                <TextBlock Text="{Binding TertiaryText}" />
+                            </StackPanel>
+                        </Button>
+                        <Button Style="{StaticResource Btn.Secondary}" Margin="0,0,10,0" Content="{Binding SecondaryText}" MinWidth="110"
+                                Command="{Binding SecondaryCommand}" IsCancel="True" Visibility="{Binding HasSecondary, Converter={StaticResource Visible}}" />
+                        <Button Style="{StaticResource Btn.Primary}" Height="44" MinWidth="150" Content="{Binding PrimaryText}"
+                                Command="{Binding PrimaryCommand}" IsDefault="True" />
+                    </StackPanel>
+                </Grid>
+            </Border>
+        </Grid>
+    </Grid>
+</Window>

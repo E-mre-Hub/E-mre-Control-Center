@@ -1,0 +1,21 @@
+# Metin dosyaları depoda LF, Windows'ta çalışma kopyasında CRLF olarak tutulur
+* text=auto
+
+*.cs      text diff=csharp eol=crlf
+*.xaml    text eol=crlf
+*.csproj  text eol=crlf
+*.sln     text eol=crlf
+*.manifest text eol=crlf
+*.ps1     text eol=crlf
+*.md      text
+*.yml     text eol=lf
+*.json    text
+
+# İkili dosyalar
+*.jpg     binary
+*.jpeg    binary
+*.png     binary
+*.ico     binary
+*.exe     binary
+*.dll     binary
+*.zip     binary

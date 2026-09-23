@@ -1,0 +1,71 @@
+# ---------------------------------------------------------------
+#  RTX Windows Updater - .gitignore
+# ---------------------------------------------------------------
+
+# Derleme çıktıları (EXE depoya konmaz; GitHub Releases üzerinden dağıtılır)
+/RTX Windows Updater.exe
+*.zip
+[Bb]in/
+[Oo]bj/
+[Bb]uild/
+[Pp]ublish/
+[Dd]ebug/
+[Rr]elease/
+x64/
+x86/
+[Aa]rtifacts/
+
+# Visual Studio / Rider / VS Code
+.vs/
+.idea/
+.vscode/
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+*.rsuser
+*.DotSettings.user
+launchSettings.json
+
+# NuGet
+*.nupkg
+*.snupkg
+**/packages/*
+!**/packages/build/
+project.lock.json
+project.fragment.lock.json
+
+# Testler / analiz
+TestResults/
+[Tt]est[Rr]esult*/
+*.trx
+*.coverage
+*.coveragexml
+coverage*.json
+coverage*.xml
+
+# Günlükler ve geçici dosyalar
+*.log
+*.tmp
+*.temp
+*.bak
+*.cache
+~$*
+
+# İmzalama anahtarları / sertifikalar / gizli bilgiler (asla depoya konmamalı)
+*.pfx
+*.p12
+*.snk
+*.key
+*.pem
+.env
+.env.*
+secrets.json
+appsettings.*.local.json
+
+# Windows
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+*.lnk
