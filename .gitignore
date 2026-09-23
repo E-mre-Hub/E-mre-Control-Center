@@ -69,3 +69,8 @@ ehthumbs.db
 Desktop.ini
 $RECYCLE.BIN/
 *.lnk
+
+# Yerel yapay zeka asistanı notları / ayarları (GitHub'a gönderilmez)
+CLAUDE.md
+CLAUDE.local.md
+.claude/

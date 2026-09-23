@@ -1,8 +1,14 @@
 # RTX Windows Updater
 
-Windows 11 + NVIDIA RTX bilgisayarlar için güncelleme merkezi. Winget, Windows Update, Microsoft Store,
+Windows 11 + NVIDIA RTX bilgisayarlar için güncelleme ve bakım merkezi. Winget, Windows Update, Microsoft Store,
 NVIDIA sürücüsü ve Microsoft Defender güncellemelerini **gerçek sistem verileriyle** kontrol eder,
-yalnızca kullanıcı onayıyla kurar ve (onaylanırsa) Çöp Kutusu'nu boşaltır.
+yalnızca kullanıcı onayıyla kurar, (onaylanırsa) Çöp Kutusu'nu boşaltır ve Windows'un kendi bakım araçlarını
+(SFC, DISM CheckHealth, MRT hızlı tarama) çalıştırır.
+
+- **İki çalışma şekli:** "Tümünü Kontrol Et / Tümünü Güncelle" veya kartları seçerek "Seçilenleri Kontrol Et /
+  Seçilenleri Güncelle-Çalıştır". Seçilmeyen karta hiçbir şekilde dokunulmaz.
+- **Sistem İşlemleri:** 9 kartın tamamı tek kategoride ve aynı yapıda: açıklama, gerçek durum, "?" bilgi kutusu,
+  seçim kutusu ve kartın kendi işlem butonu ("Kontrol Et", "Tarama Başlat", "Kontrolü Başlat", "Hızlı Taramayı Başlat").
 
 - Teknoloji: C# / .NET 8 / WPF, MVVM
 - Çıktı: `RTX Windows Updater.exe`: tek dosya, self-contained (hedef bilgisayarda .NET kurulu olması gerekmez)
@@ -49,10 +55,11 @@ Desktop\E-mre_App\
     ├── Core\
     │   ├── Logger.cs                ← Thread-safe günlük (arayüz + dosya)
     │   ├── ProcessRunner.cs         ← Harici komut çalıştırma: stdout/stderr, zaman aşımı, süreç ağacını sonlandırma
-    │   └── PowerShellRunner.cs      ← PowerShell 5.1 betikleri (##LOG / ##RESULT JSON protokolü)
+    │   ├── PowerShellRunner.cs      ← PowerShell 5.1 betikleri (##LOG / ##RESULT JSON protokolü)
+    │   └── SystemMessages.cs        ← Windows araçlarının mesajlarını sistem dilinde yükler (SFC sonuç tanıma)
     ├── Models\Models.cs             ← ComponentStatus, ModuleResult, UpdateItem, RequirementsResult
     ├── Services\
-    │   ├── IUpdateModule.cs         ← Check / Update sözleşmesi
+    │   ├── IUpdateModule.cs         ← Check / Update + IMaintenanceModule (kart butonu) + ilerleme sözleşmeleri
     │   ├── SystemRequirementsChecker.cs
     │   ├── AdminPrivilegeManager.cs
     │   ├── WingetManager.cs         ← + WingetTableParser (dilden bağımsız tablo ayrıştırma)
@@ -60,8 +67,12 @@ Desktop\E-mre_App\
     │   ├── MicrosoftStoreManager.cs
     │   ├── NvidiaDriverManager.cs
     │   ├── DefenderManager.cs
+    │   ├── SfcManager.cs            ← sfc /verifyonly (kontrol) ve sfc /scannow (tarama + onarım)
+    │   ├── DismManager.cs           ← DISM /Online /Cleanup-Image /CheckHealth (yalnızca kontrol)
+    │   ├── MrtManager.cs            ← MRT hızlı tarama (önce yalnızca tespit, temizlik onayla)
     │   ├── RecycleBinManager.cs
-    │   └── UpdateOrchestrator.cs    ← Sıralı akış, modül izolasyonu, iptal
+    │   ├── SelectedOperationsManager.cs ← Kart seçimlerinin merkezi yönetimi
+    │   └── UpdateOrchestrator.cs    ← Güvenli sıra, Tümü / Seçilenler akışları, modül izolasyonu, iptal
     ├── ViewModels\                  ← MainViewModel, DialogViewModel, kart/satır modelleri, komutlar
     ├── Views\                       ← MainWindow.xaml(.cs), Converters.cs
     └── Themes\Theme.xaml            ← Renkler, butonlar, kartlar, animasyonlar, ilerleme çubuğu
@@ -151,7 +162,7 @@ Davet edilen kişi daveti kabul ettikten sonra depoyu ve Releases'ı görebilir.
   "Bu uygulamanın cihazınızda değişiklik yapmasına izin veriyor musunuz?" UAC penceresi açılır.
 - Aynı anda yalnızca bir örnek çalışır (tek örnek kilidi); iki pencerenin aynı anda güncelleme yapması engellenir.
 - UAC reddedilirse (Win32 hata 1223) uygulama kapanmaz: "Yönetici izni reddedildi" gösterilir, hiçbir değişiklik yapılmaz.
-  "Güncelleme Kontrolünü Başlat" butonu yönetici değilken tekrar izin ister.
+  "Tümünü Kontrol Et" ve diğer işlem butonları yönetici değilken tekrar izin ister.
 - `requireAdministrator` bilinçli olarak kullanılmadı: red durumunda Windows uygulamayı hiç açmaz ve kullanıcıya
   açıklama gösterilemezdi. UAC hiçbir şekilde atlatılmaz.
 
@@ -165,9 +176,15 @@ Davet edilen kişi daveti kabul ettikten sonra depoyu ve Releases'ı görebilir.
 | **NVIDIA** | GPU: WMI. Kurulu sürücü: `nvidia-smi` (yoksa WMI sürümünden hesap). NVIDIA App: kayıt defterinden tespit (bilgi). En son sürücü: nvidia.com sürücü sayfasının kullandığı resmi NVIDIA servisleri (`lookupValueSearch.aspx` + `AjaxDriverService DriverManualLookup`, WHQL, DCH, Windows 11). | Yalnızca `https://*.download.nvidia.com` adresinden indirilir, disk alanı kontrol edilir, **Authenticode imzası doğrulanır (NVIDIA Corporation olmalı)**, `-s -noreboot` ile kurulur, ardından sürüm `nvidia-smi` ile yeniden okunarak doğrulanır. |
 | **Defender** | `Get-MpComputerStatus` + Microsoft'un resmi Defender sürüm servisi (`microsoft.com/security/encyclopedia/adlpackages.aspx?action=info&arch=x64`) ile gerçek karşılaştırma. | `Update-MpSignature` (başarısızsa MicrosoftUpdateServer, ardından MMPC kaynağı). Sürüm yeniden okunarak doğrulanır. Defender ayarlarına dokunulmaz. |
 | **Çöp Kutusu** | `SHQueryRecycleBin` (tüm sürücüler). | Yalnızca onayla `SHEmptyRecycleBin`; sonra yeniden sayılarak doğrulanır. |
+| **SFC** | `sfc /verifyonly` – yalnızca tarar, **onarım yapmaz**. Çıktı (UTF-16), `sfc.exe`'nin kendi mesaj tablosundan Windows dilinde yüklenen gerçek mesajlarla eşleştirilir; ilerleme yüzdesi canlı gösterilir. | Kartın "Tarama Başlat" butonu: `sfc /scannow` (onaydan sonra). Toplu güncellemede `sfc /scannow` yalnızca doğrulama bozuk dosya bulduysa çalışır. Onarım yarıda kesilmez. |
+| **DISM** | `DISM /Online /Cleanup-Image /CheckHealth` (çıktının dilden bağımsız okunması için DISM'in `/English` görüntüleme seçeneğiyle). Sonuç: Sağlıklı / Onarılabilir / Onarılamaz / Hata. | **Yok.** `/RestoreHealth` veya başka bir onarım komutu uygulama tarafından asla çalıştırılmaz; "Onarılabilir" durumunda yalnızca bilgi verilir. |
+| **MRT** | `MRT.exe /Q /N` – sessiz **hızlı tarama, yalnızca tespit** (dosyalara dokunulmaz). Sonuç, `%windir%\debug\mrt.log` dosyasına bu tarama için eklenen "Results Summary" ve "Return code" satırlarından okunur (KB891716 dönüş kodları). Tam tarama asla başlatılmaz. | Tehdit tespit edildiyse ve kullanıcı onaylarsa `MRT.exe /Q` (hızlı tarama + temizleme). |
 
-Her modül bağımsızdır; biri başarısız olursa diğerleri devam eder. Durumlar: Güncel, Güncelleme mevcut,
-Güncellendi, Kısmen güncellendi, Yeniden başlatma gerekli, Yönetici izni gerekli, Kontrol edilemedi, Başarısız, Atlandı.
+Güvenli işlem sırası: Winget → Windows Update → Microsoft Store → NVIDIA → Defender → SFC → DISM → MRT → Çöp Kutusu.
+
+Her modül bağımsızdır; biri başarısız olursa diğerleri devam eder. Durumlar: Güncel / Sağlıklı, Güncelleme mevcut,
+Güncellendi, Kısmen güncellendi, Dikkat (ör. DISM "onarılabilir"), Yeniden başlatma gerekli, Yönetici izni gerekli,
+Kontrol edilemedi, Başarısız, Atlandı.
 Hiçbir hata başarılı gibi gösterilmez; nedeni kartta, sonuç ekranında ve günlükte yazar.
 
 ## 7. Kullanım
@@ -176,11 +193,26 @@ Hiçbir hata başarılı gibi gösterilmez; nedeni kartta, sonuç ekranında ve 
 2. Sistem gereksinimleri (Windows 11, NVIDIA RTX, yönetici) kontrol edilir. Uygun değilse devam edilemez.
 3. Yönetici izni penceresinde "Yönetici olarak başlat" → UAC'de "Evet".
 4. "Gereksinimleri kabul ediyorum" → "Devam Et".
-5. "Güncelleme Kontrolünü Başlat": Winget → Windows Update → Microsoft Store → NVIDIA → Defender → Çöp Kutusu.
-6. Sonuçlar kartlarda, "Bulunan Güncellemeler" tablosunda (program, mevcut sürüm, yeni sürüm, durum) ve "İşlem Günlüğü"nde görünür.
-7. "Tümünü Güncelle (ve Temizle)" → yapılacak her işlemi listeleyen onay penceresi → onaylayınca yalnızca güncellemesi olan bileşenler güncellenir.
-   Çöp Kutusu kartındaki onay kutusu kaldırılırsa çöp kutusuna dokunulmaz.
-8. "İşlem Tamamlandı" ekranı her bileşenin gerçek sonucunu gösterir. Yeniden başlatma gerekiyorsa
+5. **Tümü:** "Tümünü Kontrol Et" tüm kartları kontrol eder (seçimlere bakılmaz). SFC doğrulaması ve MRT hızlı taraması
+   birkaç dakika ile yarım saat arasında sürebilir.
+6. **Seçilenler:** Kartların sağ üstündeki seçim kutularını işaretleyin (seçili kart neon çerçeveyle gösterilir, üstte
+   "N işlem seçildi" yazar, "Seçimi Temizle" tüm seçimleri kaldırır). "Seçilenleri Kontrol Et" yalnızca seçilen kartları
+   kontrol eder. Hiç seçim yoksa "Lütfen en az bir işlem seçin." uyarısı çıkar ve hiçbir şey çalışmaz.
+7. Sonuçlar kartlarda, "Bulunan Güncellemeler" tablosunda (program, mevcut sürüm, yeni sürüm, durum) ve "İşlem Günlüğü"nde görünür.
+8. "Tümünü Güncelle (ve Temizle)" → işlem gerektiren tüm kartlar; "Seçilenleri Güncelle / Çalıştır" → yalnızca seçilen
+   kartlardan işlem gerektirenler. Seçili ama henüz kontrol edilmemiş kartlar önce gerçekten kontrol edilir; güncel /
+   sağlıklı olanlar çalıştırılmaz. Her iki durumda da yapılacak işlemleri listeleyen onay penceresi çıkar.
+   "Tümünü Güncelle"de çöp kutusu, Çöp Kutusu kartındaki "Tümünü Güncelle ile birlikte boşalt" kutusuna bağlıdır;
+   "Seçilenleri Çalıştır"da ise Çöp Kutusu kartı seçildiyse boşaltılır.
+9. **Her kart kendi butonuyla tek başına da çalıştırılabilir** (tüm kartlar "Sistem İşlemleri" başlığı altındadır):
+   - Windows Update, Winget, Microsoft Store, NVIDIA Driver, Microsoft Defender, Çöp Kutusu → "Kontrol Et":
+     yalnızca o kartı gerçekten kontrol eder; güncelleme / temizlenecek öğe bulunursa uygulamak için ayrıca onay sorulur.
+   - "Tarama Başlat" (sfc /scannow, onaydan sonra), "Kontrolü Başlat" (DISM CheckHealth),
+     "Hızlı Taramayı Başlat" (MRT, yalnızca tespit; tehdit bulunursa temizlik ayrıca sorulur).
+   - Her karttaki "?" butonu, kartın ne yaptığını anlatan kısa bir bilgi kutusu açar.
+   - İşlem sırasında kartta "Kontrol ediliyor…", "Tarama devam ediyor…", "Güncelleniyor…" gibi durum ve canlı ilerleme görünür;
+     henüz çalıştırılmamış kartlarda "Henüz çalıştırılmadı" yazar.
+10. "İşlem Tamamlandı" ekranı her bileşenin gerçek sonucunu gösterir. Yeniden başlatma gerekiyorsa
    "Yeniden başlat" butonu çıkar; onaylarsanız 60 saniye sonra yeniden başlar (`shutdown /a` ile iptal edilebilir).
 
 Günlük dosyaları: `%LOCALAPPDATA%\RTX Windows Updater\Logs\` (arayüzde "Log dosyası" butonu).
@@ -194,5 +226,25 @@ Günlük dosyaları: `%LOCALAPPDATA%\RTX Windows Updater\Logs\` (arayüzde "Log 
 - Microsoft Store: winget'in msstore kataloğuyla eşleşmeyen bazı yerleşik uygulamaları yalnızca Store'un kendi
   tarayıcısı görebilir; bu uygulamalar tarama tetiklendikten sonra Store tarafından arka planda güncellenir.
 - Windows Update, sürücü ve "isteğe bağlı" (BrowseOnly) güncellemeleri kapsamaz. Bunlar Windows Ayarları'ndan kurulabilir.
+- SFC kontrol aşamasında `sfc /verifyonly` kullanılır; "Tümünü / Seçilenleri Kontrol Et" hiçbir sistem dosyasını onarmaz.
+  Onarım yalnızca "Tarama Başlat" veya güncelleme butonlarıyla, onaydan sonra `sfc /scannow` ile yapılır.
+- DISM "onarılabilir" veya SFC "bazı dosyalar onarılamadı" derse gereken `DISM /RestoreHealth` bilinçli olarak otomatik
+  çalıştırılmaz; kullanıcı isterse yönetici komut isteminden kendisi çalıştırmalıdır.
+- MRT, Windows Update ile aylık dağıtılan bir araçtır (KB890830). Sistemde yoksa MRT kartı "Tarama başarısız – MRT.exe bulunamadı" gösterir.
 - Çöp Kutusu, UAC'yi onaylayan kullanıcı hesabının çöp kutusudur (standart kullanıcı + başka bir yönetici parolası
   kullanılırsa o yönetici hesabının çöp kutusu olur).
+
+## Sürüm geçmişi
+
+### v1.1.0
+- Yeni sistem bakım kartları: Windows Sistem Dosyası Kontrolü (SFC /SCANNOW), Windows Image Sağlık Kontrolü
+  (DISM /CheckHealth), Microsoft Kötü Amaçlı Yazılım Temizleme Aracı (MRT hızlı tarama). Canlı ilerleme ve gerçek sonuçlar.
+- Seçilebilir kartlar: "Seçilenleri Kontrol Et", "Seçilenleri Güncelle / Çalıştır", "N işlem seçildi", "Seçimi Temizle".
+- Tüm kartlar tek "Sistem İşlemleri" kategorisinde ve aynı kart yapısında; her kartta "?" bilgi kutusu,
+  anlaşılır açıklama ve kendi işlem butonu ("Kontrol Et" ile tek kart kontrolü + onaylı uygulama).
+- Daha anlaşılır durum metinleri: "Henüz çalıştırılmadı", "Kontrol ediliyor…", "Tarama devam ediyor…", "Güncelleniyor…".
+- "Güncelleme Kontrolünü Başlat" butonu "Tümünü Kontrol Et" olarak adlandırıldı (davranışı aynı, artık bakım kartlarını da kapsar).
+- Kartlar ile işlem günlüğü arasındaki alan sürüklenerek boyutlandırılabilir.
+
+### v1.0.0
+- İlk sürüm: Winget, Windows Update, Microsoft Store, NVIDIA sürücüsü, Microsoft Defender, Çöp Kutusu.

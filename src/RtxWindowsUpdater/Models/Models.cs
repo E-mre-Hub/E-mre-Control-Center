@@ -14,7 +14,8 @@ public enum ComponentStatus
     AdminRequired,    // Kırmızı – yönetici izni gerekli
     CheckFailed,      // Kırmızı – kontrol edilemedi
     Failed,           // Kırmızı – güncelleme başarısız
-    Skipped           // Gri   – kullanıcı tarafından atlandı / uygulanamaz
+    Skipped,          // Gri   – kullanıcı tarafından atlandı / uygulanamaz
+    Attention         // Turuncu – dikkat gerekiyor ancak otomatik işlem yapılmaz (örn. DISM "onarılabilir")
 }
 
 public static class ComponentKeys
@@ -24,6 +25,9 @@ public static class ComponentKeys
     public const string Store = "store";
     public const string Nvidia = "nvidia";
     public const string Defender = "defender";
+    public const string Sfc = "sfc";
+    public const string Dism = "dism";
+    public const string Mrt = "mrt";
     public const string RecycleBin = "recyclebin";
 }
 
@@ -111,3 +115,9 @@ public sealed class RequirementsResult
 
 /// <summary>Orkestratörün arayüze bildirdiği ilerleme.</summary>
 public sealed record StepProgress(string Text, double Percent);
+
+/// <summary>
+/// Uzun süren bir modülün (SFC, DISM, MRT) çalışırken bildirdiği canlı durum.
+/// Percent null ise ilerleme yüzdesi bilinmiyordur (belirsiz ilerleme).
+/// </summary>
+public sealed record ModuleProgress(string Key, string Text, double? Percent);

@@ -33,7 +33,7 @@ public sealed class StatusToBrushConverter : IValueConverter
     public object Convert(object value, Type targetType, object parameter, CultureInfo culture) => value switch
     {
         ComponentStatus.UpToDate or ComponentStatus.Updated => Palette.Green,
-        ComponentStatus.UpdateAvailable or ComponentStatus.PartiallyUpdated or ComponentStatus.RebootRequired => Palette.Orange,
+        ComponentStatus.UpdateAvailable or ComponentStatus.PartiallyUpdated or ComponentStatus.RebootRequired or ComponentStatus.Attention => Palette.Orange,
         ComponentStatus.Failed or ComponentStatus.CheckFailed or ComponentStatus.AdminRequired => Palette.Red,
         ComponentStatus.Checking or ComponentStatus.Updating => Palette.Blue,
         RequirementState.Ok => Palette.Green,
@@ -69,7 +69,7 @@ public sealed class StatusToGlyphConverter : IValueConverter
     {
         ComponentStatus.UpToDate or ComponentStatus.Updated => "",          // CheckMark
         ComponentStatus.UpdateAvailable => "",                              // Download
-        ComponentStatus.PartiallyUpdated or ComponentStatus.RebootRequired => "", // Warning
+        ComponentStatus.PartiallyUpdated or ComponentStatus.RebootRequired or ComponentStatus.Attention => "", // Warning
         ComponentStatus.CheckFailed => "",                                  // Warning
         ComponentStatus.Failed => "",                                       // Cancel
         ComponentStatus.AdminRequired => "",                                // Lock
@@ -78,7 +78,7 @@ public sealed class StatusToGlyphConverter : IValueConverter
         RequirementState.Failed => "",
         RequirementState.Warning => "",
         RequirementState.Pending => "",
-        _ => ""                                                             // Unknown / kontrol edilmedi
+        _ => "\uE823"                                                        // Saat: henüz çalıştırılmadı
     };
 
     public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture) => Binding.DoNothing;
@@ -137,4 +137,12 @@ public sealed class DialogKindToBrushConverter : IValueConverter
     };
 
     public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture) => Binding.DoNothing;
+}
+
+/// <summary>bool değeri tersine çevirir (ör. açılır bilgi kutusu açıkken butonun tekrar tıklanmasını engellemek için).</summary>
+public sealed class InverseBoolConverter : IValueConverter
+{
+    public object Convert(object value, Type targetType, object parameter, CultureInfo culture) => value is not true;
+
+    public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture) => value is not true;
 }

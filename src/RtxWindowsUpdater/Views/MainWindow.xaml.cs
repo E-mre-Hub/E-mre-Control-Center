@@ -51,7 +51,17 @@ public partial class MainWindow : Window
     private void OnViewModelChanged(object? sender, PropertyChangedEventArgs e)
     {
         if (e.PropertyName == nameof(MainViewModel.IsDashboard) && _vm.IsDashboard)
+        {
             PlayPageIn(DashboardPage);
+            // Ana ekran her zaman en üstten (Sistem Durumu ve ilk kart satırı görünür şekilde) açılsın.
+            Dispatcher.BeginInvoke(ResetDashboardScroll, System.Windows.Threading.DispatcherPriority.ContextIdle);
+        }
+    }
+
+    private void ResetDashboardScroll()
+    {
+        LeftScroll.ScrollToTop();
+        CardsScroll.ScrollToTop();
     }
 
     private void OnDialogChanged(object? sender, PropertyChangedEventArgs e)
