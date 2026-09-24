@@ -17,8 +17,10 @@ public sealed class ComponentCardViewModel(string key, string title, string glyp
     private string _activityText = string.Empty;
     private CardSnapshot? _lastSnapshot;
     private bool _snapshotFromHistory;
+    private string? _unavailableReason;
 
     private const string NotCheckedText = "Henüz çalıştırılmadı";
+    public const string UnavailableText = "Kullanım dışı";
     private const string NotRunThisSessionText = "Bu oturumda çalıştırılmadı";
 
     public string Key { get; } = key;
@@ -81,14 +83,40 @@ public sealed class ComponentCardViewModel(string key, string title, string glyp
         get => _isSelected;
         set
         {
+            if (value && IsUnavailable) return;
             if (Set(ref _isSelected, value))
                 SelectionChangedCallback?.Invoke(Key, value);
         }
     }
 
+    /// <summary>
+    /// Kart bu sistemde kullanım dışı mı (ör. NVIDIA RTX ekran kartı yok). Kullanım dışı kart seçilemez, çalıştırılamaz
+    /// ve toplu işlemlere (Tümünü Kontrol Et / Güncelle) dahil edilmez.
+    /// </summary>
+    public bool IsUnavailable { get; private set; }
+
+    /// <summary>
+    /// Kartı kalıcı olarak (oturum boyunca) kullanım dışı yapar; <paramref name="reason"/> kartta gösterilir.
+    /// Birden fazla neden varsa (ör. RTX yok + yönetici yetkisi yok) hepsi sırayla yazılır.
+    /// </summary>
+    public void MarkUnavailable(string reason)
+    {
+        IsUnavailable = true;
+        OnPropertyChanged(nameof(IsUnavailable));
+        _unavailableReason = _unavailableReason is null ? reason : _unavailableReason + " " + reason;
+        if (_isSelected)
+        {
+            _isSelected = false;
+            OnPropertyChanged(nameof(IsSelected));
+            SelectionChangedCallback?.Invoke(Key, false);
+        }
+        Reset();
+    }
+
     /// <summary>Seçim yöneticisinden gelen değişikliği geri çağırım tetiklemeden uygular.</summary>
     public void SyncSelected(bool selected)
     {
+        if (selected && IsUnavailable) return;
         if (_isSelected == selected) return;
         _isSelected = selected;
         OnPropertyChanged(nameof(IsSelected));
@@ -133,7 +161,7 @@ public sealed class ComponentCardViewModel(string key, string title, string glyp
     {
         _lastSnapshot = snapshot;
         _snapshotFromHistory = true;
-        if (Status == ComponentStatus.NotChecked) Summary = NotRunThisSessionText;
+        if (Status == ComponentStatus.NotChecked && !IsUnavailable) Summary = NotRunThisSessionText;
         RaiseLastRunChanged();
     }
 
@@ -165,6 +193,7 @@ public sealed class ComponentCardViewModel(string key, string title, string glyp
         ComponentStatus.CheckFailed => "Kontrol edilemedi",
         ComponentStatus.Failed => "Başarısız",
         ComponentStatus.Skipped => "Atlandı",
+        ComponentStatus.Unavailable => UnavailableText,
         _ => Summary
     };
 
@@ -172,6 +201,7 @@ public sealed class ComponentCardViewModel(string key, string title, string glyp
 
     public void Apply(ModuleResult r, CardSnapshot? snapshot = null)
     {
+        if (IsUnavailable) return; // kullanım dışı kart hiçbir işleme girmez
         Status = r.Status;
         Summary = r.Summary;
         if (r.Status is ComponentStatus.Checking or ComponentStatus.Updating)
@@ -216,10 +246,10 @@ public sealed class ComponentCardViewModel(string key, string title, string glyp
 
     public void Reset()
     {
-        Status = ComponentStatus.NotChecked;
-        Summary = _snapshotFromHistory ? NotRunThisSessionText : NotCheckedText;
+        Status = IsUnavailable ? ComponentStatus.Unavailable : ComponentStatus.NotChecked;
+        Summary = IsUnavailable ? UnavailableText : _snapshotFromHistory ? NotRunThisSessionText : NotCheckedText;
         Details = string.Empty;
-        Reason = null;
+        Reason = IsUnavailable ? _unavailableReason : null;
         LastResult = null;
         ActivityText = string.Empty;
         Progress = 0;

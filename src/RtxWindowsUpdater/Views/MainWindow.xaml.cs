@@ -4,6 +4,7 @@ using System.Windows;
 using System.Windows.Interop;
 using System.Windows.Media;
 using System.Windows.Media.Animation;
+using RtxWindowsUpdater.Core;
 using RtxWindowsUpdater.ViewModels;
 
 namespace RtxWindowsUpdater.Views;
@@ -56,7 +57,7 @@ public partial class MainWindow : Window
         }
         catch (Exception ex)
         {
-            MessageBox.Show(this, "Başlatma sırasında hata: " + ex.Message, "RTX Windows Updater",
+            MessageBox.Show(this, "Başlatma sırasında hata: " + ex.Message, AppInfo.Name,
                 MessageBoxButton.OK, MessageBoxImage.Warning);
         }
     }

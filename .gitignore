@@ -1,8 +1,9 @@
 # ---------------------------------------------------------------
-#  RTX Windows Updater - .gitignore
+#  E-mre Hub - .gitignore
 # ---------------------------------------------------------------
 
 # Derleme çıktıları (EXE depoya konmaz; GitHub Releases üzerinden dağıtılır)
+/E-mre Hub.exe
 /RTX Windows Updater.exe
 *.zip
 [Bb]in/
@@ -74,3 +75,5 @@ $RECYCLE.BIN/
 CLAUDE.md
 CLAUDE.local.md
 .claude/
+# Yerel test düzenekleri (UI durum / servis / performans testleri; yalnızca geliştirme makinesinde)
+/local-tests/

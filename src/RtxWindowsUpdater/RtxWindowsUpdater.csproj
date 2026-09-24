@@ -10,12 +10,12 @@
     <LangVersion>latest</LangVersion>
 
     <RootNamespace>RtxWindowsUpdater</RootNamespace>
-    <AssemblyName>RTX Windows Updater</AssemblyName>
-    <Product>RTX Windows Updater</Product>
-    <AssemblyTitle>RTX Windows Updater</AssemblyTitle>
+    <AssemblyName>E-mre Hub</AssemblyName>
+    <Product>E-mre Hub</Product>
+    <AssemblyTitle>E-mre Hub</AssemblyTitle>
     <Company>E-mre</Company>
     <Copyright>© E-mre</Copyright>
-    <Version>1.2.0</Version>
+    <Version>1.3.0</Version>
 
     <!-- EXE ikonu (Windows Explorer / görev çubuğu / kısayol) -->
     <ApplicationIcon>..\..\assets\E-mreLogo.ico</ApplicationIcon>

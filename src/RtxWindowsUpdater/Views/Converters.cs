@@ -27,7 +27,7 @@ internal static class Palette
     }
 }
 
-/// <summary>ComponentStatus → renk (Yeşil = güncel, Turuncu = güncelleme mevcut, Kırmızı = hata, Gri = kontrol edilmedi).</summary>
+/// <summary>ComponentStatus → renk (Yeşil = güncel, Turuncu = güncelleme mevcut, Kırmızı = hata, Gri = kontrol edilmedi / kullanım dışı).</summary>
 public sealed class StatusToBrushConverter : IValueConverter
 {
     public object Convert(object value, Type targetType, object parameter, CultureInfo culture) => value switch
@@ -74,6 +74,7 @@ public sealed class StatusToGlyphConverter : IValueConverter
         ComponentStatus.Failed => "",                                       // Cancel
         ComponentStatus.AdminRequired => "",                                // Lock
         ComponentStatus.Checking or ComponentStatus.Updating => "",         // Sync
+        ComponentStatus.Unavailable => "",                            // Blocked: kullanım dışı
         RequirementState.Ok => "",
         RequirementState.Failed => "",
         RequirementState.Warning => "",

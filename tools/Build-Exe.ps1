@@ -1,10 +1,10 @@
 ﻿<#
-    RTX Windows Updater - tek dosya EXE üretimi
-    Çıktı: <E-mre_App>\RTX Windows Updater.exe
+    E-mre Hub - tek dosya EXE üretimi
+    Çıktı: <proje klasörü (E-mre_Hub)>\E-mre Hub.exe  (klasör, betiğin konumundan bulunur; adı önemli değildir)
 
-    Kullanım (E-mre_App klasöründe):
+    Kullanım (proje klasöründe):
         powershell -ExecutionPolicy Bypass -File .\tools\Build-Exe.ps1
-        powershell -ExecutionPolicy Bypass -File .\tools\Build-Exe.ps1 -Version 1.1.0
+        powershell -ExecutionPolicy Bypass -File .\tools\Build-Exe.ps1 -Version 1.3.0
 #>
 param(
     # Boş bırakılırsa .csproj içindeki <Version> kullanılır.
@@ -60,10 +60,10 @@ if ($Version) {
 & $dotnet @publishArgs
 if ($LASTEXITCODE -ne 0) { throw "dotnet publish başarısız (çıkış kodu $LASTEXITCODE)." }
 
-# 4) EXE'yi E-mre_App kök klasörüne kopyala
-$exe = Join-Path $publish 'RTX Windows Updater.exe'
+# 4) EXE'yi proje kök klasörüne kopyala
+$exe = Join-Path $publish 'E-mre Hub.exe'
 if (-not (Test-Path $exe)) { throw "Yayın çıktısında EXE bulunamadı: $exe" }
-$target = Join-Path $root 'RTX Windows Updater.exe'
+$target = Join-Path $root 'E-mre Hub.exe'
 Copy-Item $exe $target -Force
 
 $size = [Math]::Round((Get-Item $target).Length / 1MB, 1)

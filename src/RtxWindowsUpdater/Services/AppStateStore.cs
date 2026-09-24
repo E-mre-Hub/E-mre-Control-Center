@@ -145,8 +145,9 @@ public sealed class AppState
 }
 
 /// <summary>
-/// Uygulama durumunu %LOCALAPPDATA%\RTX Windows Updater\state.json dosyasında saklar.
+/// Uygulama durumunu %LOCALAPPDATA%\E-mre Hub\state.json dosyasında saklar.
 /// Kaydetme arka planda yapılır; dosya okunamaz/yazılamazsa uygulama çalışmaya devam eder ve nedeni günlüğe yazılır.
+/// Yeni klasörde henüz state.json yoksa eski addaki (RTX Windows Updater) geçmiş bir kez KOPYALANIR; eski dosya silinmez.
 /// </summary>
 public sealed class AppStateStore
 {
@@ -164,13 +165,32 @@ public sealed class AppStateStore
 
     public AppState State { get; }
 
-    public AppStateStore(Logger logger)
+    public AppStateStore(Logger logger) : this(logger, AppInfo.DataDirectory, AppInfo.LegacyDataDirectory)
+    {
+    }
+
+    internal AppStateStore(Logger logger, string dataDirectory, string? legacyDataDirectory)
     {
         _logger = logger;
-        _path = Path.Combine(
-            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-            "RTX Windows Updater", "state.json");
+        _path = Path.Combine(dataDirectory, "state.json");
+        if (legacyDataDirectory is not null) CopyLegacyState(Path.Combine(legacyDataDirectory, "state.json"));
         State = Load();
+    }
+
+    /// <summary>Ad değişikliğinden önceki geçmişi yeni klasöre taşımadan kopyalar (yalnızca yeni klasörde geçmiş yoksa).</summary>
+    private void CopyLegacyState(string legacyPath)
+    {
+        try
+        {
+            if (File.Exists(_path) || !File.Exists(legacyPath)) return;
+            Directory.CreateDirectory(Path.GetDirectoryName(_path)!);
+            File.Copy(legacyPath, _path, overwrite: false);
+            _logger.Info($"Önceki sürümün işlem geçmişi kopyalandı: {legacyPath} → {_path} (eski dosya silinmedi).");
+        }
+        catch (Exception ex)
+        {
+            _logger.Warning($"Önceki sürümün işlem geçmişi kopyalanamadı ({legacyPath}): {ex.Message}");
+        }
     }
 
     private AppState Load()

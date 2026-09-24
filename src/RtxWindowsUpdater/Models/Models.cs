@@ -15,7 +15,8 @@ public enum ComponentStatus
     CheckFailed,      // Kırmızı – kontrol edilemedi
     Failed,           // Kırmızı – güncelleme başarısız
     Skipped,          // Gri   – kullanıcı tarafından atlandı / uygulanamaz
-    Attention         // Turuncu – dikkat gerekiyor ancak otomatik işlem yapılmaz (örn. winget kurulum teknolojisi uyuşmazlığı)
+    Attention,        // Turuncu – dikkat gerekiyor ancak otomatik işlem yapılmaz (örn. winget kurulum teknolojisi uyuşmazlığı)
+    Unavailable       // Gri   – bu sistemde kullanım dışı (örn. NVIDIA RTX ekran kartı yok; hiçbir işlem çalıştırılmaz)
 }
 
 public static class ComponentKeys
@@ -206,7 +207,12 @@ public sealed class RequirementsResult
     public GpuInfo? RtxGpu { get; init; }
     public bool IsAdministrator { get; init; }
     public string? Error { get; init; }
-    public bool IsSupported => IsWindows11 && HasRtxGpu;
+
+    /// <summary>
+    /// Uygulamaya giriş için yalnızca Windows 11 zorunludur. NVIDIA RTX ekran kartı yoksa uygulama "kartsız" kullanılabilir;
+    /// bu durumda yalnızca NVIDIA Driver kartı kullanım dışı olur (<see cref="HasRtxGpu"/>).
+    /// </summary>
+    public bool IsSupported => IsWindows11;
 }
 
 /// <summary>Orkestratörün arayüze bildirdiği ilerleme.</summary>

@@ -32,14 +32,14 @@ jobs:
       - name: ZIP paketi hazırla
         shell: powershell
         run: |
-          $name = if ($env:GITHUB_REF_TYPE -eq 'tag') { "RTX-Windows-Updater-$($env:GITHUB_REF_NAME).zip" } else { 'RTX-Windows-Updater.zip' }
-          Compress-Archive -Path 'RTX Windows Updater.exe' -DestinationPath $name -Force
+          $name = if ($env:GITHUB_REF_TYPE -eq 'tag') { "E-mre-Hub-$($env:GITHUB_REF_NAME).zip" } else { 'E-mre-Hub.zip' }
+          Compress-Archive -Path 'E-mre Hub.exe' -DestinationPath $name -Force
           "ZIP_NAME=$name" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
 
       - name: Artifact yükle
         uses: actions/upload-artifact@v4
         with:
-          name: RTX-Windows-Updater
+          name: E-mre-Hub
           path: ${{ env.ZIP_NAME }}
 
       - name: GitHub Release oluştur

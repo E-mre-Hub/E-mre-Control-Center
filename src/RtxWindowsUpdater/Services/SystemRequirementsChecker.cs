@@ -7,6 +7,7 @@ namespace RtxWindowsUpdater.Services;
 
 /// <summary>
 /// Windows 11 (build 22000+), NVIDIA RTX GPU ve yönetici yetkisini gerçek sistemden okur.
+/// Windows 11 zorunludur; RTX yoksa uygulama kartsız kullanılır (NVIDIA Driver kartı kullanım dışı).
 /// </summary>
 public sealed class SystemRequirementsChecker(Logger logger)
 {
@@ -57,13 +58,15 @@ public sealed class SystemRequirementsChecker(Logger logger)
         }
         else if (nvidiaNonRtx is not null)
         {
-            gpuText = $"{nvidiaNonRtx.Name} (RTX serisi değil – desteklenmiyor)";
-            logger.Error($"NVIDIA GPU bulundu ancak RTX serisi değil: {nvidiaNonRtx.Name}");
+            gpuText = $"{nvidiaNonRtx.Name} (RTX serisi değil)";
+            logger.Warning($"NVIDIA GPU bulundu ancak RTX serisi değil: {nvidiaNonRtx.Name}. NVIDIA Driver kartı kullanım dışı olacak.");
         }
         else
         {
-            gpuText = gpuError ?? (gpus.Count == 0 ? "Ekran kartı bulunamadı" : "NVIDIA GPU bulunamadı");
-            if (gpuError is null) logger.Error("NVIDIA RTX GPU bulunamadı.");
+            gpuText = gpuError ?? (gpus.Count == 0
+                ? "Ekran kartı bulunamadı"
+                : "NVIDIA ekran kartı yok (" + string.Join(", ", gpus.Select(g => g.Name)) + ")");
+            if (gpuError is null) logger.Warning("NVIDIA RTX GPU bulunamadı. NVIDIA Driver kartı kullanım dışı olacak.");
         }
 
         // --- Yönetici ---

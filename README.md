@@ -1,6 +1,9 @@
-# RTX Windows Updater
+# E-mre Hub
 
-Windows 11 + NVIDIA RTX bilgisayarlar için güncelleme ve bakım merkezi. Winget, Windows Update, Microsoft Store,
+> v1.3.0 ile uygulamanın adı **E-mre Hub** oldu (önceki adı: RTX Windows Updater).
+
+Windows 11 bilgisayarlar için güncelleme ve bakım merkezi (NVIDIA RTX ekran kartı için sürücü desteğiyle; RTX yoksa
+"kartsız mod" ile kullanılır). Winget, Windows Update, Microsoft Store,
 NVIDIA sürücüsü ve Microsoft Defender güncellemelerini **gerçek sistem verileriyle** kontrol eder,
 yalnızca kullanıcı onayıyla kurar, Windows geçici dosyalarını ve (onaylanırsa) Çöp Kutusu'nu temizler ve Windows'un
 kendi bakım araçlarını (SFC, DISM CheckHealth / onayla RestoreHealth, MRT hızlı tarama) çalıştırır.
@@ -14,7 +17,7 @@ kendi bakım araçlarını (SFC, DISM CheckHealth / onayla RestoreHealth, MRT h�
   (gerçek komut, çıkış kodu, stdout/stderr, süre), Son İşlem özeti, işlem geçmişi, Windows bildirimleri ve Log Yönetimi.
 
 - Teknoloji: C# / .NET 8 / WPF, MVVM
-- Çıktı: `RTX Windows Updater.exe`: tek dosya, self-contained (hedef bilgisayarda .NET kurulu olması gerekmez)
+- Çıktı: `E-mre Hub.exe`: tek dosya, self-contained (hedef bilgisayarda .NET kurulu olması gerekmez)
 - Arayüz: siyah / koyu lacivert, neon mavi vurgular, gölgeli kartlar, animasyonlar, Segoe Fluent ikonları (emoji yok)
 
 > Bu depo **özeldir (private)**. Yalnızca depo sahibinin davet ettiği kişiler erişebilir.
@@ -25,22 +28,26 @@ kendi bakım araçlarını (SFC, DISM CheckHealth / onayla RestoreHealth, MRT h�
 ## Hızlı başlangıç (arkadaşlar için)
 
 1. GitHub'dan gelen davet e-postasını kabul edin (veya https://github.com/Emrefb06 adresindeki depo davetini onaylayın).
-2. Deponun **Releases** bölümünden en son `RTX-Windows-Updater-vX.Y.Z.zip` dosyasını indirin.
-3. ZIP'i bir klasöre çıkarın ve `RTX Windows Updater.exe` dosyasına çift tıklayın.
+2. Deponun **Releases** bölümünden en son `E-mre-Hub-vX.Y.Z.zip` dosyasını indirin (v1.2.0 ve öncesinin paketleri
+   `RTX-Windows-Updater-vX.Y.Z.zip` adını taşır).
+3. ZIP'i bir klasöre çıkarın ve `E-mre Hub.exe` dosyasına çift tıklayın.
 4. **Windows SmartScreen uyarısı:** EXE dijital olarak imzalanmadığı için ilk açılışta
    "Windows kişisel bilgisayarınızı korudu" uyarısı çıkabilir. **Ek bilgi → Yine de çalıştır** seçin.
    (Bu, imzasız her uygulamada görülen normal bir uyarıdır; kaynak kodun tamamı bu depodadır.)
-5. Uygulama yönetici izni isteyecektir; UAC penceresinde **Evet** deyin.
+5. Uygulama yönetici izni isteyecektir; UAC penceresinde **Evet** deyin. (İzin vermezseniz uygulama açılır ama tüm kartlar
+   kullanım dışı olur; hiçbir kontrol veya güncelleme yapılamaz.)
 
-Gereksinimler: Windows 11 (derleme 22000+), NVIDIA GeForce RTX ekran kartı, internet bağlantısı, winget (Windows 11'de hazır gelir).
+Gereksinimler: Windows 11 (derleme 22000+, zorunlu), internet bağlantısı, winget (Windows 11'de hazır gelir).
+NVIDIA GeForce RTX ekran kartı önerilir. Kart yoksa, başka marka bir kart ya da RTX serisi olmayan bir NVIDIA kartı varsa
+uygulama **"Kartsız Devam Et"** ile kullanılabilir; yalnızca NVIDIA Driver kartı kullanım dışı olur (bkz. [Kartsız mod](#kartsız-mod-nvidia-rtx-yoksa)).
 
 ---
 
 ## 1. Klasör yapısı
 
 ```
-Desktop\E-mre_App\
-├── RTX Windows Updater.exe          ← Son uygulama (yerel derleme çıktısı; depoya konmaz)
+Desktop\E-mre_Hub\                   ← Proje klasörü (v1.3.0 öncesi adı: E-mre_App)
+├── E-mre Hub.exe                    ← Son uygulama (yerel derleme çıktısı; depoya konmaz)
 ├── README.md
 ├── .gitignore / .gitattributes
 ├── .github\workflows\release.yml    ← Etiket gönderilince EXE'yi derleyip Releases'a ekler
@@ -52,10 +59,11 @@ Desktop\E-mre_App\
 │   └── Build-Exe.ps1                ← Tek komutla EXE üretimi
 ├── build\publish\                   ← dotnet publish ara çıktısı (depoya konmaz)
 └── src\RtxWindowsUpdater\
-    ├── RtxWindowsUpdater.csproj     ← Proje, ikon, tek dosya yayın ayarları
+    ├── RtxWindowsUpdater.csproj     ← Proje, ikon, tek dosya yayın ayarları (iç proje adı eski addan kaldı; EXE adı AssemblyName'den)
     ├── app.manifest                 ← UAC / DPI / Windows 10-11 bildirimi
     ├── App.xaml(.cs)                ← Giriş noktası, global hata yakalama, argümanlar
     ├── Core\
+    │   ├── AppInfo.cs               ← Uygulama adı (E-mre Hub), veri klasörü, sürüm
     │   ├── Logger.cs                ← Thread-safe günlük (arayüz + dosya)
     │   ├── ProcessRunner.cs         ← Harici komut çalıştırma: stdout/stderr, zaman aşımı, süreç ağacını sonlandırma
     │   ├── CmdCommand.cs            ← Güvenli cmd.exe komut satırı (tırnaklama + tehlikeli karakter reddi)
@@ -114,14 +122,14 @@ EXE self-contained yayımlandığı için **kullanıcı bilgisayarında .NET kur
 
 ## 4. Derleme ve EXE üretimi
 
-Tek komut (E-mre_App klasöründe):
+Tek komut (proje klasöründe, ör. `E-mre_Hub`):
 
 ```bash
 powershell -ExecutionPolicy Bypass -File .\tools\Build-Exe.ps1
 ```
 
 Betik şunları yapar: .NET 8 SDK'yı bulur, ICO yoksa üretir, aşağıdaki komutu çalıştırır ve EXE'yi
-`E-mre_App\RTX Windows Updater.exe` konumuna kopyalar.
+proje klasörüne `E-mre Hub.exe` olarak kopyalar (klasörün adı önemli değildir).
 
 Elle:
 
@@ -136,27 +144,28 @@ dotnet publish src\RtxWindowsUpdater\RtxWindowsUpdater.csproj -c Release -r win-
 Kaynaktan derlemek için (depoya erişimi olan herkes):
 
 ```bash
-git clone https://github.com/Emrefb06/RTX-Windows-Updater.git E-mre_App
+git clone https://github.com/Emrefb06/RTX-Windows-Updater.git E-mre_Hub
 ```
 
-Ardından `E-mre_App` klasöründe `tools\Build-Exe.ps1` çalıştırılır.
+Ardından `E-mre_Hub` klasöründe `tools\Build-Exe.ps1` çalıştırılır. (GitHub'daki depo adı `RTX-Windows-Updater` olarak kaldı;
+uygulamanın adı E-mre Hub'dır. Depo adı GitHub'da Settings → Repository name ile değiştirilirse eski adres otomatik yönlenir.)
 
 ### Yeni sürüm yayınlama (depo sahibi)
 
-1. `src\RtxWindowsUpdater\RtxWindowsUpdater.csproj` içindeki `<Version>` değerini artırın (ör. `1.2.0`).
+1. `src\RtxWindowsUpdater\RtxWindowsUpdater.csproj` içindeki `<Version>` değerini artırın (ör. `1.3.0`).
 2. Değişiklikleri commit'leyip gönderin, ardından etiket oluşturun:
 
 ```bash
-git tag v1.2.0
+git tag v1.3.0
 ```
 
 ```bash
-git push origin v1.2.0
+git push origin v1.3.0
 ```
 
 3. GitHub Actions (`.github/workflows/release.yml`) EXE'yi Windows sunucusunda derler ve
-   `RTX-Windows-Updater-v1.2.0.zip` olarak **Releases** sayfasına ekler. Davetli arkadaşlar oradan indirir.
-   Etiketteki sürüm (v1.2.0) EXE'nin sürümü olarak kullanılır; csproj'daki `<Version>` ile aynı olmalıdır.
+   `E-mre-Hub-v1.3.0.zip` olarak **Releases** sayfasına ekler. Davetli arkadaşlar oradan indirir.
+   Etiketteki sürüm (v1.3.0) EXE'nin sürümü olarak kullanılır; csproj'daki `<Version>` ile aynı olmalıdır.
 
 Not: Özel depolarda GitHub Actions ücretsiz planda aylık 2.000 dakika ile sınırlıdır (Windows dakikaları 2 kat sayılır);
 bir derleme yaklaşık 3-5 dakika sürer.
@@ -169,12 +178,14 @@ Davet edilen kişi daveti kabul ettikten sonra depoyu ve Releases'ı görebilir.
 ## 5. Yönetici izni (UAC) nasıl çalışır
 
 - `app.manifest` → `asInvoker`. Uygulama normal kullanıcı olarak açılır, gereksinimleri gösterir.
-- Windows 11 + RTX uygunsa ve yönetici değilse, uygulama **neden gerektiğini açıklayan** bir pencere gösterir.
+- Windows 11 uygunsa (RTX olsun olmasın) ve yönetici değilse, uygulama **neden gerektiğini açıklayan** bir pencere gösterir.
   Kullanıcı onaylarsa `AdminPrivilegeManager` kendini `Verb = "runas"` ile yeniden başlatır → Windows'un
   "Bu uygulamanın cihazınızda değişiklik yapmasına izin veriyor musunuz?" UAC penceresi açılır.
 - Aynı anda yalnızca bir örnek çalışır (tek örnek kilidi); iki pencerenin aynı anda güncelleme yapması engellenir.
 - UAC reddedilirse (Win32 hata 1223) uygulama kapanmaz: "Yönetici izni reddedildi" gösterilir, hiçbir değişiklik yapılmaz.
-  "Tümünü Kontrol Et" ve diğer işlem butonları yönetici değilken tekrar izin ister.
+- **Yönetici yetkisi olmadan uygulamaya girilebilir ama 10 kartın tamamı "Kullanım dışı" olur** (kart butonları, seçim kutuları,
+  "Tümünü / Seçilenleri Kontrol Et" ve güncelleme butonları kapalı). İşlemler panelinde bir uyarı ve **"Yönetici olarak yeniden başlat"**
+  butonu çıkar; uygulama UAC onayıyla yönetici olarak yeniden açılır ve doğrudan ana ekrana döner.
 - `requireAdministrator` bilinçli olarak kullanılmadı: red durumunda Windows uygulamayı hiç açmaz ve kullanıcıya
   açıklama gösterilemezdi. UAC hiçbir şekilde atlatılmaz.
 
@@ -231,7 +242,7 @@ zaman; "Tümünü Güncelle" / "Seçilenleri Güncelle" sonunda ve (otomatik gü
 | **Winget** | `winget upgrade --source winget` + `winget list --source winget` (güncel paketler). Metin tablosu başlık konumlarından ayrıştırılır (Türkçe/İngilizce çıktıda çalışır). | Kontrolde bulunan liste kullanılır (yeniden liste sorgusu yok); her paket tek tek: `winget upgrade --id <Id> --exact --source <kaynak> --silent --accept-package-agreements`. Sonuç winget'in resmi dönüş kodlarına göre **paket bazında** yorumlanır: paket adı, mevcut → yeni sürüm, Türkçe açıklama, kurulum programının gerçek çıkış kodu (ör. "Installer failed with exit code: 6"), winget kodu + sembolü ve winget'in kendi mesajı. `0x8A15008E` (kurulum teknolojisi farklı) başarısız sayılır; bu paket/sürüm `state.json`'a kaydedilir ve tekrar listelendiğinde (uygulama yeniden açılsa da) otomatik güncellemeye alınmaz, manuel "kaldır + yeniden kur" seçeneği olarak sunulur. Yalnızca `0x8A150109 / 0x8A15010B` "güncellendi – yeniden başlatma gerekli" sayılır. Ardından TEK bir `winget upgrade --source <kaynak>` ile doğrulanır; hâlâ listelenen paket "doğrulanamadı" olur (winget 0 döndürse bile) ve dosyalarını kullanan çalışan uygulama varsa "kapat ve tekrar dene" sunulur. "Açık hedefleme gerekli" (sabitlenmiş) paketler otomatik güncellenmez ve güncelleme sayısına katılmaz; kartta "Otomatik uygulanabilir: N / Manuel: M" olarak ayrı gösterilir. Paket bazlı sonuç (durum, neden, kod + sembol, kurulum programı çıkış kodu, winget mesajı, engelleyen uygulamalar) Detaylı Sonuç panelinde listelenir. Çalışan uygulama nedeniyle başarısız olan paketler onayla yeniden denenebilir (yukarıya bakın). |
 | **Windows Update** | Resmi Windows Update Agent COM API'si: `Microsoft.Update.Session` → `UpdateSearcher.Search("IsInstalled=0 and IsHidden=0 and Type='Software' and BrowseOnly=0")`. Servis devre dışıysa yalnızca raporlanır (ayar değiştirilmez). Bekleyen yeniden başlatma `Microsoft.Update.SystemInfo` ile okunur. | Aynı güncellemeler yeniden doğrulanır → `UpdateDownloader` → `UpdateInstaller`. Güncelleme bazında sonuç kodu ve HRESULT gösterilir. **Otomatik yeniden başlatma yok.** |
 | **Microsoft Store** | Store uygulamasının varlığı (`Get-AppxPackage`) + `winget upgrade --source msstore`. | Paketler winget ile tek tek güncellenir, ardından Store'un kendi taraması `MDM_EnterpriseModernAppManagement_AppManagement01.UpdateScanMethod` ile tetiklenir. |
-| **NVIDIA** | GPU: WMI. Kurulu sürücü: `nvidia-smi` (yoksa WMI sürümünden hesap). NVIDIA App: kayıt defterinden tespit (bilgi). En son sürücü: nvidia.com sürücü sayfasının kullandığı resmi NVIDIA servisleri (`lookupValueSearch.aspx` + `AjaxDriverService DriverManualLookup`, WHQL, DCH, Windows 11). | Yalnızca `https://*.download.nvidia.com` adresinden indirilir, disk alanı kontrol edilir, **Authenticode imzası doğrulanır (NVIDIA Corporation olmalı)**, `-s -noreboot` ile kurulur, ardından sürüm `nvidia-smi` ile yeniden okunarak doğrulanır. |
+| **NVIDIA** | GPU: WMI. Kurulu sürücü: `nvidia-smi` (yoksa WMI sürümünden hesap). NVIDIA App: kayıt defterinden tespit (bilgi). En son sürücü: nvidia.com sürücü sayfasının kullandığı resmi NVIDIA servisleri (`lookupValueSearch.aspx` + `AjaxDriverService DriverManualLookup`, WHQL, DCH, Windows 11). | Yalnızca `https://*.download.nvidia.com` adresinden indirilir, disk alanı kontrol edilir, **Authenticode imzası doğrulanır (NVIDIA Corporation olmalı)**, `-s -noreboot` ile kurulur, ardından sürüm `nvidia-smi` ile yeniden okunarak doğrulanır. Kurulum dosyası `%ProgramData%\E-mre Hub\Downloads` klasörüne indirilir ve işlem bitince (başarılı ya da değil) silinir. Kartsız modda bu kart hiç çalışmaz. |
 | **Defender** | `Get-MpComputerStatus` + Microsoft'un resmi Defender sürüm servisi (`microsoft.com/security/encyclopedia/adlpackages.aspx?action=info&arch=x64`) ile gerçek karşılaştırma. | `Update-MpSignature` (başarısızsa MicrosoftUpdateServer, ardından MMPC kaynağı). Sürüm yeniden okunarak doğrulanır. Defender ayarlarına dokunulmaz. |
 | **Windows Geçici Dosyalar** | Ayarlar → Sistem → Depolama → Geçici dosyalar'daki güvenli kategorilerin gerçek konumları ölçülür: Kullanıcı geçici dosyaları (`%TEMP%`, .NET tek dosya çalışma klasörü hariç), Windows geçici dosyaları (`%WINDIR%\Temp`), Teslim En İyileştirme önbelleği (resmi `Get-DeliveryOptimizationStatus` / `Get-DOConfig` + önbellek klasörünün diskteki gerçek boyutu), Windows hata raporlama dosyaları (`WER\ReportArchive`, `ReportQueue`), DirectX gölgelendirici önbelleği (`%LOCALAPPDATA%\D3DSCache`). Her kategori için ayrı ayrı **Ölçülen**, **Temizlenebilir** ve **Korunan** hesaplanır. Temizlenebilir: 24 saatten uzun süredir değişmemiş, sistem/salt okunur olmayan dosyalar; Teslim En İyileştirme'de Windows'un sabitlemediği (IsPinned) ve etkin indirmede olmayan önbellek. Korunan alan (son 24 saat, salt okunur/sistem, sabitlenmiş/etkin önbellek, bir önceki temizlikte Windows'un silmediği önbellek) asla "temizlenebilir" sayılmaz ve kartta "Ek olarak X korunuyor" diye ayrı yazılır. Bağlantı noktaları izlenmez. Okunamayan konum "0 bayt" değil "Okunamadı" olarak raporlanır. Sonuç: "Temizlenebilir: X" veya "Temizlenecek geçici dosya bulunamadı". | Onay penceresinde tahmini alan ve kategori kutuları (varsayılan işaretli, seçili toplam canlı hesaplanır). Yalnızca işaretli kategoriler temizlenir; kullanımdaki dosyalar atlanır, kök klasörler ve son 24 saatte oluşturulmuş klasörler silinmez; Teslim En İyileştirme için Windows'un resmi `Delete-DeliveryOptimizationCache -Force` komutu (sabitlenmiş dosyalar silinmez; `-IncludePinnedFiles` kullanılmaz). Temizlikten sonra TÜM kategoriler dosya sisteminden yeniden ölçülür (silme komutunun kendi bildirimi sonuç sayılmaz): **Önce / Sonra / Temizlenen / Kalan / Kullanımda-atlanan / Korunan**. Kullanımdaki dosyalar kaldıysa sonuç "Kısmen temizlendi" (uyarı) olur. Çöp Kutusu bu hesaba dahil değildir. |
 | **Çöp Kutusu** | `SHQueryRecycleBin` (tüm sürücüler). | Yalnızca onayla `SHEmptyRecycleBin`; sonra yeniden sayılarak doğrulanır. |
@@ -244,15 +255,17 @@ Geçici Dosyalar → Çöp Kutusu. (DISM, SFC'den önce çalışır: Microsoft'u
 
 Her modül bağımsızdır; biri başarısız olursa diğerleri devam eder. Durumlar: Güncel / Sağlıklı, Güncelleme mevcut,
 Güncellendi, Kısmen güncellendi, Dikkat (ör. yalnızca manuel güncellemesi olan winget), Yeniden başlatma gerekli, Yönetici izni gerekli,
-Kontrol edilemedi, Başarısız, Atlandı.
+Kontrol edilemedi, Başarısız, Atlandı, Kullanım dışı (RTX ekran kartı yoksa NVIDIA Driver; yönetici yetkisi yoksa tüm kartlar).
 Hiçbir hata başarılı gibi gösterilmez; nedeni kartta, sonuç ekranında ve günlükte yazar.
 
 ## 7. Kullanım
 
-1. `Desktop\E-mre_App\RTX Windows Updater.exe` dosyasına çift tıklayın.
-2. Sistem gereksinimleri (Windows 11, NVIDIA RTX, yönetici) kontrol edilir. Uygun değilse devam edilemez.
-3. Yönetici izni penceresinde "Yönetici olarak başlat" → UAC'de "Evet".
-4. "Gereksinimleri kabul ediyorum" → "Devam Et".
+1. `E-mre Hub.exe` dosyasına çift tıklayın (kendi derlemenizde: `Desktop\E-mre_Hub\E-mre Hub.exe`).
+2. Sistem gereksinimleri (Windows 11, NVIDIA RTX, yönetici) kontrol edilir. Windows 11 değilse uygulama kullanılamaz
+   (devam edilemez). NVIDIA RTX ekran kartı yoksa GPU satırı turuncu uyarı olur ve devam butonu "Kartsız Devam Et" olarak görünür.
+3. Yönetici izni penceresinde "Yönetici olarak başlat" → UAC'de "Evet". "Şimdi değil" derseniz de girebilirsiniz ama tüm kartlar
+   kullanım dışı olur; sonradan İşlemler panelindeki "Yönetici olarak yeniden başlat" ile yetki verebilirsiniz.
+4. "Gereksinimleri kabul ediyorum" → "Devam Et" (RTX ekran kartı yoksa "Kartsız Devam Et").
 5. **Tümü:** "Tümünü Kontrol Et" tüm kartları kontrol eder (seçimlere bakılmaz). SFC doğrulaması ve MRT hızlı taraması
    birkaç dakika ile yarım saat arasında sürebilir.
 6. **Seçilenler:** Kartların sağ üstündeki seçim kutularını işaretleyin (seçili kart neon çerçeveyle gösterilir, üstte
@@ -287,20 +300,46 @@ Hiçbir hata başarılı gibi gösterilmez; nedeni kartta, sonuç ekranında ve 
    (kapatılacak ve kapatılmayacak işlemler ayrı listelenir). "İşlem Tamamlandı" ekranı her bileşenin gerçek sonucunu gösterir. Yeniden başlatma gerekiyorsa
    "Yeniden başlat" butonu çıkar; onaylarsanız 60 saniye sonra yeniden başlar (`shutdown /a` ile iptal edilebilir).
 
-Günlük dosyaları: `%LOCALAPPDATA%\RTX Windows Updater\Logs\` (arayüzde "Log dosyası" butonu).
+### Kartsız mod (NVIDIA RTX yoksa)
+
+- **Windows 11 zorunludur.** Windows 11 değilse gereksinim sayfasında "Bu uygulama bu sistem için desteklenmiyor" uyarısı
+  çıkar, devam butonları kapalıdır ve uygulamanın hiçbir işlemi kullanılamaz.
+- Windows 11 uygun ama ekran kartı bulunamadıysa, başka marka (Intel / AMD) bir kart ya da RTX serisi olmayan bir NVIDIA
+  kartı (ör. GTX) varsa uygulama engellenmez: GPU satırı algılanan kartla birlikte turuncu uyarı olarak gösterilir ve
+  "Kartsız Devam Et" butonu çıkar ("Gereksinimleri kabul ediyorum" işaretlenmelidir).
+- Kartsız modda **NVIDIA Driver kartı "Kullanım dışı"** olur: kartın butonu ve seçim kutusu kapalıdır; "Tümünü Kontrol Et",
+  "Tümünü Güncelle" ve seçili işlemler bu kartı hiç çalıştırmaz (günlüğe "bu sistemde kullanım dışı, kontrol edilmedi" yazılır).
+  Yönetici yetkisiyle diğer 9 kart normal çalışır (yönetici yetkisi yoksa tüm kartlar kullanım dışıdır, aşağıya bakın).
+- Sistem Sağlık Özeti bu kartı "çalıştırılmadı" saymaz, "1 kullanım dışı" olarak ayrıca gösterir; başlık altında
+  "Windows 11 · kartsız mod" yazar. Sistem Bilgileri'nde NVIDIA alanları "NVIDIA ekran kartı yok" gösterir
+  (RTX olmayan NVIDIA kartında gerçek model ve sürücü sürümü gösterilir).
+
+### Yönetici yetkisi olmadan
+
+- Uygulama normal kullanıcı olarak açılır ve yönetici iznini neden istediğini açıklar. İzin verilmezse ana ekrana yine girilebilir,
+  ancak **10 kartın tamamı "Kullanım dışı"** olur (kartta neden: "Yönetici yetkisi yok…"). RTX ekran kartı da yoksa NVIDIA Driver
+  kartında iki neden birlikte yazar.
+- "Tümünü Kontrol Et", "Seçilenleri Kontrol Et", güncelleme butonları, kart butonları ve seçim kutuları kapalıdır; Sistem Sağlık Özeti
+  "Yönetici yetkisi yok – tüm işlemler kullanım dışı" gösterir. Sistem Bilgileri, geçmiş sonuçlar (Detaylı Sonuç) ve günlük yine görüntülenebilir.
+- İşlemler panelindeki **"Yönetici olarak yeniden başlat"** uygulamayı UAC onayıyla yönetici olarak yeniden açar. Yetki yalnızca
+  bu yolla alınır; UAC hiçbir şekilde atlatılmaz.
+
+Günlük dosyaları: `%LOCALAPPDATA%\E-mre Hub\Logs\` (arayüzde "Log dosyası" butonu). v1.3.0 öncesi günlükler eski
+`%LOCALAPPDATA%\RTX Windows Updater\Logs\` klasöründe kalır (silinmez).
 
 ### Sistem Sağlık Özeti, Sistem Bilgileri ve işlem geçmişi
 
 - **Sistem Sağlık Özeti** (ana ekranın üstünde) yalnızca kartların bu oturumdaki GERÇEK durumlarından hesaplanır:
   çalıştırılmamış kartlar "Kontrol edilmedi" olarak kalır ve sağlıklı sayılmaz; hata ve bekleyen güncellemeler gizlenmez.
-  Genel durum, sorunsuz / güncelleme-uyarı / hata / çalıştırılmadı sayılarıyla birlikte gösterilir.
+  Genel durum, sorunsuz / güncelleme-uyarı / hata / çalıştırılmadı (varsa kullanım dışı) sayılarıyla birlikte gösterilir.
 - **Son İşlem**: her işlem bitince gerçek sonuçlardan hesaplanan kısa özet. Kontrol: "10 kontrol tamamlandı · 3 güncelleme
   bulundu (Winget 2, Microsoft Defender 1) · 1 manuel güncelleme (otomatik uygulanmaz) · 1 uyarı · 0 hata · …".
   Güncelleme: "4 işlem · 2 başarılı · 1 uyarı · 1 hata · Winget: 2 paket güncellenemedi · Süre: 21 sn".
   Tüm işlemler "Son İşlemler" sekmesinde listelenir (son 50).
 - **Sistem Bilgileri** (açılır/kapanır): işletim sistemi, Windows sürümü ve build, CPU, RAM, GPU, NVIDIA GPU modeli ve
   sürücü sürümü, mimari, bilgisayar adı, disk, boş/toplam alan, çalışma süresi. Alınamayan alan "Bilgi alınamadı" yazar
-  ve nedeni günlüğe düşer. Değişmeyen bilgiler (işletim sistemi, CPU, RAM, GPU) oturumda bir kez okunur; "Yenile" butonu
+  ve nedeni günlüğe düşer (NVIDIA kartı olmayan sistemde NVIDIA alanları okuma hatası değil "NVIDIA ekran kartı yok"
+  olarak gösterilir). Değişmeyen bilgiler (işletim sistemi, CPU, RAM, GPU) oturumda bir kez okunur; "Yenile" butonu
   yalnızca sürücü sürümü, disk alanı ve çalışma süresini yeniden okur. Ekran kartı listesi (WMI) gereksinim kontrolü,
   Sistem Bilgileri ve NVIDIA kartı arasında paylaşılır; yönetici yetkisi açılışta bir kez doğrulanır.
 - **Son çalıştırılma**: her kartta "Son kontrol / Son tarama / Son güncelleme: tarih saat" (gerçek bitiş zamanı).
@@ -308,7 +347,8 @@ Günlük dosyaları: `%LOCALAPPDATA%\RTX Windows Updater\Logs\` (arayüzde "Log 
 - **Detaylı Sonuç** (kartın liste ikonlu butonu): işlem türü, bitiş zamanı, çalışma süresi, çalıştırılan her komut
   (komut satırı, Exit Code, süre, stdout, stderr), Windows API / NVIDIA / Microsoft servis yanıtları ve öğe tablosu.
   Elde edilmeyen bilgi "Bilgi alınamadı" olarak gösterilir.
-- Geçmiş dosyası: `%LOCALAPPDATA%\RTX Windows Updater\state.json`.
+- Geçmiş dosyası: `%LOCALAPPDATA%\E-mre Hub\state.json`. Yeni klasörde geçmiş yoksa önceki sürümün
+  `%LOCALAPPDATA%\RTX Windows Updater\state.json` dosyası ilk açılışta bir kez kopyalanır (eski dosya silinmez).
 
 ### Windows bildirimleri
 
@@ -323,7 +363,7 @@ Günlük dosyaları: `%LOCALAPPDATA%\RTX Windows Updater\Logs\` (arayüzde "Log 
 - Günlük satırları `[saat] [INFO|SUCCESS|WARNING|ERROR] mesaj` biçimindedir; dosyaya arka planda yazılır (arayüz beklemez).
 - Filtreler (Tümü / Bilgi / Başarılı / Uyarı / Hata) yalnızca görünümü değiştirir; kayıtlar silinmez.
 - "Logları Temizle" yalnızca ekranı temizler, günlük dosyası korunur. "Dışa Aktar" gerçek oturum günlüğünü seçtiğiniz konuma
-  `RTX-Windows-Updater-Log-YYYY-AA-GG.txt` olarak kopyalar. "Log dosyası" dosyayı, "Klasör" günlük klasörünü açar.
+  `E-mre-Hub-Log-YYYY-AA-GG.txt` olarak kopyalar. "Log dosyası" dosyayı, "Klasör" günlük klasörünü açar.
 
 ## 8. Bilinen sınırlamalar
 
@@ -362,6 +402,22 @@ Günlük dosyaları: `%LOCALAPPDATA%\RTX Windows Updater\Logs\` (arayüzde "Log 
   kullanılırsa o yönetici hesabının çöp kutusu olur).
 
 ## Sürüm geçmişi
+
+### v1.3.0
+
+**Yeni**
+- **Yeni ad: E-mre Hub.** EXE `E-mre Hub.exe`, Releases paketi `E-mre-Hub-vX.Y.Z.zip`. Veriler artık
+  `%LOCALAPPDATA%\E-mre Hub` altında; önceki sürümün işlem geçmişi ilk açılışta otomatik kopyalanır, eski klasör silinmez.
+- **Kartsız mod:** NVIDIA RTX ekran kartı olmayan (kart yok, başka marka veya RTX olmayan NVIDIA) Windows 11 bilgisayarlarda
+  uygulama "Kartsız Devam Et" ile kullanılabilir; yalnızca NVIDIA Driver kartı "Kullanım dışı" olur (seçilemez, çalıştırılamaz,
+  toplu işlemlere girmez). Diğer 9 kart normal çalışır. Windows 11 zorunlu kalır: değilse uygulama hiç kullanılamaz.
+- **Yönetici yetkisi olmadan giriş:** UAC izni verilmezse uygulamaya girilebilir ama 10 kartın tamamı "Kullanım dışı" olur ve toplu
+  kontrol/güncelleme butonları kapanır. İşlemler panelinde "Yönetici olarak yeniden başlat" butonu çıkar.
+
+**İyileştirmeler**
+- RTX bulunamaması artık hata değil uyarı olarak gösterilir ve günlüğe yazılır; algılanan gerçek ekran kartı gösterilir.
+- Sistem Sağlık Özeti kullanım dışı kartı "çalıştırılmadı" saymaz, ayrıca "N kullanım dışı" olarak gösterir.
+- Sistem Bilgileri: NVIDIA kartı olmayan sistemde NVIDIA alanları "Bilgi alınamadı" yerine "NVIDIA ekran kartı yok" gösterir.
 
 ### v1.2.0
 
@@ -406,6 +462,7 @@ Günlük dosyaları: `%LOCALAPPDATA%\RTX Windows Updater\Logs\` (arayüzde "Log 
 - Geçici dosyalarda Windows'un sabitlediği Teslim En İyileştirme önbelleği "temizlenebilir" gösterilmez (önceden
   9,88 GB temizlenebilir deyip 1,66 GB temizleniyordu); okunamayan konum "0 bayt" yerine "Okunamadı" gösterilir.
 - İşlem bittiğinde ilerleme animasyonunun durmaması düzeltildi; iptal edilen işlem "hata" değil "iptal" olarak gösterilir.
+
 ### v1.1.0
 - Yeni sistem bakım kartları: Windows Sistem Dosyası Kontrolü (SFC /SCANNOW), Windows Image Sağlık Kontrolü
   (DISM /CheckHealth), Microsoft Kötü Amaçlı Yazılım Temizleme Aracı (MRT hızlı tarama). Canlı ilerleme ve gerçek sonuçlar.

@@ -15,8 +15,9 @@ namespace RtxWindowsUpdater.Services;
 /// </summary>
 public sealed class NotificationService(Logger logger)
 {
+    // Kimlik bilinçli olarak değiştirilmedi (ad değişikliğinde Windows'taki bildirim ayarı korunur); görünen ad her açılışta yazılır.
     public const string AppId = "E-mre.RTXWindowsUpdater";
-    public const string DisplayName = "RTX Windows Updater";
+    public const string DisplayName = AppInfo.Name;
 
     private bool _registered;
 

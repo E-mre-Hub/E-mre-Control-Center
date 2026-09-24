@@ -157,7 +157,7 @@ public sealed class NvidiaDriverManager(Logger logger, HttpClient http) : IUpdat
         }
 
         var dir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData),
-            "RTX Windows Updater", "Downloads");
+            AppInfo.Name, "Downloads");
         var file = Path.Combine(dir, Path.GetFileName(uri.LocalPath));
 
         try

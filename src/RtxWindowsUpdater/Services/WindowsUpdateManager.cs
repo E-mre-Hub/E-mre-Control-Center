@@ -51,7 +51,7 @@ public sealed class WindowsUpdateManager(Logger logger) : IUpdateModule
         try { $pending = [bool](New-Object -ComObject Microsoft.Update.SystemInfo).RebootRequired } catch { }
 
         $session = New-Object -ComObject Microsoft.Update.Session
-        $session.ClientApplicationID = 'RTX Windows Updater'
+        $session.ClientApplicationID = 'E-mre Hub'
         $searcher = $session.CreateUpdateSearcher()
         $searcher.Online = $true
         Write-Log 'Microsoft Update sunucularında arama yapılıyor (birkaç dakika sürebilir)...'
@@ -78,7 +78,7 @@ public sealed class WindowsUpdateManager(Logger logger) : IUpdateModule
     private const string InstallScript = """
         $ids = @(); foreach ($x in (__IDS__ | ConvertFrom-Json)) { $ids += [string]$x }
         $session = New-Object -ComObject Microsoft.Update.Session
-        $session.ClientApplicationID = 'RTX Windows Updater'
+        $session.ClientApplicationID = 'E-mre Hub'
         $searcher = $session.CreateUpdateSearcher()
         $searcher.Online = $true
         Write-Log 'Güncellemeler Microsoft Update üzerinde yeniden doğrulanıyor...'

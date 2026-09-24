@@ -12,6 +12,7 @@ namespace RtxWindowsUpdater;
 
 public partial class App : Application
 {
+    // İç kimlik bilinçli olarak eski adla aynı kaldı: eski sürüm (RTX Windows Updater) ile E-mre Hub aynı anda çalışamaz.
     private const string SingleInstanceMutexName = @"Local\RTXWindowsUpdater.SingleInstance";
 
     private Logger? _logger;
@@ -27,7 +28,7 @@ public partial class App : Application
         var relaunched = e.Args.Contains(AdminPrivilegeManager.ArgElevated, StringComparer.OrdinalIgnoreCase);
         if (!TryAcquireSingleInstance(relaunched ? TimeSpan.FromSeconds(10) : TimeSpan.Zero))
         {
-            MessageBox.Show("RTX Windows Updater zaten çalışıyor.", "RTX Windows Updater",
+            MessageBox.Show(AppInfo.Name + " zaten çalışıyor.", AppInfo.Name,
                 MessageBoxButton.OK, MessageBoxImage.Information);
             Shutdown();
             return;
@@ -64,7 +65,7 @@ public partial class App : Application
         MessageBox.Show(
             "Beklenmeyen bir hata oluştu ve kaydedildi:\n\n" + e.Exception.Message +
             "\n\nUygulama çalışmaya devam edecek. Ayrıntılar için işlem günlüğüne bakın.",
-            "RTX Windows Updater", MessageBoxButton.OK, MessageBoxImage.Warning);
+            AppInfo.Name, MessageBoxButton.OK, MessageBoxImage.Warning);
         e.Handled = true;
     }
 
@@ -73,7 +74,7 @@ public partial class App : Application
     {
         try
         {
-            var dir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "RTX Windows Updater");
+            var dir = AppInfo.DataDirectory;
             Directory.CreateDirectory(dir);
             var target = Path.Combine(dir, "notification-icon.png");
             var info = GetResourceStream(new Uri("pack://application:,,,/Assets/E-mreLogo.jpg"));

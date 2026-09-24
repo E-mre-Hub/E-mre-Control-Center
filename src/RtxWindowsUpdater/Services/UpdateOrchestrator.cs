@@ -43,7 +43,7 @@ public sealed class UpdateOrchestrator : IDisposable
     {
         _logger = logger;
         _http = new HttpClient { Timeout = Timeout.InfiniteTimeSpan };
-        _http.DefaultRequestHeaders.UserAgent.ParseAdd("Mozilla/5.0 (Windows NT 10.0; Win64; x64) RTXWindowsUpdater/1.1");
+        _http.DefaultRequestHeaders.UserAgent.ParseAdd("Mozilla/5.0 (Windows NT 10.0; Win64; x64) E-mreHub/" + AppInfo.Version);
 
         Modules =
         [
@@ -64,6 +64,23 @@ public sealed class UpdateOrchestrator : IDisposable
         foreach (var m in Modules.OfType<IProgressReportingModule>())
             m.ProgressChanged += p => _activity?.Report(p);
     }
+
+    /// <summary>Bu sistemde kullanım dışı modüller (ör. RTX yoksa NVIDIA). Hiçbir kontrol / güncelleme akışına girmez.</summary>
+    private readonly HashSet<string> _unavailable = [];
+
+    public void SetUnavailable(string key)
+    {
+        lock (_unavailable) _unavailable.Add(key);
+    }
+
+    public bool IsUnavailable(string key)
+    {
+        lock (_unavailable) return _unavailable.Contains(key);
+    }
+
+    /// <summary>Anahtarlardaki modüller, güvenli işlem sırasıyla ve kullanım dışı olanlar hariç.</summary>
+    private List<IUpdateModule> AvailableModules(IReadOnlyCollection<string> keys) =>
+        Modules.Where(m => keys.Contains(m.Key) && !IsUnavailable(m.Key)).ToList();
 
     public IUpdateModule? Find(string key) => Modules.FirstOrDefault(m => m.Key == key);
 
@@ -138,7 +155,7 @@ public sealed class UpdateOrchestrator : IDisposable
     {
         var selectedMode = mode == RunMode.Selected;
         var results = new Dictionary<string, ModuleResult>();
-        var targets = Modules.Where(m => keys.Contains(m.Key)).ToList();
+        var targets = AvailableModules(keys);
         if (targets.Count == 0) return results;
 
         _activity = rep.Activity;
@@ -148,6 +165,8 @@ public sealed class UpdateOrchestrator : IDisposable
             if (selectedMode) LogSelection(keys, "Seçilen işlemler hazırlanıyor...");
             else if (mode == RunMode.Single) _logger.Info($"{targets[0].DisplayName}: kontrol başlatıldı.");
             else _logger.Info("Tüm kartların kontrolü başlatıldı.");
+            foreach (var k in keys.Where(IsUnavailable))
+                _logger.Info($"{NameOf(k)}: bu sistemde kullanım dışı, kontrol edilmedi.");
 
             rep.Step.Report(new StepProgress("Yönetici izinleri kontrol ediliyor...", 4));
             if (!AdminPrivilegeManager.IsElevated)
@@ -255,7 +274,7 @@ public sealed class UpdateOrchestrator : IDisposable
         if (selectedMode) LogSelection(keys, "Seçilen işlemler hazırlanıyor...");
 
         var targets = new List<IUpdateModule>();
-        foreach (var m in Modules.Where(m => keys.Contains(m.Key)))
+        foreach (var m in AvailableModules(keys))
         {
             if (!checks.TryGetValue(m.Key, out var c))
             {

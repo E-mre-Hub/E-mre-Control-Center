@@ -66,6 +66,8 @@ public sealed class MainViewModel : ObservableObject, IDisposable
     private bool _isAdmin;
     private bool _accepted;
     private string _unsupportedMessage = string.Empty;
+    private bool _hasRtx = true; // gereksinim kontrolü bitene kadar "kartsız" seçeneği gösterilmez
+    private string _noRtxMessage = string.Empty;
     private bool _isBusy;
     private bool _isUpdatePhase;
     private string _stepText = "Henüz işlem yapılmadı";
@@ -215,7 +217,7 @@ public sealed class MainViewModel : ObservableObject, IDisposable
             card.SelectionChangedCallback = (key, selected) => _selection.SetSelected(key, selected);
             card.ActionCommand = new AsyncCommand(
                 () => c.IsMaintenance ? RunMaintenanceAsync(c) : RunCardCheckAsync(c),
-                () => !IsBusy && IsSupported, OnCommandError);
+                () => !IsBusy && IsSupported && !c.IsUnavailable, OnCommandError);
             card.DetailsCommand = new RelayCommand(() => Detail.Show(c));
             if (_state.State.Cards.TryGetValue(card.Key, out var saved))
                 card.LoadHistory(saved);
@@ -233,10 +235,12 @@ public sealed class MainViewModel : ObservableObject, IDisposable
         LogsView.Filter = o => o is LogEntry e && PassesLogFilter(e);
         RecomputeHealth();
 
-        ContinueCommand = new RelayCommand(GoToDashboard, () => Accepted && IsSupported);
+        ContinueCommand = new RelayCommand(GoToDashboard, () => Accepted && IsSupported && HasRtx);
+        ContinueWithoutGpuCommand = new RelayCommand(GoToDashboard, () => Accepted && IsSupported && !HasRtx);
         ElevateCommand = new AsyncCommand(() => PromptElevationAsync(false), () => !IsAdmin && IsSupported, OnCommandError);
-        StartCheckCommand = new AsyncCommand(StartCheckAsync, () => !IsBusy && IsSupported, OnCommandError);
-        CheckSelectedCommand = new AsyncCommand(CheckSelectedAsync, () => !IsBusy && IsSupported, OnCommandError);
+        // Yönetici yetkisi yoksa tüm kartlar kullanım dışıdır; toplu kontrol butonları da kapalıdır (yalnızca yeniden başlatma sunulur).
+        StartCheckCommand = new AsyncCommand(StartCheckAsync, () => !IsBusy && IsSupported && IsAdmin, OnCommandError);
+        CheckSelectedCommand = new AsyncCommand(CheckSelectedAsync, () => !IsBusy && IsSupported && IsAdmin, OnCommandError);
         UpdateAllCommand = new AsyncCommand(UpdateAllAsync, () => CanUpdateAll, OnCommandError);
         UpdateSelectedCommand = new AsyncCommand(UpdateSelectedAsync, () => CanRunSelected, OnCommandError);
         ClearSelectionCommand = new RelayCommand(() => _selection.Clear(), () => _selection.HasSelection);
@@ -344,10 +348,45 @@ public sealed class MainViewModel : ObservableObject, IDisposable
     public bool RequirementsChecked { get => _requirementsChecked; private set => Set(ref _requirementsChecked, value); }
     public bool IsSupported { get => _isSupported; private set { Set(ref _isSupported, value); OnPropertyChanged(nameof(ShowUnsupported)); } }
     public bool ShowUnsupported => RequirementsChecked && !IsSupported;
-    public bool IsAdmin { get => _isAdmin; private set { Set(ref _isAdmin, value); OnPropertyChanged(nameof(ShowElevate)); } }
+    public bool IsAdmin
+    {
+        get => _isAdmin;
+        private set
+        {
+            Set(ref _isAdmin, value);
+            OnPropertyChanged(nameof(ShowElevate));
+            OnPropertyChanged(nameof(AvailableSummary));
+        }
+    }
+
+    /// <summary>Yönetici değil: gereksinim sayfasında ve ana ekranın İşlemler panelinde "yönetici olarak başlat" gösterilir.</summary>
     public bool ShowElevate => RequirementsChecked && IsSupported && !IsAdmin;
     public bool Accepted { get => _accepted; set => Set(ref _accepted, value); }
     public string UnsupportedMessage { get => _unsupportedMessage; private set => Set(ref _unsupportedMessage, value); }
+
+    /// <summary>NVIDIA RTX ekran kartı var mı? Yoksa uygulama "kartsız" kullanılır ve NVIDIA Driver kartı kullanım dışıdır.</summary>
+    public bool HasRtx
+    {
+        get => _hasRtx;
+        private set
+        {
+            if (!Set(ref _hasRtx, value)) return;
+            OnPropertyChanged(nameof(ShowNoRtx));
+            OnPropertyChanged(nameof(ShowContinue));
+            OnPropertyChanged(nameof(PlatformText));
+        }
+    }
+
+    /// <summary>Ana ekran başlığının altındaki platform satırı.</summary>
+    public string PlatformText => HasRtx ? "Windows 11 · NVIDIA RTX" : "Windows 11 · kartsız mod";
+
+    /// <summary>Windows 11 uygun ancak RTX yok: "Kartsız Devam Et" seçeneği gösterilir.</summary>
+    public bool ShowNoRtx => RequirementsChecked && IsSupported && !HasRtx;
+
+    /// <summary>Normal "Devam Et" butonu (RTX varsa ya da sistem desteklenmiyorsa – o durumda buton devre dışıdır).</summary>
+    public bool ShowContinue => !ShowNoRtx;
+
+    public string NoRtxMessage { get => _noRtxMessage; private set => Set(ref _noRtxMessage, value); }
 
     /// <summary>Bir işlem sürüyor mu? Yalnızca <see cref="SetBusy"/> ile değişir (işlem başı ve tek final geçişi).</summary>
     public bool IsBusy => _isBusy;
@@ -407,6 +446,8 @@ public sealed class MainViewModel : ObservableObject, IDisposable
     {
         get
         {
+            if (RequirementsChecked && !IsAdmin)
+                return "Yönetici yetkisi yok: tüm kartlar kullanım dışı. Kontrol ve güncelleme için uygulamayı yönetici olarak yeniden başlatın.";
             if (_checks.Count == 0)
                 return _updatesApplied
                     ? "İşlemler uygulandı. Yeni durum için yeniden kontrol edin."
@@ -433,10 +474,12 @@ public sealed class MainViewModel : ObservableObject, IDisposable
 
     public string LogFilePath => _logger.LogFilePath;
 
-    public string AppVersion { get; } = "v" + (System.Reflection.Assembly.GetExecutingAssembly()
-        .GetName().Version?.ToString(3) ?? "1.0.0");
+    public string AppName => AppInfo.Name;
+
+    public string AppVersion { get; } = "v" + AppInfo.Version;
 
     public ICommand ContinueCommand { get; }
+    public ICommand ContinueWithoutGpuCommand { get; }
     public ICommand ElevateCommand { get; }
     public ICommand StartCheckCommand { get; }
     public ICommand CheckSelectedCommand { get; }
@@ -455,7 +498,7 @@ public sealed class MainViewModel : ObservableObject, IDisposable
 
     public async Task InitializeAsync()
     {
-        _logger.Info("RTX Windows Updater başlatıldı.");
+        _logger.Info(AppInfo.Name + " v" + AppInfo.Version + " başlatıldı.");
         RequirementsResult req;
         try
         {
@@ -467,31 +510,7 @@ public sealed class MainViewModel : ObservableObject, IDisposable
             req = new RequirementsResult { Error = ex.Message, OsDescription = "Okunamadı", GpuDescription = "Okunamadı" };
         }
 
-        WindowsRow.State = req.IsWindows11 ? RequirementState.Ok : RequirementState.Failed;
-        WindowsRow.Detail = req.OsDescription;
-        GpuRow.State = req.HasRtxGpu ? RequirementState.Ok : RequirementState.Failed;
-        GpuRow.Detail = req.GpuDescription;
-        IsAdmin = req.IsAdministrator;
-        AdminRow.State = req.IsAdministrator ? RequirementState.Ok : RequirementState.Failed;
-        AdminRow.Detail = req.IsAdministrator ? "Yönetici olarak çalışıyor" : "Yönetici olarak çalışmıyor – UAC onayı gerekli";
-
-        IsSupported = req.IsSupported;
-        RequirementsChecked = true;
-        OnPropertyChanged(nameof(ShowUnsupported));
-        OnPropertyChanged(nameof(ShowElevate));
-
-        if (!req.IsSupported)
-        {
-            var reasons = new List<string>();
-            if (!req.IsWindows11) reasons.Add("Windows 11 gerekli (algılanan: " + req.OsDescription + ").");
-            if (!req.HasRtxGpu) reasons.Add("NVIDIA GeForce RTX serisi ekran kartı gerekli (algılanan: " + req.GpuDescription + ").");
-            UnsupportedMessage = "Bu uygulama bu sistem için desteklenmiyor.\n" + string.Join("\n", reasons);
-            _logger.Error("Sistem desteklenmiyor; devam edilemez.");
-            CommandManager.InvalidateRequerySuggested();
-            return;
-        }
-
-        CommandManager.InvalidateRequerySuggested();
+        if (!ApplyRequirements(req)) return;
 
         // Sistem bilgileri arka planda okunur; arayüz beklemez.
         _ = RefreshSystemInfoAsync();
@@ -509,11 +528,80 @@ public sealed class MainViewModel : ObservableObject, IDisposable
             await PromptElevationAsync(false);
     }
 
+    private const string NoAdminReason =
+        "Yönetici yetkisi yok. Kontrol ve güncelleme için uygulamayı \"Yönetici olarak yeniden başlat\" ile açın (UAC onayı).";
+
+    /// <summary>
+    /// Gereksinim kontrolünün gerçek sonucunu gereksinim sayfasına ve kartlara uygular. Windows 11 değilse false döner
+    /// (giriş engellenir). RTX yoksa uygulama engellenmez: NVIDIA Driver kartı ve modülü kullanım dışı yapılır.
+    /// Yönetici yetkisi yoksa uygulamaya girilebilir ama tüm kartlar kullanım dışıdır.
+    /// </summary>
+    private bool ApplyRequirements(RequirementsResult req)
+    {
+        WindowsRow.State = req.IsWindows11 ? RequirementState.Ok : RequirementState.Failed;
+        WindowsRow.Detail = req.OsDescription;
+        // RTX yoksa uygulama engellenmez: GPU satırı uyarı olur ve "Kartsız Devam Et" sunulur (yalnızca NVIDIA kartı kullanım dışı).
+        GpuRow.State = req.HasRtxGpu ? RequirementState.Ok : RequirementState.Warning;
+        GpuRow.Detail = req.GpuDescription;
+        IsAdmin = req.IsAdministrator;
+        AdminRow.State = req.IsAdministrator ? RequirementState.Ok : RequirementState.Failed;
+        AdminRow.Detail = req.IsAdministrator ? "Yönetici olarak çalışıyor" : "Yönetici olarak çalışmıyor – tüm kartlar kullanım dışı";
+
+        HasRtx = req.HasRtxGpu;
+        if (!req.HasRtxGpu)
+        {
+            NoRtxMessage = "NVIDIA GeForce RTX ekran kartı bulunamadı. Algılanan: " + req.GpuDescription + ".\n" +
+                           "Uygulamayı \"Kartsız Devam Et\" ile kullanabilirsiniz: NVIDIA Driver kartı kullanım dışı olur, " +
+                           "diğer tüm işlemler normal çalışır.";
+            var nvidia = Cards.First(c => c.Key == ComponentKeys.Nvidia);
+            nvidia.MarkUnavailable("NVIDIA GeForce RTX ekran kartı bulunamadı. Algılanan: " + req.GpuDescription + ". " +
+                                   "NVIDIA sürücü kontrolü ve güncellemesi yapılmaz.");
+            _orchestrator.SetUnavailable(ComponentKeys.Nvidia);
+            RecomputeHealth();
+        }
+
+        if (!req.IsAdministrator)
+        {
+            // Yönetici yetkisi olmadan hiçbir kontrol / güncelleme çalıştırılamaz: 10 kartın tamamı kullanım dışıdır.
+            // Yetki yalnızca "Yönetici olarak (yeniden) başlat" → UAC onayıyla alınır (yeni işlem; UAC atlatılmaz).
+            foreach (var card in Cards)
+            {
+                card.MarkUnavailable(NoAdminReason);
+                _orchestrator.SetUnavailable(card.Key);
+            }
+            RecomputeHealth();
+        }
+
+        IsSupported = req.IsSupported;
+        RequirementsChecked = true;
+        OnPropertyChanged(nameof(AvailableSummary));
+        OnPropertyChanged(nameof(ShowUnsupported));
+        OnPropertyChanged(nameof(ShowElevate));
+        OnPropertyChanged(nameof(ShowNoRtx));
+        OnPropertyChanged(nameof(ShowContinue));
+
+        if (!req.IsSupported)
+        {
+            // Windows 11 zorunludur: uygun değilse uygulamanın hiçbir işlemi kullanılamaz (giriş engellenir).
+            UnsupportedMessage = "Bu uygulama bu sistem için desteklenmiyor.\n" +
+                                 "Windows 11 gerekli (algılanan: " + req.OsDescription + "). Uygulamanın hiçbir işlemi kullanılamaz.";
+            _logger.Error("Sistem desteklenmiyor (Windows 11 değil); devam edilemez.");
+            CommandManager.InvalidateRequerySuggested();
+            return false;
+        }
+
+        CommandManager.InvalidateRequerySuggested();
+        return true;
+    }
+
     private void GoToDashboard()
     {
         if (!Accepted || !IsSupported) return;
         IsDashboard = true;
-        _logger.Info("Ana ekran açıldı.");
+        if (HasRtx) _logger.Info("Ana ekran açıldı.");
+        else _logger.Warning("Ana ekran kartsız açıldı: NVIDIA RTX ekran kartı yok, NVIDIA Driver kartı kullanım dışı.");
+        if (!IsAdmin)
+            _logger.Warning("Yönetici yetkisi yok: tüm kartlar kullanım dışı. Kontrol ve güncelleme için \"Yönetici olarak yeniden başlat\" kullanılmalı.");
     }
 
     // ------------------------------------------------------------------ elevation
@@ -522,7 +610,7 @@ public sealed class MainViewModel : ObservableObject, IDisposable
     {
         var ok = await Dialog.ShowAsync(
             "Yönetici izni gerekiyor",
-            "RTX Windows Updater; Windows Update, NVIDIA sürücüsü, uygulama ve Defender güncellemelerini kurabilmek, " +
+            AppInfo.Name + "; Windows Update, NVIDIA sürücüsü, uygulama ve Defender güncellemelerini kurabilmek, " +
             "SFC / DISM / MRT sistem bakım araçlarını çalıştırabilmek için yönetici yetkisine ihtiyaç duyar.\n\n" +
             "Devam ettiğinizde Windows, \"Bu uygulamanın cihazınızda değişiklik yapmasına izin veriyor musunuz?\" sorusunu soran UAC penceresini açacak. " +
             "Bu izin yalnızca sistem güncellemeleri ve bakım işlemleri için kullanılır. İzin vermezseniz sistemde hiçbir değişiklik yapılmaz.",
@@ -550,9 +638,10 @@ public sealed class MainViewModel : ObservableObject, IDisposable
                 break;
             case ElevationOutcome.Declined:
                 _logger.Error("Yönetici izni reddedildi. Sistem üzerinde değişiklik yapılmayacak.");
-                AdminRow.Detail = "UAC izni reddedildi – güncelleme yapılamaz";
+                AdminRow.Detail = "UAC izni reddedildi – tüm kartlar kullanım dışı";
                 await Dialog.ShowAsync("Yönetici izni reddedildi",
-                    "UAC penceresinde izin verilmedi. Uygulama güncellemeleri kontrol edip kuramaz; sistemde herhangi bir değişiklik yapılmadı.\n\n" +
+                    "UAC penceresinde izin verilmedi. Yönetici yetkisi olmadan uygulamaya girebilirsiniz ancak tüm kartlar kullanım dışı " +
+                    "olur; hiçbir kontrol veya güncelleme yapılamaz. Sistemde herhangi bir değişiklik yapılmadı.\n\n" +
                     "İstediğiniz zaman \"Yönetici olarak yeniden başlat\" butonuyla tekrar deneyebilirsiniz.",
                     Icons.Warning, DialogKind.Warning, "Tamam");
                 break;
@@ -1147,7 +1236,7 @@ public sealed class MainViewModel : ObservableObject, IDisposable
 
         var shutdown = Path.Combine(Environment.SystemDirectory, "shutdown.exe");
         var r = await ProcessRunner.RunCmdAsync(shutdown,
-            ["/r", "/t", "60", "/c", "RTX Windows Updater: Guncellemeleri tamamlamak icin yeniden baslatiliyor. Iptal icin: shutdown /a"],
+            ["/r", "/t", "60", "/c", AppInfo.Name + ": Guncellemeleri tamamlamak icin yeniden baslatiliyor. Iptal icin: shutdown /a"],
             TimeSpan.FromSeconds(30), CancellationToken.None);
         if (r.Succeeded)
             _logger.Warning("Bilgisayar 60 saniye içinde yeniden başlatılacak (iptal için komut satırında: shutdown /a).");
@@ -1515,7 +1604,7 @@ public sealed class MainViewModel : ObservableObject, IDisposable
         var dialog = new Microsoft.Win32.SaveFileDialog
         {
             Title = "Günlüğü dışa aktar",
-            FileName = $"RTX-Windows-Updater-Log-{DateTime.Now:yyyy-MM-dd}.txt",
+            FileName = $"E-mre-Hub-Log-{DateTime.Now:yyyy-MM-dd}.txt",
             DefaultExt = ".txt",
             Filter = "Metin dosyası (*.txt)|*.txt|Tüm dosyalar (*.*)|*.*",
             AddExtension = true,
@@ -1588,7 +1677,7 @@ public sealed class MainViewModel : ObservableObject, IDisposable
     /// </summary>
     private void RecomputeHealth()
     {
-        int ok = 0, pending = 0, errors = 0, notRun = 0, running = 0;
+        int ok = 0, pending = 0, errors = 0, notRun = 0, running = 0, unavailable = 0;
         foreach (var c in Cards)
         {
             switch (c.Status)
@@ -1598,15 +1687,24 @@ public sealed class MainViewModel : ObservableObject, IDisposable
                     or ComponentStatus.RebootRequired: pending++; break;
                 case ComponentStatus.Failed or ComponentStatus.CheckFailed or ComponentStatus.AdminRequired: errors++; break;
                 case ComponentStatus.Checking or ComponentStatus.Updating: running++; break;
+                case ComponentStatus.Unavailable: unavailable++; break; // bu sistemde çalıştırılamaz; sağlık hesabına girmez
                 default: notRun++; break;
             }
         }
 
-        var total = Cards.Count;
+        var total = Cards.Count - unavailable;
         if (running > 0)
         {
             HealthStatus = ComponentStatus.Checking;
             HealthHeadline = $"İşlem sürüyor ({running} kart çalışıyor)";
+        }
+        else if (total == 0)
+        {
+            HealthStatus = ComponentStatus.Unavailable;
+            // Tüm kartlar yalnızca ApplyRequirements'ta (IsAdmin ayarlandıktan sonra) kullanım dışı yapılabilir.
+            HealthHeadline = !IsAdmin
+                ? "Yönetici yetkisi yok – tüm işlemler kullanım dışı"
+                : "Tüm işlemler kullanım dışı";
         }
         else if (notRun == total)
         {
@@ -1636,6 +1734,7 @@ public sealed class MainViewModel : ObservableObject, IDisposable
 
         var parts = new List<string> { $"{ok} sorunsuz", $"{pending} güncelleme / uyarı", $"{errors} hata", $"{notRun} çalıştırılmadı" };
         if (running > 0) parts.Add($"{running} çalışıyor");
+        if (unavailable > 0) parts.Add($"{unavailable} kullanım dışı");
         HealthCounts = string.Join(" · ", parts);
     }
 

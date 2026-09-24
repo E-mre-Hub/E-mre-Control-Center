@@ -34,6 +34,10 @@ public sealed class SystemInfoService(Logger logger)
     private List<SystemInfoField>? _staticHead;
     private List<SystemInfoField>? _staticTail;
     private GpuInfo? _nvidiaGpu;
+    /// <summary>Ekran kartı listesi gerçekten okundu ve NVIDIA kartı yok (liste okunamadıysa false: "Bilgi alınamadı").</summary>
+    private bool _noNvidia;
+
+    private const string NoNvidiaText = "NVIDIA ekran kartı yok";
 
     /// <summary>
     /// Sistem bilgilerini döndürür. İlk çağrıda tüm alanlar gerçek kaynaklardan okunur; sonraki çağrılarda (Yenile butonu)
@@ -43,34 +47,45 @@ public sealed class SystemInfoService(Logger logger)
     {
         List<SystemInfoField>? head, tail;
         GpuInfo? rtx;
+        bool noNvidia;
         lock (_lock)
         {
             head = _staticHead;
             tail = _staticTail;
             rtx = _nvidiaGpu;
+            noNvidia = _noNvidia;
         }
 
         var first = head is null || tail is null;
         if (first)
         {
-            (head, tail, rtx) = ReadStatic();
+            (head, tail, rtx, noNvidia) = ReadStatic();
             lock (_lock)
             {
                 _staticHead = head;
                 _staticTail = tail;
                 _nvidiaGpu = rtx;
+                _noNvidia = noNvidia;
             }
         }
 
         // --- Değişebilen alanlar: her çağrıda GERÇEK okuma ---
         var driverField = new List<SystemInfoField>();
-        string? driver = null;
-        if (rtx is not null)
+        if (noNvidia)
         {
-            try { driver = await NvidiaDriverManager.ReadInstalledDriverVersionAsync(rtx, ct, logger); }
-            catch (Exception ex) when (ex is not OperationCanceledException) { logger.Warning($"NVIDIA sürücü sürümü okunamadı: {ex.Message}"); }
+            // Ekran kartı listesi gerçekten okundu ve NVIDIA kartı yok: sürücü sürümü okunacak bir şey yoktur.
+            driverField.Add(new SystemInfoField("NVIDIA Driver", NoNvidiaText, true, false));
         }
-        Add(driverField, "NVIDIA Driver", () => driver);
+        else
+        {
+            string? driver = null;
+            if (rtx is not null)
+            {
+                try { driver = await NvidiaDriverManager.ReadInstalledDriverVersionAsync(rtx, ct, logger); }
+                catch (Exception ex) when (ex is not OperationCanceledException) { logger.Warning($"NVIDIA sürücü sürümü okunamadı: {ex.Message}"); }
+            }
+            Add(driverField, "NVIDIA Driver", () => driver);
+        }
 
         var dynamicTail = new List<SystemInfoField>();
         DriveInfo? drive = null;
@@ -133,7 +148,7 @@ public sealed class SystemInfoService(Logger logger)
     }
 
     /// <summary>Değişmeyen alanları gerçek kaynaklardan (WMI, kayıt defteri) bir kez okur.</summary>
-    private (List<SystemInfoField> Head, List<SystemInfoField> Tail, GpuInfo? Rtx) ReadStatic()
+    private (List<SystemInfoField> Head, List<SystemInfoField> Tail, GpuInfo? Rtx, bool NoNvidia) ReadStatic()
     {
         var head = new List<SystemInfoField>();
 
@@ -188,12 +203,15 @@ public sealed class SystemInfoService(Logger logger)
 
         // --- GPU (gereksinim kontrolünün okuduğu liste paylaşılır; WMI yeniden sorgulanmaz) ---
         List<GpuInfo> gpus = [];
-        try { gpus = SystemRequirementsChecker.GetGpus(); }
+        var gpusRead = false;
+        try { gpus = SystemRequirementsChecker.GetGpus(); gpusRead = true; }
         catch (Exception ex) { logger.Warning($"Win32_VideoController okunamadı: {ex.Message}"); }
 
         Add(head, "GPU", () => gpus.Count == 0 ? null : string.Join(" · ", gpus.Select(g => g.Name)), primary: true);
         var rtx = gpus.FirstOrDefault(g => g.IsRtx) ?? gpus.FirstOrDefault(g => g.IsNvidia);
-        Add(head, "NVIDIA GPU modeli", () => rtx?.Name);
+        var noNvidia = gpusRead && gpus.Count > 0 && rtx is null;
+        if (noNvidia) head.Add(new SystemInfoField("NVIDIA GPU modeli", NoNvidiaText, true, false));
+        else Add(head, "NVIDIA GPU modeli", () => rtx?.Name);
 
         // --- Mimari / bilgisayar adı ---
         var tail = new List<SystemInfoField>();
@@ -205,7 +223,7 @@ public sealed class SystemInfoService(Logger logger)
         });
         Add(tail, "Bilgisayar adı", () => Environment.MachineName);
 
-        return (head, tail, rtx);
+        return (head, tail, rtx, noNvidia);
     }
 
     private static Dictionary<string, object?> QuerySingle(string wql)
