@@ -35,7 +35,7 @@ public sealed class SystemRequirementsChecker(Logger logger)
         List<GpuInfo> gpus;
         try
         {
-            gpus = ReadGpus();
+            gpus = GetGpus();
         }
         catch (Exception ex)
         {
@@ -83,6 +83,29 @@ public sealed class SystemRequirementsChecker(Logger logger)
         };
     }
 
+    private static readonly object GpuLock = new();
+    private static List<GpuInfo>? _cachedGpus;
+
+    /// <summary>
+    /// Ekran kartı listesi (WMI Win32_VideoController) oturum boyunca BİR KEZ okunur ve paylaşılır
+    /// (gereksinim kontrolü, Sistem Bilgileri ve NVIDIA kartı aynı sonucu kullanır). Değişebilen sürücü sürümü gereken
+    /// yerlerde <see cref="ReadGpus"/> doğrudan çağrılır.
+    /// </summary>
+    public static List<GpuInfo> GetGpus()
+    {
+        lock (GpuLock)
+        {
+            if (_cachedGpus is not null) return _cachedGpus;
+        }
+        var list = ReadGpus();
+        lock (GpuLock)
+        {
+            _cachedGpus ??= list;
+            return _cachedGpus;
+        }
+    }
+
+    /// <summary>Ekran kartlarını WMI'dan her çağrıda yeniden okur.</summary>
     public static List<GpuInfo> ReadGpus()
     {
         var list = new List<GpuInfo>();

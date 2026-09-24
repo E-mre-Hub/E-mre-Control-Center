@@ -94,7 +94,8 @@ public sealed class SfcManager(Logger logger) : IMaintenanceModule, IProgressRep
         var lastLoggedPercent = -1;
         var lastPercent = -1;
 
-        var r = await ProcessRunner.RunAsync(SfcPath, mode, Timeout, ct,
+        // cmd.exe üzerinden: cmd.exe /d /s /c ""C:\Windows\System32\sfc.exe" /verifyonly" (çıktı UTF-16 kalır).
+        var r = await ProcessRunner.RunCmdAsync(SfcPath, [mode], Timeout, ct,
             onStdOut: line =>
             {
                 var clean = line.Replace("\0", string.Empty).Trim();
@@ -171,7 +172,9 @@ public sealed class SfcManager(Logger logger) : IMaintenanceModule, IProgressRep
                 Status = repair ? ComponentStatus.PartiallyUpdated : ComponentStatus.UpdateAvailable,
                 Summary = "Bozuk dosyalar bulundu ancak bazıları onarılamadı",
                 Details = "Ayrıntılar: %windir%\\Logs\\CBS\\CBS.log",
-                Reason = "Onarılamayan dosyalar için DISM /Online /Cleanup-Image /RestoreHealth ile bileşen deposunun onarılması gerekebilir (uygulama bunu otomatik çalıştırmaz).",
+                Reason = "Onarılamayan dosyalar için DISM /Online /Cleanup-Image /RestoreHealth ile bileşen deposunun onarılması gerekebilir " +
+                         "(Windows Image Sağlık Kontrolü kartı bileşen deposunu \"onarılabilir\" bulursa onayınızla onarır; onaysız çalışmaz). " +
+                         "Onarımdan sonra SFC taramasını tekrarlayın.",
                 RebootRequired = reboot
             };
 
@@ -221,8 +224,9 @@ public sealed class SfcManager(Logger logger) : IMaintenanceModule, IProgressRep
             {
                 Key = Key,
                 Status = ComponentStatus.Attention,
-                Summary = "İhlal yok, ancak bileşen meta verisi bozuk",
-                Reason = "Windows, sistem bütünlüğünü garanti edemediğini bildirdi. DISM /Online /Cleanup-Image /RestoreHealth önerilir (uygulama bunu otomatik çalıştırmaz)."
+                Summary = "Dikkat: İhlal yok, ancak bileşen meta verisi bozuk",
+                Reason = "Windows, sistem bütünlüğünü garanti edemediğini bildirdi. DISM /Online /Cleanup-Image /RestoreHealth önerilir " +
+                         "(Windows Image Sağlık Kontrolü kartı \"onarılabilir\" bulursa onayınızla onarır; onaysız çalışmaz)."
             };
 
         if (Has(MsgNoViolations))

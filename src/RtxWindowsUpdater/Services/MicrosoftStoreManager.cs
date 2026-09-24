@@ -12,7 +12,7 @@ namespace RtxWindowsUpdater.Services;
 ///           ile Store'un kendi güncelleme taraması tetiklenir.
 /// Not: Winget ile eşleşmeyen bazı yerleşik uygulamaları yalnızca Store'un kendi tarayıcısı görebilir.
 /// </summary>
-public sealed class MicrosoftStoreManager : IUpdateModule
+public sealed class MicrosoftStoreManager : IUpdateModule, IInUseRetryModule, IManualUpdateModule
 {
     private readonly Logger _logger;
     private readonly WingetManager _winget;
@@ -43,7 +43,8 @@ public sealed class MicrosoftStoreManager : IUpdateModule
     {
         _logger.Info("Microsoft Store güncellemeleri kontrol ediliyor...");
 
-        var presence = await PowerShellRunner.RunAsync(StorePresenceScript, TimeSpan.FromMinutes(1), ct);
+        var presence = await PowerShellRunner.RunAsync(StorePresenceScript, TimeSpan.FromMinutes(1), ct,
+            traceName: "Get-AppxPackage -Name Microsoft.WindowsStore");
         if (!presence.Ok)
         {
             var reason = "Microsoft Store durumu okunamadı: " + presence.DescribeFailure("PowerShell");
@@ -78,12 +79,21 @@ public sealed class MicrosoftStoreManager : IUpdateModule
         };
     }
 
+    /// <summary>Çalışan uygulama nedeniyle güncellenemeyen Store paketlerini, onaylanan uygulamalar kapatıldıktan sonra yeniden dener.</summary>
+    public Task<ModuleResult> RetryAfterClosingAsync(ModuleResult previous, IReadOnlyCollection<RunningProcessInfo> approved,
+        CancellationToken ct) => _winget.RetryAfterClosingAsync(previous, approved, ct);
+
+    /// <summary>Kullanıcının ayrıca seçtiği, otomatik uygulanmayan Store güncellemelerini uygular.</summary>
+    public Task<ModuleResult> UpdateManualAsync(ModuleResult check, IReadOnlyCollection<string> ids, CancellationToken ct) =>
+        _winget.UpdateManualAsync(check, ids, ct);
+
     public async Task<ModuleResult> UpdateAsync(ModuleResult check, CancellationToken ct)
     {
         var result = await _winget.UpdateAsync(check, ct);
 
         _logger.Info("Microsoft Store'un kendi güncelleme taraması tetikleniyor (MDM UpdateScanMethod)...");
-        var scan = await PowerShellRunner.RunAsync(MdmScanScript, TimeSpan.FromMinutes(3), CancellationToken.None);
+        var scan = await PowerShellRunner.RunAsync(MdmScanScript, TimeSpan.FromMinutes(3), CancellationToken.None,
+            traceName: "MDM_EnterpriseModernAppManagement_AppManagement01.UpdateScanMethod");
         if (scan.Ok && scan.Data!.Value.Long("returnValue") == 0)
             _logger.Success("Microsoft Store güncelleme taraması başlatıldı; kalan Store güncellemeleri arka planda Store tarafından kurulacak.");
         else

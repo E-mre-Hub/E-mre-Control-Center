@@ -45,6 +45,7 @@ public sealed class RecycleBinManager(Logger logger) : IUpdateModule
         try
         {
             var (items, bytes, hr) = Query();
+            ExecutionTrace.Note($"SHQueryRecycleBin → HRESULT 0x{unchecked((uint)hr):X8}, {items} öğe, {FormatSize(bytes)}");
             if (hr != 0)
             {
                 var reason = $"Çöp kutusu okunamadı (HRESULT 0x{unchecked((uint)hr):X8}).";
@@ -101,6 +102,7 @@ public sealed class RecycleBinManager(Logger logger) : IUpdateModule
 
             var hr = SHEmptyRecycleBin(IntPtr.Zero, null, SherbNoConfirmation | SherbNoProgressUi | SherbNoSound);
             var (after, _, _) = Query();
+            ExecutionTrace.Note($"SHEmptyRecycleBin → HRESULT 0x{unchecked((uint)hr):X8}; önce {before} öğe, sonra {after} öğe");
 
             if (after == 0)
             {

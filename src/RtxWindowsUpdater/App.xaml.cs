@@ -1,4 +1,6 @@
+using System.IO;
 using System.Threading.Tasks;
+using System.Windows.Media.Imaging;
 using System.Windows;
 using System.Windows.Threading;
 using RtxWindowsUpdater.Core;
@@ -46,7 +48,11 @@ public partial class App : Application
         var accepted = e.Args.Contains(AdminPrivilegeManager.ArgAccepted, StringComparer.OrdinalIgnoreCase);
         var startCheck = e.Args.Contains(AdminPrivilegeManager.ArgStartCheck, StringComparer.OrdinalIgnoreCase);
 
-        _viewModel = new MainViewModel(_logger, accepted, startCheck);
+        var state = new AppStateStore(_logger);
+        var notifications = new NotificationService(_logger);
+        notifications.Register(ExtractNotificationIcon());
+
+        _viewModel = new MainViewModel(_logger, accepted, startCheck, state, notifications);
         var window = new MainWindow(_viewModel);
         MainWindow = window;
         window.Show();
@@ -60,6 +66,33 @@ public partial class App : Application
             "\n\nUygulama çalışmaya devam edecek. Ayrıntılar için işlem günlüğüne bakın.",
             "RTX Windows Updater", MessageBoxButton.OK, MessageBoxImage.Warning);
         e.Handled = true;
+    }
+
+    /// <summary>Windows bildirimlerinde gösterilecek logoyu (E-mreLogo) PNG olarak kullanıcı klasörüne yazar.</summary>
+    private string? ExtractNotificationIcon()
+    {
+        try
+        {
+            var dir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "RTX Windows Updater");
+            Directory.CreateDirectory(dir);
+            var target = Path.Combine(dir, "notification-icon.png");
+            var info = GetResourceStream(new Uri("pack://application:,,,/Assets/E-mreLogo.jpg"));
+            if (info is null) return null;
+            using (var src = info.Stream)
+            {
+                var frame = BitmapFrame.Create(src, BitmapCreateOptions.None, BitmapCacheOption.OnLoad);
+                var encoder = new PngBitmapEncoder();
+                encoder.Frames.Add(frame);
+                using var fs = File.Create(target);
+                encoder.Save(fs);
+            }
+            return target;
+        }
+        catch (Exception ex)
+        {
+            _logger?.Warning($"Bildirim ikonu hazırlanamadı: {ex.Message}");
+            return null;
+        }
     }
 
     private bool TryAcquireSingleInstance(TimeSpan wait)
@@ -86,6 +119,7 @@ public partial class App : Application
     protected override void OnExit(ExitEventArgs e)
     {
         _viewModel?.Dispose();
+        _logger?.Dispose();
         try { _instanceMutex?.ReleaseMutex(); } catch { /* sahip değilsek sorun değil */ }
         _instanceMutex?.Dispose();
         base.OnExit(e);

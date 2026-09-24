@@ -13,7 +13,7 @@ public sealed record OrchestratorReporters(
 
 /// <summary>
 /// Kontrol, güncelleme ve bakım akışlarını güvenli sırayla yürütür:
-/// Winget → Windows Update → Microsoft Store → NVIDIA → Defender → SFC → DISM → MRT → Çöp Kutusu.
+/// Winget → Windows Update → Microsoft Store → NVIDIA → Defender → DISM → SFC → MRT → Geçici Dosyalar → Çöp Kutusu.
 ///
 /// İki çalışma şekli vardır:
 ///   TÜMÜ       : RunAllChecksAsync / RunAllUpdatesAsync        – kullanıcı seçimine bakılmaz.
@@ -52,9 +52,11 @@ public sealed class UpdateOrchestrator : IDisposable
             new MicrosoftStoreManager(logger),
             new NvidiaDriverManager(logger, _http),
             new DefenderManager(logger, _http),
-            new SfcManager(logger),
+            // Microsoft'un önerdiği onarım sırası: önce bileşen deposu (DISM), sonra sistem dosyaları (SFC).
             new DismManager(logger),
+            new SfcManager(logger),
             new MrtManager(logger),
+            new TemporaryFilesManager(logger),
             new RecycleBinManager(logger)
         ];
         ModuleOrder = Modules.Select(m => m.Key).ToList();
@@ -77,6 +79,7 @@ public sealed class UpdateOrchestrator : IDisposable
         [ComponentKeys.Sfc] = "Sistem dosyaları doğrulanıyor (sfc /verifyonly)...",
         [ComponentKeys.Dism] = "Windows image sağlık durumu kontrol ediliyor (DISM CheckHealth)...",
         [ComponentKeys.Mrt] = "MRT hızlı tarama yapılıyor (yalnızca tespit)...",
+        [ComponentKeys.TempFiles] = "Windows geçici dosyaları ölçülüyor...",
         [ComponentKeys.RecycleBin] = "Çöp kutusu kontrol ediliyor..."
     };
 
@@ -88,8 +91,9 @@ public sealed class UpdateOrchestrator : IDisposable
         [ComponentKeys.Nvidia] = "NVIDIA sürücüsü indiriliyor ve kuruluyor...",
         [ComponentKeys.Defender] = "Microsoft Defender tanımları güncelleniyor...",
         [ComponentKeys.Sfc] = "Sistem dosyaları onarılıyor (sfc /scannow)...",
-        [ComponentKeys.Dism] = "DISM CheckHealth...",
+        [ComponentKeys.Dism] = "Windows bileşen deposu onarılıyor (DISM /RestoreHealth)...",
         [ComponentKeys.Mrt] = "Tespit edilen tehditler temizleniyor (MRT hızlı tarama)...",
+        [ComponentKeys.TempFiles] = "Windows geçici dosyaları temizleniyor...",
         [ComponentKeys.RecycleBin] = "Çöp kutusu temizleniyor..."
     };
 
@@ -107,8 +111,9 @@ public sealed class UpdateOrchestrator : IDisposable
     private static string RunningText(string key, bool check) => key switch
     {
         ComponentKeys.Sfc or ComponentKeys.Mrt => "Tarama devam ediyor...",
-        ComponentKeys.Dism => "Kontrol ediliyor...",
-        ComponentKeys.RecycleBin when !check => "Temizleniyor...",
+        ComponentKeys.Dism => check ? "Kontrol ediliyor..." : "Onarılıyor...",
+        ComponentKeys.RecycleBin or ComponentKeys.TempFiles when !check => "Temizleniyor...",
+        ComponentKeys.TempFiles => "Ölçülüyor...",
         _ => check ? "Kontrol ediliyor..." : "Güncelleniyor..."
     };
 
@@ -157,7 +162,7 @@ public sealed class UpdateOrchestrator : IDisposable
                 rep.Step.Report(new StepProgress("Yönetici izni gerekli", 100));
                 return results;
             }
-            _logger.Success("Yönetici yetkisi doğrulandı.");
+            // Yönetici yetkisi uygulama açılışında doğrulanıp günlüğe yazıldı; burada yalnızca (önbellekten) denetlenir.
 
             if (targets.Any(t => OnlineModules.Contains(t.Key)))
             {
@@ -182,20 +187,28 @@ public sealed class UpdateOrchestrator : IDisposable
                 rep.Step.Report(new StepProgress(CheckTexts[m.Key], 8 + 92.0 * i / targets.Count));
                 rep.ModuleState.Report(new ModuleResult { Key = m.Key, Status = ComponentStatus.Checking, Summary = RunningText(m.Key, check: true) });
 
-                var r = await SafeRunAsync(() => m.CheckAsync(ct), m, isCheck: true, ct);
+                var r = await SafeRunAsync(() => m.CheckAsync(ct), m, OperationKind.Check, isCheck: true, ct);
                 results[m.Key] = r;
                 rep.ModuleState.Report(r);
             }
 
             rep.Step.Report(new StepProgress(ct.IsCancellationRequested ? "Kontrol iptal edildi" : "Kontrol tamamlandı", 100));
-            _logger.Info(ct.IsCancellationRequested
-                ? "Kontrol kullanıcı tarafından iptal edildi."
-                : mode switch
+            if (ct.IsCancellationRequested)
+            {
+                _logger.Warning("Kontrol kullanıcı tarafından iptal edildi.");
+            }
+            else
+            {
+                var failed = results.Values.Count(r => r.Status is ComponentStatus.CheckFailed or ComponentStatus.Failed or ComponentStatus.AdminRequired);
+                var text = mode switch
                 {
-                    RunMode.Selected => "Seçilen kontroller tamamlandı.",
-                    RunMode.Single => $"{targets[0].DisplayName}: kontrol tamamlandı.",
-                    _ => "Tüm kontroller tamamlandı."
-                });
+                    RunMode.Selected => "Seçilen kontroller tamamlandı",
+                    RunMode.Single => $"{targets[0].DisplayName}: kontrol tamamlandı",
+                    _ => "Tüm kontroller tamamlandı"
+                };
+                if (failed > 0) _logger.Warning($"{text} – {failed} kontrol başarısız.");
+                else _logger.Info(text + ".");
+            }
             return results;
         }
         finally
@@ -275,7 +288,7 @@ public sealed class UpdateOrchestrator : IDisposable
 
                 // Güncelleme/onarım başladıktan sonra yarıda kesilmez; iptal yalnızca adımlar arasında uygulanır.
                 var check = checks[m.Key];
-                var r = await SafeRunAsync(() => m.UpdateAsync(check, CancellationToken.None), m, isCheck: false, CancellationToken.None);
+                var r = await SafeRunAsync(() => m.UpdateAsync(check, CancellationToken.None), m, OperationKind.Update, isCheck: false, CancellationToken.None);
                 results[m.Key] = r;
                 rep.ModuleState.Report(r);
             }
@@ -301,13 +314,92 @@ public sealed class UpdateOrchestrator : IDisposable
         }
 
         rep.Step.Report(new StepProgress("İşlem tamamlandı", 100));
-        _logger.Info(mode switch
+        LogUpdateOutcome(mode switch
         {
-            RunMode.Selected => "Seçilen işlemler tamamlandı.",
-            RunMode.Single => "İşlem tamamlandı.",
-            _ => "Güncelleme işlemleri tamamlandı."
-        });
+            RunMode.Selected => "Seçilen işlemler tamamlandı",
+            RunMode.Single => "İşlem tamamlandı",
+            _ => "Güncelleme işlemleri tamamlandı"
+        }, results);
         return results;
+    }
+
+    /// <summary>Güncelleme bitiş mesajını GERÇEK sonuçlara göre yazar (hata/uyarı varken yalnızca "tamamlandı" denmez).</summary>
+    private void LogUpdateOutcome(string text, IReadOnlyDictionary<string, ModuleResult> results)
+    {
+        var errors = results.Values.Count(r => r.Status is ComponentStatus.Failed or ComponentStatus.CheckFailed or ComponentStatus.AdminRequired);
+        var warnings = results.Values.Count(r => r.Status is ComponentStatus.PartiallyUpdated or ComponentStatus.RebootRequired or ComponentStatus.Attention);
+        if (errors > 0 || warnings > 0) _logger.Warning($"{text} – {errors} hata, {warnings} uyarı.");
+        else _logger.Success(text + ".");
+    }
+
+    // ================================================================= MANUEL (OTOMATİK UYGULANMAYAN) GÜNCELLEMELER
+
+    /// <summary>
+    /// Kullanıcının ayrıca seçtiği, otomatik uygulanmayan güncellemeleri uygular (açık hedefleme / kaldır + yeniden kur).
+    /// </summary>
+    public async Task<ModuleResult?> RunManualUpdatesAsync(ModuleResult check, IReadOnlyCollection<string> ids,
+        OrchestratorReporters rep, CancellationToken ct)
+    {
+        if (Find(check.Key) is not { } module || module is not IManualUpdateModule manual) return null;
+        if (!AdminPrivilegeManager.IsElevated)
+        {
+            _logger.Error("Yönetici yetkisi olmadan güncelleme yapılamaz.");
+            return null;
+        }
+
+        _activity = rep.Activity;
+        try
+        {
+            _logger.Info($"{module.DisplayName}: seçilen manuel güncellemeler başlatıldı ({ids.Count} paket).");
+            rep.Step.Report(new StepProgress($"{module.DisplayName}: seçilen manuel güncellemeler uygulanıyor...", 5));
+            rep.ModuleState.Report(new ModuleResult { Key = module.Key, Status = ComponentStatus.Updating, Summary = "Manuel güncelleme uygulanıyor..." });
+            // Kaldırma/kurulum başladıktan sonra yarıda kesilmez.
+            var r = await SafeRunAsync(() => manual.UpdateManualAsync(check, ids, CancellationToken.None),
+                module, OperationKind.Update, isCheck: false, CancellationToken.None);
+            rep.ModuleState.Report(r);
+            rep.Step.Report(new StepProgress("İşlem tamamlandı", 100));
+            LogUpdateOutcome($"{module.DisplayName}: manuel güncellemeler tamamlandı", new Dictionary<string, ModuleResult> { [r.Key] = r });
+            return r;
+        }
+        finally
+        {
+            _activity = null;
+        }
+    }
+
+    // ================================================================= ÇALIŞAN UYGULAMAYI KAPATIP YENİDEN DENEME
+
+    /// <summary>
+    /// "Uygulama çalışıyor / dosyalar kullanımda" nedeniyle güncellenemeyen paketler için, kullanıcının onayladığı
+    /// engelleyen uygulamaları kapatır ve güncellemeyi yeniden dener (Winget / Microsoft Store).
+    /// </summary>
+    public async Task<ModuleResult?> RetryInUseAsync(ModuleResult previous, IReadOnlyCollection<RunningProcessInfo> approved,
+        OrchestratorReporters rep, CancellationToken ct)
+    {
+        if (Find(previous.Key) is not { } module || module is not IInUseRetryModule retry) return null;
+        if (!AdminPrivilegeManager.IsElevated)
+        {
+            _logger.Error("Yönetici yetkisi olmadan güncelleme yapılamaz.");
+            return null;
+        }
+
+        _activity = rep.Activity;
+        try
+        {
+            rep.Step.Report(new StepProgress($"{module.DisplayName}: çalışan uygulamalar kapatılıp güncelleme yeniden deneniyor...", 5));
+            rep.ModuleState.Report(new ModuleResult { Key = module.Key, Status = ComponentStatus.Updating, Summary = "Yeniden deneniyor..." });
+            // Kapatma ve kurulum başladıktan sonra yarıda kesilmez.
+            var r = await SafeRunAsync(() => retry.RetryAfterClosingAsync(previous, approved, CancellationToken.None),
+                module, OperationKind.Update, isCheck: false, CancellationToken.None);
+            rep.ModuleState.Report(r);
+            rep.Step.Report(new StepProgress("İşlem tamamlandı", 100));
+            LogUpdateOutcome($"{module.DisplayName}: yeniden deneme tamamlandı", new Dictionary<string, ModuleResult> { [r.Key] = r });
+            return r;
+        }
+        finally
+        {
+            _activity = null;
+        }
     }
 
     // ================================================================= KART EYLEMİ (SFC / DISM / MRT)
@@ -331,7 +423,7 @@ public sealed class UpdateOrchestrator : IDisposable
         {
             rep.Step.Report(new StepProgress(ActionTexts[key], 5));
             rep.ModuleState.Report(new ModuleResult { Key = key, Status = ComponentStatus.Updating, Summary = RunningText(key, check: key != ComponentKeys.Sfc) });
-            var r = await SafeRunAsync(() => m.RunActionAsync(ct), m, isCheck: key != ComponentKeys.Sfc, ct);
+            var r = await SafeRunAsync(() => m.RunActionAsync(ct), m, OperationKind.Action, isCheck: key != ComponentKeys.Sfc, ct);
             rep.ModuleState.Report(r);
             rep.Step.Report(new StepProgress("İşlem tamamlandı", 100));
             return r;
@@ -362,16 +454,26 @@ public sealed class UpdateOrchestrator : IDisposable
         Reason = "Uygulama yönetici yetkisiyle çalışmıyor."
     };
 
-    private async Task<ModuleResult> SafeRunAsync(Func<Task<ModuleResult>> action, IUpdateModule m, bool isCheck, CancellationToken ct)
+    /// <summary>
+    /// Modül işlemini hatalara karşı korunmuş şekilde çalıştırır; gerçek bitiş zamanı, süre ve
+    /// işlem sırasında çalıştırılan komutların kayıtlarını (stdout/stderr/çıkış kodu) sonuca ekler.
+    /// </summary>
+    private async Task<ModuleResult> SafeRunAsync(Func<Task<ModuleResult>> action, IUpdateModule m, OperationKind op, bool isCheck, CancellationToken ct)
     {
+        var watch = System.Diagnostics.Stopwatch.StartNew();
+        var trace = ExecutionTrace.Begin();
+        ModuleResult result;
         try
         {
-            return await action();
+            // Modül kodunun TAMAMI arka plan iş parçacığında çalışır: WMI sorguları, XML/JSON ayrıştırma,
+            // imza doğrulama, dosya okuma ve indirme döngüleri arayüz iş parçacığını asla bloklamaz.
+            // (Task.Run ExecutionContext'i taşır; ExecutionTrace'in AsyncLocal kaydı korunur.)
+            result = await Task.Run(action, CancellationToken.None);
         }
         catch (OperationCanceledException) when (ct.IsCancellationRequested)
         {
             _logger.Warning($"{m.DisplayName}: işlem iptal edildi.");
-            return new ModuleResult
+            result = new ModuleResult
             {
                 Key = m.Key,
                 Status = ComponentStatus.Skipped,
@@ -383,9 +485,28 @@ public sealed class UpdateOrchestrator : IDisposable
         {
             var reason = $"Beklenmeyen hata: {ex.Message}";
             _logger.Error($"{m.DisplayName}: {reason}");
-            return isCheck ? ModuleResult.CheckFailed(m.Key, reason) : ModuleResult.Failed(m.Key, reason);
+            result = isCheck ? ModuleResult.CheckFailed(m.Key, reason) : ModuleResult.Failed(m.Key, reason);
         }
+        finally
+        {
+            ExecutionTrace.End();
+        }
+
+        result.Operation = op;
+        result.CompletedAt = DateTime.Now;
+        result.Duration = watch.Elapsed;
+        result.Commands = trace.Commands;
+        result.Notes = trace.Notes;
+        _logger.Info($"{m.DisplayName}: işlem süresi {FormatDuration(watch.Elapsed)}.");
+        return result;
     }
+
+    /// <summary>Süreyi "4 dk 21 sn" biçiminde yazar.</summary>
+    public static string FormatDuration(TimeSpan d) =>
+        d.TotalHours >= 1 ? $"{(int)d.TotalHours} sa {d.Minutes} dk"
+        : d.TotalMinutes >= 1 ? $"{(int)d.TotalMinutes} dk {d.Seconds} sn"
+        : d.TotalSeconds >= 1 ? $"{(int)d.TotalSeconds} sn"
+        : $"{Math.Max(1, (int)d.TotalMilliseconds)} ms";
 
     private void MarkSkipped(IUpdateModule m, Dictionary<string, ModuleResult> results, IProgress<ModuleResult> state, string reason)
     {

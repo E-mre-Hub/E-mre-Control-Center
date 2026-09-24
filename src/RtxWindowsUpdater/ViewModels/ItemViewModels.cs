@@ -1,5 +1,6 @@
 using System.Windows.Input;
 using RtxWindowsUpdater.Models;
+using RtxWindowsUpdater.Services;
 
 namespace RtxWindowsUpdater.ViewModels;
 
@@ -14,12 +15,18 @@ public sealed class ComponentCardViewModel(string key, string title, string glyp
     private double _progress;
     private bool _progressKnown;
     private string _activityText = string.Empty;
+    private CardSnapshot? _lastSnapshot;
+    private bool _snapshotFromHistory;
 
     private const string NotCheckedText = "Henüz çalıştırılmadı";
+    private const string NotRunThisSessionText = "Bu oturumda çalıştırılmadı";
 
     public string Key { get; } = key;
     public string Title { get; } = title;
     public string Glyph { get; } = glyph;
+
+    /// <summary>Sağlık özetinde kullanılan kısa ad (ör. "SFC").</summary>
+    public string ShortTitle { get; init; } = title;
 
     /// <summary>SFC / DISM / MRT gibi, kendi eylem butonu bir Windows bakım aracını çalıştıran kartlar.</summary>
     public bool IsMaintenance { get; init; }
@@ -34,8 +41,11 @@ public sealed class ComponentCardViewModel(string key, string title, string glyp
     public string InfoText { get; init; } = string.Empty;
 
     public string ActionText { get; init; } = "Kontrol Et";
-    public string ActionGlyph { get; init; } = "\uE721";
+    public string ActionGlyph { get; init; } = "";
     public ICommand? ActionCommand { get; set; }
+
+    /// <summary>Detaylı Sonuç panelini açar.</summary>
+    public ICommand? DetailsCommand { get; set; }
 
     /// <summary>Seçim durumunu merkezi seçim yöneticisine ileten geri çağırım.</summary>
     public Action<string, bool>? SelectionChangedCallback { get; set; }
@@ -46,11 +56,23 @@ public sealed class ComponentCardViewModel(string key, string title, string glyp
         set
         {
             if (Set(ref _status, value))
+            {
                 OnPropertyChanged(nameof(IsBusy));
+                OnPropertyChanged(nameof(HealthText));
+            }
         }
     }
 
-    public string Summary { get => _summary; set => Set(ref _summary, value); }
+    public string Summary
+    {
+        get => _summary;
+        set
+        {
+            if (Set(ref _summary, value))
+                OnPropertyChanged(nameof(HealthText));
+        }
+    }
+
     public string Details { get => _details; set => Set(ref _details, value); }
     public string? Reason { get => _reason; set => Set(ref _reason, value); }
 
@@ -81,7 +103,74 @@ public sealed class ComponentCardViewModel(string key, string title, string glyp
 
     public ModuleResult? LastResult { get; private set; }
 
-    public void Apply(ModuleResult r)
+    // ------------------------------------------------------------ son çalıştırılma
+
+    /// <summary>Kartın son GERÇEK sonucu (bu oturumdan veya kayıtlı geçmişten).</summary>
+    public CardSnapshot? LastSnapshot => _lastSnapshot;
+
+    /// <summary>Son sonuç önceki bir oturumdan mı geliyor?</summary>
+    public bool IsSnapshotFromHistory => _snapshotFromHistory;
+
+    public bool HasLastRun => _lastSnapshot is not null;
+
+    /// <summary>"Son kontrol: 23.09.2026 19:42" – gerçek bitiş zamanından.</summary>
+    public string LastRunText => _lastSnapshot is null
+        ? string.Empty
+        : $"{LastRunLabel(Key, _lastSnapshot.Operation)}: {_lastSnapshot.CompletedAt:dd.MM.yyyy HH:mm}" +
+          (_snapshotFromHistory ? " · önceki oturum" : string.Empty);
+
+    /// <summary>İşlem türüne uygun "son ..." ifadesi.</summary>
+    public static string LastRunLabel(string key, OperationKind op) => (key, op) switch
+    {
+        (ComponentKeys.Sfc or ComponentKeys.Mrt, _) => "Son tarama",
+        (ComponentKeys.RecycleBin, OperationKind.Update) => "Son temizlik",
+        (_, OperationKind.Update) => "Son güncelleme",
+        _ => "Son kontrol"
+    };
+
+    /// <summary>Uygulama açılırken kayıtlı geçmişten son sonucu yükler (durum "çalıştırılmadı" olarak kalır).</summary>
+    public void LoadHistory(CardSnapshot snapshot)
+    {
+        _lastSnapshot = snapshot;
+        _snapshotFromHistory = true;
+        if (Status == ComponentStatus.NotChecked) Summary = NotRunThisSessionText;
+        RaiseLastRunChanged();
+    }
+
+    // ------------------------------------------------------------ sağlık özeti
+
+    /// <summary>Sistem Sağlık Özeti'nde gösterilen kısa ve gerçek duruma dayanan metin.</summary>
+    public string HealthText => Status switch
+    {
+        ComponentStatus.NotChecked => Key is ComponentKeys.Sfc or ComponentKeys.Mrt ? "Taranmadı" : "Kontrol edilmedi",
+        ComponentStatus.Checking or ComponentStatus.Updating => "Çalışıyor...",
+        ComponentStatus.UpToDate => Key switch
+        {
+            ComponentKeys.Sfc or ComponentKeys.Dism => "Sağlıklı",
+            ComponentKeys.Mrt => "Tehdit bulunmadı",
+            ComponentKeys.RecycleBin => "Boş",
+            _ => "Güncel"
+        },
+        ComponentStatus.Updated => Key switch
+        {
+            ComponentKeys.RecycleBin => "Temizlendi",
+            ComponentKeys.Sfc => "Onarıldı",
+            ComponentKeys.Mrt => "Temizlendi",
+            _ => "Güncellendi"
+        },
+        ComponentStatus.UpdateAvailable or ComponentStatus.Attention => Summary,
+        ComponentStatus.PartiallyUpdated => "Kısmen tamamlandı",
+        ComponentStatus.RebootRequired => "Yeniden başlatma gerekli",
+        ComponentStatus.AdminRequired => "Yönetici izni gerekli",
+        ComponentStatus.CheckFailed => "Kontrol edilemedi",
+        ComponentStatus.Failed => "Başarısız",
+        ComponentStatus.Skipped => "Atlandı",
+        _ => Summary
+    };
+
+    // ------------------------------------------------------------ durum güncelleme
+
+    public void Apply(ModuleResult r, CardSnapshot? snapshot = null)
     {
         Status = r.Status;
         Summary = r.Summary;
@@ -99,6 +188,14 @@ public sealed class ComponentCardViewModel(string key, string title, string glyp
             ActivityText = string.Empty;
             Progress = 0;
             ProgressKnown = false;
+
+            snapshot ??= CardSnapshot.From(r);
+            if (snapshot is not null)
+            {
+                _lastSnapshot = snapshot;
+                _snapshotFromHistory = false;
+                RaiseLastRunChanged();
+            }
         }
     }
 
@@ -120,13 +217,22 @@ public sealed class ComponentCardViewModel(string key, string title, string glyp
     public void Reset()
     {
         Status = ComponentStatus.NotChecked;
-        Summary = NotCheckedText;
+        Summary = _snapshotFromHistory ? NotRunThisSessionText : NotCheckedText;
         Details = string.Empty;
         Reason = null;
         LastResult = null;
         ActivityText = string.Empty;
         Progress = 0;
         ProgressKnown = false;
+    }
+
+    private void RaiseLastRunChanged()
+    {
+        OnPropertyChanged(nameof(LastSnapshot));
+        OnPropertyChanged(nameof(HasLastRun));
+        OnPropertyChanged(nameof(LastRunText));
+        OnPropertyChanged(nameof(IsSnapshotFromHistory));
+        OnPropertyChanged(nameof(HealthText));
     }
 }
 

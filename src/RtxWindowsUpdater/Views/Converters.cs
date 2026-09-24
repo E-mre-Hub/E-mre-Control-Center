@@ -146,3 +146,13 @@ public sealed class InverseBoolConverter : IValueConverter
 
     public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture) => value is not true;
 }
+
+/// <summary>Değer, ConverterParameter'a eşitse true (filtre düğmeleri için). Geri dönüşte seçilen parametreyi yazar.</summary>
+public sealed class EqualsConverter : IValueConverter
+{
+    public object Convert(object value, Type targetType, object parameter, CultureInfo culture) =>
+        string.Equals(value?.ToString(), parameter?.ToString(), StringComparison.OrdinalIgnoreCase);
+
+    public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture) =>
+        value is true ? parameter?.ToString() ?? Binding.DoNothing : Binding.DoNothing;
+}

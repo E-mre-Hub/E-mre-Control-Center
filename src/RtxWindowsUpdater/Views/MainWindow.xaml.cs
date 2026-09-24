@@ -1,4 +1,3 @@
-using System.Collections.Specialized;
 using System.ComponentModel;
 using System.Runtime.InteropServices;
 using System.Windows;
@@ -24,14 +23,28 @@ public partial class MainWindow : Window
         _vm = vm;
         DataContext = vm;
 
-        ((INotifyCollectionChanged)vm.Logs).CollectionChanged += OnLogsChanged;
+        // Günlük satırları ViewModel'de toplu (150 ms) eklenir; her toplu eklemede TEK kez kaydırılır.
+        vm.LogsAppended += OnLogsAppended;
         vm.PropertyChanged += OnViewModelChanged;
         vm.Dialog.PropertyChanged += OnDialogChanged;
+        vm.Detail.PropertyChanged += OnDetailChanged;
+        PreviewKeyDown += OnPreviewKeyDown;
 
         SourceInitialized += (_, _) => ApplyWindowFrame();
         StateChanged += (_, _) => UpdateMaximizeState();
         Loaded += OnLoaded;
         Closing += OnClosing;
+        Closed += OnClosed;
+    }
+
+    private void OnClosed(object? sender, EventArgs e)
+    {
+        // Pencere kapandıktan sonra ViewModel olayları pencereyi canlı tutmasın.
+        _vm.LogsAppended -= OnLogsAppended;
+        _vm.PropertyChanged -= OnViewModelChanged;
+        _vm.Dialog.PropertyChanged -= OnDialogChanged;
+        _vm.Detail.PropertyChanged -= OnDetailChanged;
+        PreviewKeyDown -= OnPreviewKeyDown;
     }
 
     private async void OnLoaded(object sender, RoutedEventArgs e)
@@ -76,19 +89,47 @@ public partial class MainWindow : Window
         scale.BeginAnimation(ScaleTransform.ScaleYProperty, new DoubleAnimation(0.94, 1, duration) { EasingFunction = ease });
     }
 
+    private void OnDetailChanged(object? sender, PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName != nameof(DetailViewModel.IsOpen) || !_vm.Detail.IsOpen) return;
+
+        var ease = new CubicEase { EasingMode = EasingMode.EaseOut };
+        DetailDrawer.BeginAnimation(OpacityProperty, new DoubleAnimation(0, 1, TimeSpan.FromMilliseconds(200)));
+        var move = (TranslateTransform)DetailDrawer.RenderTransform;
+        move.BeginAnimation(TranslateTransform.XProperty, new DoubleAnimation(48, 0, TimeSpan.FromMilliseconds(280)) { EasingFunction = ease });
+    }
+
+    private void DetailBackdrop_MouseDown(object sender, System.Windows.Input.MouseButtonEventArgs e) => _vm.Detail.IsOpen = false;
+
+    private void OnPreviewKeyDown(object sender, System.Windows.Input.KeyEventArgs e)
+    {
+        // Esc: önce iletişim kutusu (varsa kendi İptal butonu), sonra Detaylı Sonuç paneli kapanır.
+        if (e.Key == System.Windows.Input.Key.Escape && _vm.Detail.IsOpen && !_vm.Dialog.IsOpen)
+        {
+            _vm.Detail.IsOpen = false;
+            e.Handled = true;
+        }
+    }
+
     private void PlayPageIn(FrameworkElement page)
     {
         if (TryFindResource("Sb.PageIn") is Storyboard sb)
             sb.Begin(page);
     }
 
-    private void OnLogsChanged(object? sender, NotifyCollectionChangedEventArgs e)
+    private bool _scrollPending;
+
+    private void OnLogsAppended(object? sender, EventArgs e)
     {
-        if (e.Action != NotifyCollectionChangedAction.Add || _vm.Logs.Count == 0) return;
+        // Olay UI iş parçacığında (DispatcherTimer) gelir; art arda gelen toplu eklemeler tek kaydırmada birleştirilir.
+        if (_scrollPending) return;
+        _scrollPending = true;
         Dispatcher.BeginInvoke(() =>
         {
-            if (_vm.Logs.Count > 0)
-                LogList.ScrollIntoView(_vm.Logs[^1]);
+            _scrollPending = false;
+            // Filtre uygulanmış görünümdeki son öğeye kaydır (filtre dışı kalan öğeye kaydırılmaz).
+            if (LogList.Items.Count > 0)
+                LogList.ScrollIntoView(LogList.Items[LogList.Items.Count - 1]);
         }, System.Windows.Threading.DispatcherPriority.Background);
     }
 

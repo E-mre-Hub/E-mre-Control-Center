@@ -47,7 +47,8 @@ public sealed class NvidiaDriverManager(Logger logger, HttpClient http) : IUpdat
         GpuInfo? gpu;
         try
         {
-            var gpus = SystemRequirementsChecker.ReadGpus();
+            // Ekran kartı kimliği oturumda bir kez okunur (gereksinim kontrolüyle paylaşılır); sürücü sürümü aşağıda ayrıca GÜNCEL okunur.
+            var gpus = SystemRequirementsChecker.GetGpus();
             gpu = gpus.FirstOrDefault(g => g.IsRtx);
             if (gpu is null)
             {
@@ -68,7 +69,7 @@ public sealed class NvidiaDriverManager(Logger logger, HttpClient http) : IUpdat
         logger.Info($"GPU: {gpu.Name}");
 
         // 2) Kurulu sürücü sürümü
-        var current = await ReadInstalledDriverVersionAsync(gpu, ct);
+        var current = await ReadInstalledDriverVersionAsync(gpu, ct, logger);
         if (current is null)
         {
             const string reason = "Kurulu NVIDIA sürücü sürümü okunamadı (nvidia-smi ve WMI başarısız).";
@@ -101,6 +102,9 @@ public sealed class NvidiaDriverManager(Logger logger, HttpClient http) : IUpdat
         }
 
         logger.Info($"NVIDIA'nın yayımladığı en son sürücü: {latest.Version} ({latest.Name}, {latest.ReleaseDate})");
+        ExecutionTrace.Note($"NVIDIA App: {appText}");
+        ExecutionTrace.Note($"NVIDIA resmi sürücü servisi: en son sürücü {latest.Version} – {latest.Name}, yayın {latest.ReleaseDate}, boyut {latest.Size}");
+        ExecutionTrace.Note($"Resmi indirme adresi: {latest.DownloadUrl}");
 
         var updateAvailable = CompareDriver(current, latest.Version) < 0;
         var details =
@@ -178,10 +182,12 @@ public sealed class NvidiaDriverManager(Logger logger, HttpClient http) : IUpdat
                 return ModuleResult.Failed(Key, reason, check.Details);
             }
             logger.Success("Dijital imza doğrulandı: NVIDIA Corporation.");
+            ExecutionTrace.Note("Authenticode imzası doğrulandı: NVIDIA Corporation");
 
             // --- Kurulum ---
             logger.Info("NVIDIA sürücü kurulumu başlatılıyor (sessiz kurulum, otomatik yeniden başlatma YOK). Ekran birkaç kez kararabilir...");
-            var run = await ProcessRunner.RunAsync(file, "-s -noreboot", InstallTimeout, CancellationToken.None);
+            // Kurulum programı GUI uygulamasıdır: cmd.exe içinde "start "" /wait" ile çalıştırılır, çıkış kodu aynen döner.
+            var run = await ProcessRunner.RunCmdAsync(file, ["-s", "-noreboot"], InstallTimeout, CancellationToken.None, waitForGuiApp: true);
             if (!run.Started || run.TimedOut)
             {
                 var reason = ProcessRunner.Describe(run, "NVIDIA kurulum programı");
@@ -192,7 +198,7 @@ public sealed class NvidiaDriverManager(Logger logger, HttpClient http) : IUpdat
 
             // --- Doğrulama ---
             var gpu = SystemRequirementsChecker.ReadGpus().FirstOrDefault(g => g.IsRtx);
-            var now = gpu is null ? null : await ReadInstalledDriverVersionAsync(gpu, CancellationToken.None);
+            var now = gpu is null ? null : await ReadInstalledDriverVersionAsync(gpu, CancellationToken.None, logger);
             logger.Info($"Kurulum sonrası sürücü sürümü: {now ?? "okunamadı"}");
 
             if (now is not null && CompareDriver(now, item.NewVersion) >= 0)
@@ -272,6 +278,7 @@ public sealed class NvidiaDriverManager(Logger logger, HttpClient http) : IUpdat
             throw new InvalidOperationException($"'{gpuName}' NVIDIA ürün listesinde eşleştirilemedi; en son sürücü belirlenemedi.");
 
         logger.Info($"NVIDIA ürün eşleşmesi: {match.Name} (psid={match.Psid}, pfid={match.Pfid})");
+        ExecutionTrace.Note($"NVIDIA ürün listesi (lookupValueSearch.aspx): {match.Name} → psid={match.Psid}, pfid={match.Pfid}");
 
         var json = await http.GetStringAsync(string.Format(DriverLookupUrl, match.Psid, match.Pfid), cts.Token);
         using var doc = JsonDocument.Parse(json);
@@ -304,12 +311,13 @@ public sealed class NvidiaDriverManager(Logger logger, HttpClient http) : IUpdat
     private static string ShortName(string name) =>
         Regex.Replace(name, @"^NVIDIA\s+(GeForce\s+)?", string.Empty, RegexOptions.IgnoreCase);
 
-    private async Task<string?> ReadInstalledDriverVersionAsync(GpuInfo gpu, CancellationToken ct)
+    /// <summary>Kurulu NVIDIA sürücü sürümünü nvidia-smi ile (yoksa WMI sürümünden) okur. Sistem Bilgileri de kullanır.</summary>
+    internal static async Task<string?> ReadInstalledDriverVersionAsync(GpuInfo gpu, CancellationToken ct, Logger? logger = null)
     {
         if (File.Exists(NvidiaSmiPath))
         {
-            var r = await ProcessRunner.RunAsync(NvidiaSmiPath,
-                "--query-gpu=name,driver_version --format=csv,noheader", TimeSpan.FromSeconds(30), ct);
+            var r = await ProcessRunner.RunCmdAsync(NvidiaSmiPath,
+                ["--query-gpu=name,driver_version", "--format=csv,noheader"], TimeSpan.FromSeconds(30), ct);
             if (r.Succeeded)
             {
                 var lines = r.StdOut.Split('\n', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
@@ -320,12 +328,25 @@ public sealed class NvidiaDriverManager(Logger logger, HttpClient http) : IUpdat
             }
             else
             {
-                logger.Warning("nvidia-smi çalıştırılamadı: " + ProcessRunner.Describe(r, "nvidia-smi"));
+                logger?.Warning("nvidia-smi çalıştırılamadı: " + ProcessRunner.Describe(r, "nvidia-smi"));
             }
         }
 
+        // nvidia-smi yoksa: WMI sürücü sürümü (önbellekteki değil, GÜNCEL okuma – kurulumdan sonra değişmiş olabilir).
+        var wmiVersion = gpu.WmiDriverVersion;
+        try
+        {
+            var fresh = SystemRequirementsChecker.ReadGpus()
+                .FirstOrDefault(g => string.Equals(g.PnpDeviceId, gpu.PnpDeviceId, StringComparison.OrdinalIgnoreCase));
+            if (fresh is not null) wmiVersion = fresh.WmiDriverVersion;
+        }
+        catch (Exception ex) when (ex is System.Management.ManagementException or UnauthorizedAccessException or System.Runtime.InteropServices.COMException)
+        {
+            logger?.Warning("WMI sürücü sürümü okunamadı: " + ex.Message);
+        }
+
         // WMI biçimi: 32.0.16.1714 → son 5 hane "61714" → 617.14
-        var digits = new string(gpu.WmiDriverVersion.Where(char.IsDigit).ToArray());
+        var digits = new string(wmiVersion.Where(char.IsDigit).ToArray());
         if (digits.Length >= 5)
         {
             var last5 = digits[^5..];
@@ -417,6 +438,7 @@ public sealed class NvidiaDriverManager(Logger logger, HttpClient http) : IUpdat
                 return $"İndirme eksik kaldı ({read} / {total.Value} bayt).";
 
             logger.Success($"İndirme tamamlandı ({read / 1048576} MB).");
+            ExecutionTrace.Note($"İndirme tamamlandı: {uri} ({read / 1048576} MB)");
             return null;
         }
         catch (OperationCanceledException)

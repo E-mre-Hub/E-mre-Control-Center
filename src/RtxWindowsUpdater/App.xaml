@@ -18,6 +18,7 @@
             <views:BoolToVisibilityConverter x:Key="Hidden" Invert="True" />
             <views:DialogKindToBrushConverter x:Key="DialogBrush" />
             <views:InverseBoolConverter x:Key="InverseBool" />
+            <views:EqualsConverter x:Key="EqualsParam" />
         </ResourceDictionary>
     </Application.Resources>
 </Application>

@@ -1,3 +1,4 @@
+using System.IO;
 using System.ComponentModel;
 using System.Diagnostics;
 using System.Text;
@@ -30,6 +31,9 @@ public sealed class ProcessResult
 /// </summary>
 public static class ProcessRunner
 {
+    /// <param name="displayCommand">
+    /// İşlem kaydında (Detaylı Sonuç paneli) gösterilecek komut. Boşsa "dosya argümanlar" kullanılır.
+    /// </param>
     public static async Task<ProcessResult> RunAsync(
         string fileName,
         string arguments,
@@ -37,7 +41,54 @@ public static class ProcessRunner
         CancellationToken cancellationToken,
         Action<string>? onStdOut = null,
         Action<string>? onStdErr = null,
-        Encoding? outputEncoding = null)
+        Encoding? outputEncoding = null,
+        string? displayCommand = null)
+    {
+        var startedAt = DateTime.Now;
+        var watch = System.Diagnostics.Stopwatch.StartNew();
+        var command = displayCommand ?? $"{Path.GetFileName(fileName)} {arguments}".Trim();
+        var result = await RunCoreAsync(fileName, arguments, timeout, cancellationToken, onStdOut, onStdErr, outputEncoding)
+            .ConfigureAwait(false);
+        ExecutionTrace.Record(command, startedAt, watch.Elapsed, result);
+        return result;
+    }
+
+    /// <summary>
+    /// Bir sistem aracını cmd.exe üzerinden çalıştırır (bkz. <see cref="CmdCommand"/>). stdout/stderr yakalama,
+    /// çıkış kodu, zaman aşımı ve süreç ağacını sonlandırma davranışı <see cref="RunAsync"/> ile aynıdır;
+    /// cmd.exe /c, çalıştırdığı programın çıkış kodunu aynen döndürür.
+    /// </summary>
+    public static Task<ProcessResult> RunCmdAsync(
+        string executable,
+        IEnumerable<string> args,
+        TimeSpan timeout,
+        CancellationToken cancellationToken,
+        Action<string>? onStdOut = null,
+        Action<string>? onStdErr = null,
+        Encoding? outputEncoding = null,
+        bool waitForGuiApp = false)
+    {
+        string cmdArgs;
+        try
+        {
+            cmdArgs = CmdCommand.BuildArguments(executable, args, waitForGuiApp);
+        }
+        catch (ArgumentException ex)
+        {
+            return Task.FromResult(new ProcessResult { StartError = ex.Message });
+        }
+        return RunAsync(CmdCommand.CmdPath, cmdArgs, timeout, cancellationToken, onStdOut, onStdErr, outputEncoding,
+            displayCommand: CmdCommand.Display(cmdArgs));
+    }
+
+    private static async Task<ProcessResult> RunCoreAsync(
+        string fileName,
+        string arguments,
+        TimeSpan timeout,
+        CancellationToken cancellationToken,
+        Action<string>? onStdOut,
+        Action<string>? onStdErr,
+        Encoding? outputEncoding)
     {
         var psi = new ProcessStartInfo
         {

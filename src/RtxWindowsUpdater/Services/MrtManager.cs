@@ -61,7 +61,8 @@ public sealed class MrtManager(Logger logger) : IMaintenanceModule, IProgressRep
         using var heartbeatCts = new CancellationTokenSource();
         var heartbeat = HeartbeatAsync(started, heartbeatCts.Token);
 
-        var r = await ProcessRunner.RunAsync(MrtPath, detectOnly ? "/Q /N" : "/Q", Timeout, ct);
+        // MRT bir GUI uygulamasıdır: cmd.exe içinde "start "" /wait" ile çalıştırılır ki cmd bitişini beklesin.
+        var r = await ProcessRunner.RunCmdAsync(MrtPath, detectOnly ? ["/Q", "/N"] : ["/Q"], Timeout, ct, waitForGuiApp: true);
 
         // MRT tarama motorunu ayrı bir alt süreçte çalıştırabilir; günlüğe sonuç yazılana kadar bekle.
         string? block = null;
@@ -96,6 +97,16 @@ public sealed class MrtManager(Logger logger) : IMaintenanceModule, IProgressRep
             logger.Warning("[MRT] Bu taramaya ait sonuç mrt.log dosyasında bulunamadı; süreç çıkış kodu kullanılıyor.");
         }
 
+        ExecutionTrace.Note($"Tarama tipi: Hızlı tarama ({(detectOnly ? "yalnızca tespit, MRT /Q /N" : "temizleme, MRT /Q")})");
+        if (block is not null)
+        {
+            ExecutionTrace.Note($"mrt.log dönüş kodu: {(code?.ToString() ?? "bulunamadı")}");
+            if (summaryLines.Count > 0) ExecutionTrace.Note("mrt.log sonuç özeti: " + string.Join(" / ", summaryLines));
+        }
+        else
+        {
+            ExecutionTrace.Note("Bu taramaya ait sonuç mrt.log dosyasında bulunamadı; süreç çıkış kodu kullanıldı.");
+        }
         code ??= r.ExitCode;
         logger.Info($"[MRT] Dönüş kodu: {code}");
         return Done(Interpret(code.Value, detectOnly, summaryLines, version));

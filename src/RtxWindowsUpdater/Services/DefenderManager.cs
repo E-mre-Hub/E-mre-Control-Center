@@ -162,7 +162,7 @@ public sealed class DefenderManager(Logger logger, HttpClient http) : IUpdateMod
     {
         logger.Info("Microsoft Defender tanımları güncelleniyor...");
         var ps = await PowerShellRunner.RunAsync(UpdateScript, TimeSpan.FromMinutes(15), CancellationToken.None,
-            m => logger.Info("  " + m));
+            m => logger.Info("  " + m), traceName: "Update-MpSignature");
         if (!ps.Ok)
         {
             var reason = ps.DescribeFailure("Update-MpSignature");
@@ -206,7 +206,7 @@ public sealed class DefenderManager(Logger logger, HttpClient http) : IUpdateMod
 
     private async Task<(LocalStatus? Status, string? Error)> ReadLocalAsync(CancellationToken ct)
     {
-        var ps = await PowerShellRunner.RunAsync(StatusScript, TimeSpan.FromMinutes(2), ct);
+        var ps = await PowerShellRunner.RunAsync(StatusScript, TimeSpan.FromMinutes(2), ct, traceName: "Get-MpComputerStatus");
         if (!ps.Ok) return (null, ps.DescribeFailure("Get-MpComputerStatus"));
         var d = ps.Data!.Value;
         return (new LocalStatus(
@@ -231,7 +231,12 @@ public sealed class DefenderManager(Logger logger, HttpClient http) : IUpdateMod
             var xml = await http.GetStringAsync(LatestInfoUrl, cts.Token);
             var root = XDocument.Parse(xml).Root;
             var sig = root?.Element("signatures");
-            if (sig is null) return null;
+            if (sig is null)
+            {
+                ExecutionTrace.Note("Microsoft Defender sürüm servisi beklenen veriyi döndürmedi.");
+                return null;
+            }
+            ExecutionTrace.Note($"Microsoft Defender sürüm servisi: tanım {sig.Value.Trim()}, motor {root!.Element("engine")?.Value.Trim() ?? "?"}, platform {root.Element("platform")?.Value.Trim() ?? "?"}");
             return new LatestInfo(
                 sig.Value.Trim(),
                 root!.Element("engine")?.Value.Trim() ?? "?",
@@ -241,6 +246,7 @@ public sealed class DefenderManager(Logger logger, HttpClient http) : IUpdateMod
         catch (Exception ex) when (ex is not OperationCanceledException || !ct.IsCancellationRequested)
         {
             logger.Warning($"Microsoft Defender sürüm servisine ulaşılamadı: {ex.Message}");
+            ExecutionTrace.Note($"Microsoft Defender sürüm servisine ulaşılamadı: {ex.Message}");
             return null;
         }
     }

@@ -15,7 +15,7 @@
     <AssemblyTitle>RTX Windows Updater</AssemblyTitle>
     <Company>E-mre</Company>
     <Copyright>© E-mre</Copyright>
-    <Version>1.1.0</Version>
+    <Version>1.2.0</Version>
 
     <!-- EXE ikonu (Windows Explorer / görev çubuğu / kısayol) -->
     <ApplicationIcon>..\..\assets\E-mreLogo.ico</ApplicationIcon>

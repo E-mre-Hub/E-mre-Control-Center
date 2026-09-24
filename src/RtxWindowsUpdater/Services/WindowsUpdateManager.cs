@@ -136,7 +136,8 @@ public sealed class WindowsUpdateManager(Logger logger) : IUpdateModule
     public async Task<ModuleResult> CheckAsync(CancellationToken ct)
     {
         logger.Info("Windows Update kontrol ediliyor...");
-        var ps = await PowerShellRunner.RunAsync(Prepare(CheckScript), SearchTimeout, ct, m => logger.Info("  " + m));
+        var ps = await PowerShellRunner.RunAsync(Prepare(CheckScript), SearchTimeout, ct, m => logger.Info("  " + m),
+            traceName: "Windows Update Agent – IUpdateSearcher.Search(\"" + Criteria + "\")");
 
         if (!ps.Ok)
         {
@@ -162,18 +163,22 @@ public sealed class WindowsUpdateManager(Logger logger) : IUpdateModule
         }
 
         var pending = data.Bool("rebootPending") == true;
+        ExecutionTrace.Note($"WUA arama sonuç kodu: {resultCode} ({(resultCode == 2 ? "başarılı" : "hatalarla tamamlandı")}); bekleyen yeniden başlatma: {(pending ? "evet" : "hayır")}");
+
+        // Windows güncellemelerinin "mevcut sürümü" yoktur; KB numarası "yeni" sütununda, sınıf ve boyut durum metninde gösterilir.
         var items = data.Arr("updates").Select(u =>
         {
             var size = u.Long("size") ?? 0;
+            var extra = string.Join(" · ", new[] { u.Str("classification"), size > 0 ? $"{size / 1048576.0:N0} MB" : null }
+                .Where(s => !string.IsNullOrEmpty(s)));
             return new UpdateItem
             {
                 Name = u.Str("title") ?? "(adsız güncelleme)",
                 Id = u.Str("id") ?? string.Empty,
-                CurrentVersion = u.Str("classification") ?? string.Empty,
-                NewVersion = string.Join("  ", new[] { u.Str("kb"), size > 0 ? $"{size / 1048576.0:N0} MB" : null }
-                    .Where(s => !string.IsNullOrEmpty(s))),
+                CurrentVersion = string.Empty,
+                NewVersion = u.Str("kb") ?? string.Empty,
                 UpdateAvailable = true,
-                StatusText = "Güncelleme mevcut"
+                StatusText = extra.Length > 0 ? $"Güncelleme mevcut · {extra}" : "Güncelleme mevcut"
             };
         }).ToList();
 
@@ -218,7 +223,8 @@ public sealed class WindowsUpdateManager(Logger logger) : IUpdateModule
         logger.Info($"Windows Update: {ids.Length} güncelleme indirilip kurulacak...");
         var script = Prepare(InstallScript.Replace("__IDS__", PowerShellRunner.ToPsLiteral(ids)));
         // Kurulum başladıktan sonra yarıda kesilmemesi için iptal belirteci iletilmez.
-        var ps = await PowerShellRunner.RunAsync(script, InstallTimeout, CancellationToken.None, m => logger.Info("  " + m));
+        var ps = await PowerShellRunner.RunAsync(script, InstallTimeout, CancellationToken.None, m => logger.Info("  " + m),
+            traceName: "Windows Update Agent – UpdateDownloader.Download + UpdateInstaller.Install");
 
         if (!ps.Ok)
         {

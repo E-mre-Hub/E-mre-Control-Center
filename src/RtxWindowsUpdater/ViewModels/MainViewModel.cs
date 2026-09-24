@@ -1,13 +1,18 @@
+using System.Collections.Concurrent;
 using System.Collections.ObjectModel;
 using System.Diagnostics;
 using System.IO;
 using System.Windows;
 using System.Windows.Input;
+using System.Windows.Threading;
 using RtxWindowsUpdater.Core;
 using RtxWindowsUpdater.Models;
 using RtxWindowsUpdater.Services;
 
 namespace RtxWindowsUpdater.ViewModels;
+
+/// <summary>Sol paneldeki işlem durumunun birbirinden ayrı hâlleri.</summary>
+public enum OperationState { Idle, Checking, Updating, Completed, Failed, Cancelled }
 
 /// <summary>
 /// Arayüz durumu ve akışı. Sistem işlemlerini doğrudan yapmaz; servisleri/orkestratörü çağırır.
@@ -38,6 +43,7 @@ public sealed class MainViewModel : ObservableObject, IDisposable
         public const string Play = "";
         public const string Search = "";
         public const string SelectAll = "";
+        public const string TempFiles = "\uE8B7";
     }
 
     private const int MaxLogEntries = 5000;
@@ -62,15 +68,54 @@ public sealed class MainViewModel : ObservableObject, IDisposable
     private string _unsupportedMessage = string.Empty;
     private bool _isBusy;
     private bool _isUpdatePhase;
-    private string _stepText = "Hazır";
+    private string _stepText = "Henüz işlem yapılmadı";
     private double _progress;
     private bool _cleanRecycleBin = true;
     private bool _cancelRequested;
     private bool _updatesApplied;
 
-    public MainViewModel(Logger logger, bool argAccepted, bool argStartCheck)
+    // --- v1.2: sistem bilgileri, sağlık özeti, işlem geçmişi, bildirimler, günlük yönetimi ---
+    private readonly AppStateStore _state;
+    private readonly NotificationService _notifications;
+    private readonly SystemInfoService _systemInfo;
+    private TimeSpan _lastBusyDuration;
+    private bool _isSystemInfoExpanded;
+    private bool _isSystemInfoLoading;
+    private string _systemInfoStatus = "Sistem bilgileri okunuyor...";
+    private string _healthHeadline = "Sistem henüz kontrol edilmedi";
+    private string _healthCounts = string.Empty;
+    private ComponentStatus _healthStatus = ComponentStatus.NotChecked;
+    private OperationRecord? _lastOperation;
+    private string _logFilter = "all";
+    private int _bottomTabIndex;
+    private bool _notificationsEnabled;
+
+    // --- performans: günlük satırları toplu (batch) işlenir, işlem durumu ayrı tutulur ---
+    private static readonly TimeSpan ProgressInterval = TimeSpan.FromMilliseconds(100);
+    private readonly Dispatcher _dispatcher;
+    private readonly ConcurrentQueue<LogEntry> _pendingLogs = new();
+    private readonly DispatcherTimer _logTimer;
+    private int _logFlushScheduled;
+    private OperationState _operationState = OperationState.Idle;
+    private ObservableCollection<UpdateRowViewModel> _updateRows = [];
+
+    /// <summary>Bir grup günlük satırı ekrana eklendiğinde (görünüm tek seferde en alta kaydırılır).</summary>
+    public event EventHandler? LogsAppended;
+
+    public MainViewModel(Logger logger, bool argAccepted, bool argStartCheck,
+        AppStateStore state, NotificationService notifications)
     {
         _logger = logger;
+        _state = state;
+        _notifications = notifications;
+        _systemInfo = new SystemInfoService(logger);
+        _notificationsEnabled = state.State.NotificationsEnabled;
+        _notifications.Enabled = _notificationsEnabled;
+        // Önceki oturumlarda winget'in gerçekten 0x8A15008E döndürdüğü paketler (aynı sürüm tekrar otomatik denenmez).
+        WingetManager.LoadKnownTechnologyMismatches(state.State.WingetTechnologyMismatch);
+        _dispatcher = Dispatcher.CurrentDispatcher;
+        _logTimer = new DispatcherTimer(DispatcherPriority.Background) { Interval = TimeSpan.FromMilliseconds(100) };
+        _logTimer.Tick += FlushPendingLogs;
         _argAccepted = argAccepted;
         _argStartCheck = argStartCheck;
         _requirements = new SystemRequirementsChecker(logger);
@@ -124,6 +169,7 @@ public sealed class MainViewModel : ObservableObject, IDisposable
             new ComponentCardViewModel(ComponentKeys.Sfc, "Windows Sistem Dosyası Kontrolü", Icons.Sfc)
             {
                 IsMaintenance = true,
+                ShortTitle = "SFC",
                 CommandText = "SFC /SCANNOW",
                 Description = "Windows sistem dosyalarını tarar ve bozuk veya eksik dosyaları onarmayı dener.",
                 InfoText = "Windows sistem dosyalarının bütünlüğünü kontrol eder. Bozuk veya eksik sistem dosyaları tespit edilirse Windows tarafından desteklenen şekilde onarılmaya çalışılır.",
@@ -133,20 +179,33 @@ public sealed class MainViewModel : ObservableObject, IDisposable
             new ComponentCardViewModel(ComponentKeys.Dism, "Windows Image Sağlık Kontrolü", Icons.Dism)
             {
                 IsMaintenance = true,
+                ShortTitle = "DISM",
                 CommandText = DismManager.DisplayCommand,
-                Description = "Windows bileşen deposunun sağlık durumunu kontrol eder.",
-                InfoText = "Windows bileşen deposunun sağlık durumunu kontrol eder. CheckHealth yalnızca mevcut sağlık durumunu kontrol eder; kullanıcı istemeden RestoreHealth çalıştırmaz.",
+                Description = "Windows bileşen deposunun sağlık durumunu kontrol eder; onarılabilir bozulma bulunursa onayınızla onarır.",
+                InfoText = "DISM /CheckHealth ile Windows bileşen deposunun sağlık durumunu kontrol eder. Sonuç \"onarılabilir\" ise, " +
+                           "yalnızca sizin onayınızla (Güncelle / Onar) DISM /RestoreHealth çalıştırılır ve onarımdan sonra durum " +
+                           "yeniden kontrol edilerek doğrulanır. Onayınız olmadan hiçbir onarım yapılmaz.",
                 ActionText = "Kontrolü Başlat",
                 ActionGlyph = Icons.Search
             },
             new ComponentCardViewModel(ComponentKeys.Mrt, "Microsoft Kötü Amaçlı Yazılım Temizleme Aracı", Icons.Mrt)
             {
                 IsMaintenance = true,
+                ShortTitle = "MRT",
                 CommandText = "MRT — Hızlı Tarama",
                 Description = "Windows MRT aracını kullanarak hızlı bir kötü amaçlı yazılım taraması gerçekleştirir.",
                 InfoText = "Windows'un yerleşik Microsoft Kötü Amaçlı Yazılım Temizleme Aracıdır. Bu kart MRT'nin hızlı tarama modunu kullanır.",
                 ActionText = "Hızlı Taramayı Başlat",
                 ActionGlyph = Icons.Play
+            },
+            new ComponentCardViewModel(ComponentKeys.TempFiles, "Windows Geçici Dosyalar", Icons.TempFiles)
+            {
+                ShortTitle = "Geçici Dosyalar",
+                CommandText = "%TEMP% · %WINDIR%\\Temp · DO önbelleği",
+                Description = "Windows'un güvenli şekilde temizlenebilecek geçici dosyalarını kontrol eder ve onayınızla temizler.",
+                InfoText = "Ayarlar > Sistem > Depolama > Geçici dosyalar bölümündeki güvenli kategorileri ölçer: kullanıcı ve Windows geçici " +
+                           "klasörleri, Teslim En İyileştirme önbelleği, Windows hata raporları ve DirectX gölgelendirici önbelleği. " +
+                           "Son 24 saatte değişen ve kullanımdaki dosyalara dokunulmaz; Çöp Kutusu, İndirilenler ve Windows.old hariçtir."
             }
         ];
 
@@ -157,18 +216,37 @@ public sealed class MainViewModel : ObservableObject, IDisposable
             card.ActionCommand = new AsyncCommand(
                 () => c.IsMaintenance ? RunMaintenanceAsync(c) : RunCardCheckAsync(c),
                 () => !IsBusy && IsSupported, OnCommandError);
+            card.DetailsCommand = new RelayCommand(() => Detail.Show(c));
+            if (_state.State.Cards.TryGetValue(card.Key, out var saved))
+                card.LoadHistory(saved);
+            card.PropertyChanged += (_, e) =>
+            {
+                if (e.PropertyName is nameof(ComponentCardViewModel.HealthText) or nameof(ComponentCardViewModel.Status))
+                    RecomputeHealth();
+            };
         }
         _selection.SelectionChanged += OnSelectionChanged;
+
+        RecentOperations = new ObservableCollection<OperationRecord>(_state.State.Recent);
+        _lastOperation = RecentOperations.FirstOrDefault();
+        LogsView = System.Windows.Data.CollectionViewSource.GetDefaultView(Logs);
+        LogsView.Filter = o => o is LogEntry e && PassesLogFilter(e);
+        RecomputeHealth();
 
         ContinueCommand = new RelayCommand(GoToDashboard, () => Accepted && IsSupported);
         ElevateCommand = new AsyncCommand(() => PromptElevationAsync(false), () => !IsAdmin && IsSupported, OnCommandError);
         StartCheckCommand = new AsyncCommand(StartCheckAsync, () => !IsBusy && IsSupported, OnCommandError);
         CheckSelectedCommand = new AsyncCommand(CheckSelectedAsync, () => !IsBusy && IsSupported, OnCommandError);
-        UpdateAllCommand = new AsyncCommand(UpdateAllAsync, CanUpdateAll, OnCommandError);
-        UpdateSelectedCommand = new AsyncCommand(UpdateSelectedAsync, () => !IsBusy && IsSupported, OnCommandError);
+        UpdateAllCommand = new AsyncCommand(UpdateAllAsync, () => CanUpdateAll, OnCommandError);
+        UpdateSelectedCommand = new AsyncCommand(UpdateSelectedAsync, () => CanRunSelected, OnCommandError);
         ClearSelectionCommand = new RelayCommand(() => _selection.Clear(), () => _selection.HasSelection);
         CancelCommand = new RelayCommand(Cancel, () => IsBusy && !_cancelRequested);
-        OpenLogCommand = new RelayCommand(OpenLogFile);
+        OpenLogCommand = new AsyncCommand(OpenLogFileAsync, onError: OnCommandError);
+        OpenLogFolderCommand = new AsyncCommand(OpenLogFolderAsync, onError: OnCommandError);
+        ExportLogsCommand = new AsyncCommand(ExportLogsAsync, onError: OnCommandError);
+        ClearLogsCommand = new RelayCommand(ClearLogs, () => Logs.Count > 0);
+        ShowRecentCommand = new RelayCommand(() => BottomTabIndex = 2);
+        RefreshSystemInfoCommand = new AsyncCommand(RefreshSystemInfoAsync, () => !IsSystemInfoLoading, OnCommandError);
 
         _logger.LogAdded += OnLogAdded;
     }
@@ -181,11 +259,79 @@ public sealed class MainViewModel : ObservableObject, IDisposable
     public RequirementRowViewModel GpuRow { get; }
     public RequirementRowViewModel AdminRow { get; }
 
-    /// <summary>"Sistem İşlemleri" altındaki 9 kartın tamamı (ekran sırasıyla).</summary>
+    /// <summary>"Sistem İşlemleri" altındaki 10 kartın tamamı (ekran sırasıyla).</summary>
     public ObservableCollection<ComponentCardViewModel> Cards { get; }
 
     public ObservableCollection<LogEntry> Logs { get; } = [];
-    public ObservableCollection<UpdateRowViewModel> UpdateRows { get; } = [];
+    /// <summary>"Bulunan Güncellemeler" tablosu; her yenilemede tek seferde değiştirilir (satır satır bildirim yok).</summary>
+    public ObservableCollection<UpdateRowViewModel> UpdateRows
+    {
+        get => _updateRows;
+        private set => Set(ref _updateRows, value);
+    }
+
+    // --- Detaylı Sonuç paneli ---
+    public DetailViewModel Detail { get; } = new();
+
+    // --- Sistem Bilgileri ---
+    public ObservableCollection<SystemInfoField> SystemInfoFields { get; } = [];
+    public ObservableCollection<SystemInfoField> SystemInfoPrimaryFields { get; } = [];
+
+    public bool IsSystemInfoExpanded { get => _isSystemInfoExpanded; set => Set(ref _isSystemInfoExpanded, value); }
+
+    public bool IsSystemInfoLoading
+    {
+        get => _isSystemInfoLoading;
+        private set { Set(ref _isSystemInfoLoading, value); CommandManager.InvalidateRequerySuggested(); }
+    }
+
+    public string SystemInfoStatus { get => _systemInfoStatus; private set => Set(ref _systemInfoStatus, value); }
+
+    // --- Sistem Sağlık Özeti (kartların GERÇEK durumlarından hesaplanır) ---
+    public string HealthHeadline { get => _healthHeadline; private set => Set(ref _healthHeadline, value); }
+    public string HealthCounts { get => _healthCounts; private set => Set(ref _healthCounts, value); }
+    public ComponentStatus HealthStatus { get => _healthStatus; private set => Set(ref _healthStatus, value); }
+
+    // --- Son işlem özeti ve işlem geçmişi ---
+    public ObservableCollection<OperationRecord> RecentOperations { get; }
+
+    public OperationRecord? LastOperation
+    {
+        get => _lastOperation;
+        private set { Set(ref _lastOperation, value); OnPropertyChanged(nameof(HasLastOperation)); }
+    }
+
+    public bool HasLastOperation => LastOperation is not null;
+
+    // --- Günlük yönetimi ---
+    public System.ComponentModel.ICollectionView LogsView { get; }
+
+    /// <summary>Günlük filtresi: all / info / success / warning / error. Yalnızca görünümü değiştirir.</summary>
+    public string LogFilter
+    {
+        get => _logFilter;
+        set
+        {
+            if (Set(ref _logFilter, value))
+                LogsView.Refresh();
+        }
+    }
+
+    /// <summary>Alt paneldeki etkin sekme (0: günlük, 1: bulunan güncellemeler, 2: son işlemler).</summary>
+    public int BottomTabIndex { get => _bottomTabIndex; set => Set(ref _bottomTabIndex, value); }
+
+    // --- Bildirimler ---
+    public bool NotificationsEnabled
+    {
+        get => _notificationsEnabled;
+        set
+        {
+            if (!Set(ref _notificationsEnabled, value)) return;
+            _notifications.Enabled = value;
+            _state.SetNotificationsEnabled(value);
+            _logger.Info(value ? "Windows bildirimleri açıldı." : "Windows bildirimleri kapatıldı.");
+        }
+    }
 
     public bool IsDashboard
     {
@@ -203,11 +349,44 @@ public sealed class MainViewModel : ObservableObject, IDisposable
     public bool Accepted { get => _accepted; set => Set(ref _accepted, value); }
     public string UnsupportedMessage { get => _unsupportedMessage; private set => Set(ref _unsupportedMessage, value); }
 
-    public bool IsBusy
+    /// <summary>Bir işlem sürüyor mu? Yalnızca <see cref="SetBusy"/> ile değişir (işlem başı ve tek final geçişi).</summary>
+    public bool IsBusy => _isBusy;
+
+    /// <summary>Bir işlem gerçekten çalışırken true (ilerleme animasyonları yalnızca bu durumda çalışır).</summary>
+    public bool IsOperationRunning => IsBusy;
+
+    public OperationState OperationState
     {
-        get => _isBusy;
-        private set { Set(ref _isBusy, value); CommandManager.InvalidateRequerySuggested(); }
+        get => _operationState;
+        private set
+        {
+            if (Set(ref _operationState, value))
+                OnPropertyChanged(nameof(OperationStateText));
+        }
     }
+
+    public string OperationStateText => OperationState switch
+    {
+        OperationState.Checking => "Kontrol devam ediyor...",
+        OperationState.Updating => "İşlem devam ediyor...",
+        OperationState.Completed => "İşlem tamamlandı",
+        OperationState.Failed => "İşlem tamamlandı – hata var",
+        OperationState.Cancelled => "İşlem iptal edildi",
+        _ => "Hazır"
+    };
+
+    /// <summary>
+    /// "Tümünü Güncelle" yalnızca bu oturumda GERÇEKTEN kontrol edilmiş ve işlem gerektiren kart varsa etkindir.
+    /// Kontrol edilmemiş, güncel/sağlıklı veya kontrolü başarısız kartlar güncelleme akışına girmez.
+    /// </summary>
+    public bool CanUpdateAll =>
+        !IsBusy && IsSupported &&
+        _checks.Values.Any(c => c.HasActionableUpdates && (c.Key != ComponentKeys.RecycleBin || CleanRecycleBin));
+
+    /// <summary>"Seçilenleri Güncelle / Çalıştır": seçili kartlardan en az biri kontrol edilmiş ve işlem gerektiriyorsa etkin.</summary>
+    public bool CanRunSelected =>
+        !IsBusy && IsSupported &&
+        _selection.SelectedKeys.Any(k => _checks.TryGetValue(k, out var c) && c.HasActionableUpdates);
 
     public bool IsUpdatePhase { get => _isUpdatePhase; private set => Set(ref _isUpdatePhase, value); }
     public string StepText { get => _stepText; private set => Set(ref _stepText, value); }
@@ -216,7 +395,7 @@ public sealed class MainViewModel : ObservableObject, IDisposable
     public bool CleanRecycleBin
     {
         get => _cleanRecycleBin;
-        set { Set(ref _cleanRecycleBin, value); OnPropertyChanged(nameof(UpdateAllText)); CommandManager.InvalidateRequerySuggested(); }
+        set { Set(ref _cleanRecycleBin, value); OnPropertyChanged(nameof(UpdateAllText)); RaiseUpdateAvailabilityChanged(); }
     }
 
     public string UpdateAllText =>
@@ -229,9 +408,11 @@ public sealed class MainViewModel : ObservableObject, IDisposable
         get
         {
             if (_checks.Count == 0)
-                return _updatesApplied ? "İşlemler uygulandı – dilerseniz yeniden kontrol edin" : "Kontrol henüz yapılmadı";
-            var n = _checks.Values.Where(c => c.Key != ComponentKeys.RecycleBin && c.HasActionableUpdates).Sum(c => c.ActionableCount);
-            return n == 0 ? "Uygulanabilir güncelleme / işlem yok" : $"{n} güncelleme / işlem uygulanmaya hazır";
+                return _updatesApplied
+                    ? "İşlemler uygulandı. Yeni durum için yeniden kontrol edin."
+                    : "Henüz kontrol yapılmadı. Önce \"Tümünü Kontrol Et\" veya \"Seçilenleri Kontrol Et\" çalıştırılmalı.";
+            var n = _checks.Values.Count(c => c.HasActionableUpdates);
+            return n == 0 ? "Kontrol edilen kartlarda uygulanacak işlem yok" : $"{n} kartta güncelleme / işlem uygulanmaya hazır";
         }
     }
 
@@ -245,7 +426,8 @@ public sealed class MainViewModel : ObservableObject, IDisposable
     /// "Seçilenleri Güncelle", bakım/temizlik kartı da seçiliyse "Seçilenleri Çalıştır".
     /// </summary>
     public string UpdateSelectedText =>
-        _selection.SelectedKeys.Any(k => k is ComponentKeys.Sfc or ComponentKeys.Dism or ComponentKeys.Mrt or ComponentKeys.RecycleBin)
+        _selection.SelectedKeys.Any(k => k is ComponentKeys.Sfc or ComponentKeys.Dism or ComponentKeys.Mrt
+            or ComponentKeys.RecycleBin or ComponentKeys.TempFiles)
             ? "Seçilenleri Çalıştır"
             : "Seçilenleri Güncelle";
 
@@ -263,6 +445,11 @@ public sealed class MainViewModel : ObservableObject, IDisposable
     public ICommand ClearSelectionCommand { get; }
     public ICommand CancelCommand { get; }
     public ICommand OpenLogCommand { get; }
+    public ICommand OpenLogFolderCommand { get; }
+    public ICommand ExportLogsCommand { get; }
+    public ICommand ClearLogsCommand { get; }
+    public ICommand ShowRecentCommand { get; }
+    public ICommand RefreshSystemInfoCommand { get; }
 
     // ------------------------------------------------------------------ startup
 
@@ -305,6 +492,9 @@ public sealed class MainViewModel : ObservableObject, IDisposable
         }
 
         CommandManager.InvalidateRequerySuggested();
+
+        // Sistem bilgileri arka planda okunur; arayüz beklemez.
+        _ = RefreshSystemInfoAsync();
 
         if (_argAccepted)
         {
@@ -394,25 +584,34 @@ public sealed class MainViewModel : ObservableObject, IDisposable
         RaiseSummaryChanged();
 
         Dictionary<string, ModuleResult>? results = null;
-        var completed = await RunBusyAsync(updatePhase: false, async ct =>
-            results = await _orchestrator.RunAllChecksAsync(Reporters(), ct));
-        StoreChecks(results);
-
-        if (!completed)
-        {
-            StepText = "Kontrol iptal edildi";
-            return;
-        }
+        var completed = await RunBusyAsync(updatePhase: false,
+            async ct => results = await _orchestrator.RunAllChecksAsync(Reporters(), ct),
+            done =>
+            {
+                StoreChecks(results);
+                var anyError = FinishOperation("Sistem kontrolü", results, done, updatePhase: false, single: false, NotifyPolicy.Always);
+                var ready = _checks.Values.Any(c => c.HasActionableUpdates);
+                return new OperationEnd(anyError,
+                    ready ? "Kontrol tamamlandı – işlemler hazır" : "Kontrol tamamlandı – uygulanacak işlem yok",
+                    ready ? "Kontrol tamamlandı – işlemler hazır, bazı kontroller başarısız" : "Kontrol tamamlandı – bazı kontroller başarısız oldu",
+                    "Kontrol iptal edildi");
+            });
+        if (!completed) return;
 
         if (!_checks.Values.Any(c => c.HasActionableUpdates))
         {
-            StepText = "Kontrol tamamlandı – uygulanacak işlem yok";
-            await ShowResultsAsync("Kontrol Tamamlandı",
-                "Tüm kontroller gerçek sistem verileriyle tamamlandı. Uygulanacak bir güncelleme veya işlem bulunamadı.");
+            // Otomatik uygulanacak bir şey yoksa, varsa manuel güncellemeler (bu oturumda henüz sorulmamışsa) sunulur.
+            if (await OfferManualUpdatesAsync(_checks.Values.ToList(), onlyNotOffered: true))
+            {
+                await ShowResultsAsync("İşlem Tamamlandı", "Aşağıdaki sonuçlar sistemden okunan gerçek durumu gösterir.");
+                return;
+            }
+            await ShowResultsAsync("Kontrol Tamamlandı", OperationState == OperationState.Failed
+                ? "Kontroller tamamlandı ancak bazıları başarısız oldu (nedenleri aşağıda). Başarılı kontrollerde uygulanacak bir işlem bulunamadı."
+                : "Tüm kontroller gerçek sistem verileriyle tamamlandı. Uygulanacak bir güncelleme veya işlem bulunamadı.");
         }
         else
         {
-            StepText = "Kontrol tamamlandı – işlemler hazır";
             _logger.Info("İşlemleri uygulamak için \"" + UpdateAllText + "\" veya \"" + UpdateSelectedText + "\" butonunu kullanın.");
         }
     }
@@ -435,64 +634,77 @@ public sealed class MainViewModel : ObservableObject, IDisposable
         RaiseSummaryChanged();
 
         Dictionary<string, ModuleResult>? results = null;
-        var completed = await RunBusyAsync(updatePhase: false, async ct =>
-            results = await _orchestrator.RunSelectedChecksAsync(keys, Reporters(), ct));
-        StoreChecks(results);
-
-        if (!completed)
-        {
-            StepText = "Kontrol iptal edildi";
-            return;
-        }
+        var completed = await RunBusyAsync(updatePhase: false,
+            async ct => results = await _orchestrator.RunSelectedChecksAsync(keys, Reporters(), ct),
+            done =>
+            {
+                StoreChecks(results);
+                var anyError = FinishOperation("Seçilen kontroller", results, done, updatePhase: false, single: false, NotifyPolicy.Always);
+                var ready = keys.Any(k => _checks.TryGetValue(k, out var c) && c.HasActionableUpdates);
+                return new OperationEnd(anyError,
+                    ready ? "Seçilen kontroller tamamlandı – işlemler hazır" : "Seçilen kontroller tamamlandı – uygulanacak işlem yok",
+                    ready ? "Seçilen kontroller tamamlandı – işlemler hazır, bazı kontroller başarısız" : "Seçilen kontroller tamamlandı – bazıları başarısız oldu",
+                    "Kontrol iptal edildi");
+            });
+        if (!completed) return;
 
         if (!keys.Any(k => _checks.TryGetValue(k, out var c) && c.HasActionableUpdates))
         {
-            StepText = "Seçilen kontroller tamamlandı – uygulanacak işlem yok";
-            await ShowResultsAsync("Kontrol Tamamlandı",
-                "Seçilen kartlar gerçek sistem verileriyle kontrol edildi. Uygulanacak bir güncelleme veya işlem bulunamadı.", keys);
+            var selectedChecks = keys.Where(_checks.ContainsKey).Select(k => _checks[k]).ToList();
+            if (await OfferManualUpdatesAsync(selectedChecks, onlyNotOffered: true))
+            {
+                await ShowResultsAsync("İşlem Tamamlandı", "Seçilen kartların sistemden okunan gerçek sonuçları:", keys);
+                return;
+            }
+            await ShowResultsAsync("Kontrol Tamamlandı", OperationState == OperationState.Failed
+                ? "Seçilen kontrollerin bazıları başarısız oldu (nedenleri aşağıda). Başarılı kontrollerde uygulanacak bir işlem bulunamadı."
+                : "Seçilen kartlar gerçek sistem verileriyle kontrol edildi. Uygulanacak bir güncelleme veya işlem bulunamadı.", keys);
         }
         else
         {
-            StepText = "Seçilen kontroller tamamlandı – işlemler hazır";
             _logger.Info("Seçilen kartlardaki işlemleri uygulamak için \"" + UpdateSelectedText + "\" butonunu kullanın.");
         }
     }
 
     // ------------------------------------------------------------------ TÜMÜNÜ GÜNCELLE
 
-    private bool CanUpdateAll()
-    {
-        if (IsBusy) return false;
-        return _checks.Values.Any(c => c.HasActionableUpdates && (c.Key != ComponentKeys.RecycleBin || CleanRecycleBin));
-    }
-
     private async Task UpdateAllAsync()
     {
-        if (!CanUpdateAll() || !await EnsureElevatedAsync(startCheckAfter: false)) return;
+        if (!CanUpdateAll || !await EnsureElevatedAsync(startCheckAfter: false)) return;
 
-        var bullets = _orchestrator.ModuleOrder
+        var keys = _orchestrator.ModuleOrder
             .Where(k => _checks.TryGetValue(k, out var c) && c.HasActionableUpdates && (k != ComponentKeys.RecycleBin || CleanRecycleBin))
-            .Select(k => BuildBullet(k, _checks[k]))
             .ToList();
+        var bullets = keys.Select(k => BuildBullet(k, _checks[k])).ToList();
+        var choices = BuildTempChoices(keys);
 
         var ok = await Dialog.ShowAsync(
             "Güncellemeleri onaylayın",
-            "Aşağıdaki işlemler sırayla gerçekleştirilecek. Yalnızca güncellemesi veya işlemi bulunan bileşenlere dokunulur. " +
+            "Aşağıdaki işlemler sırayla gerçekleştirilecek. Yalnızca kontrolde işlem gerektirdiği görülen bileşenlere dokunulur. " +
             "Bilgisayarınız sizin onayınız olmadan yeniden başlatılmaz.",
-            Icons.Download, DialogKind.Question, "Onayla ve başlat", "Vazgeç", bullets);
+            Icons.Download, DialogKind.Question, "Onayla ve başlat", "Vazgeç", bullets,
+            choices: choices, choicesTitle: choices is null ? null : "TEMİZLENECEK GEÇİCİ DOSYA KATEGORİLERİ");
         if (!ok)
         {
             _logger.Info("Kullanıcı güncellemeyi iptal etti; hiçbir değişiklik yapılmadı.");
             return;
         }
+        ApplyTempChoices(choices);
 
         var snapshot = new Dictionary<string, ModuleResult>(_checks);
         Dictionary<string, ModuleResult>? results = null;
-        await RunBusyAsync(updatePhase: true, async ct =>
-            results = await _orchestrator.RunAllUpdatesAsync(snapshot, CleanRecycleBin, Reporters(), ct));
-        StoreUpdates(results);
-        StepText = "İşlem tamamlandı";
+        await RunBusyAsync(updatePhase: true,
+            async ct => results = await _orchestrator.RunAllUpdatesAsync(snapshot, CleanRecycleBin, Reporters(), ct),
+            done =>
+            {
+                StoreUpdates(results);
+                var anyError = FinishOperation("Güncelleme işlemleri", results, done, updatePhase: true, single: false, NotifyPolicy.Always);
+                return new OperationEnd(anyError, "Güncelleme işlemleri tamamlandı", "Güncelleme işlemleri bitti – bazı işlemler başarısız oldu");
+            });
 
+        await OfferInUseRetryAsync(results);
+        // Otomatik uygulanmayan güncellemeler (varsa) ayrıca ve seçmeli olarak sunulur.
+        await OfferManualUpdatesAsync(snapshot.Values.ToList(), onlyNotOffered: false);
         await ShowResultsAsync("İşlem Tamamlandı", "Aşağıdaki sonuçlar sistemden okunan gerçek durumu gösterir.");
     }
 
@@ -509,33 +721,23 @@ public sealed class MainViewModel : ObservableObject, IDisposable
         }
         if (!await EnsureElevatedAsync(startCheckAfter: false)) return;
 
-        // 1) Seçilip henüz kontrol edilmemiş kartların önce gerçek kontrolünü yap.
-        var missing = keys.Where(k => !_checks.ContainsKey(k)).ToList();
-        if (missing.Count > 0)
-        {
-            _logger.Info("Henüz kontrol edilmemiş seçili kartlar önce kontrol ediliyor: " +
-                         string.Join(", ", missing.Select(_orchestrator.NameOf)));
-            foreach (var c in Cards.Where(c => missing.Contains(c.Key))) c.Reset();
-
-            Dictionary<string, ModuleResult>? checkResults = null;
-            var completed = await RunBusyAsync(updatePhase: false, async ct =>
-                checkResults = await _orchestrator.RunSelectedChecksAsync(missing, Reporters(), ct));
-            StoreChecks(checkResults);
-            if (!completed)
-            {
-                StepText = "İşlem iptal edildi";
-                return;
-            }
-        }
-
+        // 1) Kontrol edilmemiş kart güncellenemez: bu oturumda gerçek kontrol sonucu olmayan seçili kartlar atlanır.
+        var unchecked_ = keys.Where(k => !_checks.ContainsKey(k)).ToList();
+        foreach (var k in unchecked_)
+            _logger.Warning($"{_orchestrator.NameOf(k)}: bu oturumda kontrol edilmediği için atlandı (önce kontrol edilmeli).");
         // 2) Seçilenlerden gerçekten işlem gerektirenleri belirle.
         var actionable = keys.Where(k => _checks.TryGetValue(k, out var c) && c.HasActionableUpdates).ToList();
         var notNeeded = keys.Except(actionable)
-            .Select(k => $"{_orchestrator.NameOf(k)} ({(_checks.TryGetValue(k, out var c) ? c.Summary : "kontrol edilemedi")})")
+            .Select(k => $"{_orchestrator.NameOf(k)} ({(_checks.TryGetValue(k, out var c) ? c.Summary : "kontrol edilmedi")})")
             .ToList();
 
         if (actionable.Count == 0)
         {
+            if (await OfferManualUpdatesAsync(keys.Where(_checks.ContainsKey).Select(k => _checks[k]).ToList(), onlyNotOffered: false))
+            {
+                await ShowResultsAsync("İşlem Tamamlandı", "Seçilen kartların sistemden okunan gerçek sonuçları:", keys);
+                return;
+            }
             StepText = "Seçilen kartlarda uygulanacak işlem yok";
             _logger.Info("Seçilen kartların hiçbiri işlem gerektirmiyor; hiçbir şey çalıştırılmadı.");
             await ShowResultsAsync("Yapılacak işlem yok",
@@ -548,32 +750,41 @@ public sealed class MainViewModel : ObservableObject, IDisposable
         if (notNeeded.Count > 0)
             message += "\n\nİşlem gerektirmediği için atlanacak: " + string.Join(", ", notNeeded) + ".";
 
+        var selectedChoices = BuildTempChoices(actionable);
         var ok = await Dialog.ShowAsync(
             UpdateSelectedText + " – onay",
             message,
             Icons.Play, DialogKind.Question, "Onayla ve başlat", "Vazgeç",
-            actionable.Select(k => BuildBullet(k, _checks[k])));
+            actionable.Select(k => BuildBullet(k, _checks[k])),
+            choices: selectedChoices, choicesTitle: selectedChoices is null ? null : "TEMİZLENECEK GEÇİCİ DOSYA KATEGORİLERİ");
         if (!ok)
         {
             _logger.Info("Kullanıcı seçilen işlemleri iptal etti; hiçbir değişiklik yapılmadı.");
             return;
         }
+        ApplyTempChoices(selectedChoices);
 
         // 3) Yalnızca seçilenleri çalıştır.
         var snapshot = new Dictionary<string, ModuleResult>(_checks);
         Dictionary<string, ModuleResult>? results = null;
-        await RunBusyAsync(updatePhase: true, async ct =>
-            results = await _orchestrator.RunSelectedUpdatesAsync(snapshot, keys, Reporters(), ct));
-        StoreUpdates(results);
-        StepText = "Seçilen işlemler tamamlandı";
+        await RunBusyAsync(updatePhase: true,
+            async ct => results = await _orchestrator.RunSelectedUpdatesAsync(snapshot, actionable, Reporters(), ct),
+            done =>
+            {
+                StoreUpdates(results);
+                var anyError = FinishOperation("Seçilen işlemler", results, done, updatePhase: true, single: false, NotifyPolicy.Always);
+                return new OperationEnd(anyError, "Seçilen işlemler tamamlandı", "Seçilen işlemler bitti – bazı işlemler başarısız oldu");
+            });
 
+        await OfferInUseRetryAsync(results);
+        await OfferManualUpdatesAsync(keys.Where(snapshot.ContainsKey).Select(k => snapshot[k]).ToList(), onlyNotOffered: false);
         await ShowResultsAsync("İşlem Tamamlandı", "Seçilen kartların sistemden okunan gerçek sonuçları:", keys);
     }
 
     // ------------------------------------------------------------------ KART "KONTROL ET" BUTONU
 
     /// <summary>
-    /// Güncelleme kartlarının (Windows Update, Winget, Store, NVIDIA, Defender, Çöp Kutusu) kendi butonu:
+    /// Güncelleme kartlarının (Windows Update, Winget, Store, NVIDIA, Defender, Geçici Dosyalar, Çöp Kutusu) kendi butonu:
     /// yalnızca o kartı gerçekten kontrol eder. İşlem gerekiyorsa uygulamak için ayrıca onay istenir.
     /// </summary>
     private async Task RunCardCheckAsync(ComponentCardViewModel card)
@@ -585,35 +796,62 @@ public sealed class MainViewModel : ObservableObject, IDisposable
         RaiseSummaryChanged();
 
         Dictionary<string, ModuleResult>? results = null;
-        var completed = await RunBusyAsync(updatePhase: false, async ct =>
-            results = await _orchestrator.RunSingleCheckAsync(card.Key, Reporters(), ct));
-        StoreChecks(results);
-        StepText = completed ? card.Title + ": kontrol tamamlandı" : "Kontrol iptal edildi";
-        if (!completed || !_checks.TryGetValue(card.Key, out var check) || !check.HasActionableUpdates) return;
+        var completed = await RunBusyAsync(updatePhase: false,
+            async ct => results = await _orchestrator.RunSingleCheckAsync(card.Key, Reporters(), ct),
+            done =>
+            {
+                StoreChecks(results);
+                var anyError = FinishOperation($"{card.ShortTitle} kontrolü", results, done, updatePhase: false, single: true, NotifyPolicy.IfLong);
+                return new OperationEnd(anyError, card.Title + ": kontrol tamamlandı", card.Title + ": kontrol başarısız oldu", "Kontrol iptal edildi");
+            });
+        if (!completed || !_checks.TryGetValue(card.Key, out var check)) return;
+        if (!check.HasActionableUpdates)
+        {
+            // Kartın kendi butonu açık bir kullanıcı isteğidir: otomatik uygulanmayan güncellemeler her seferinde sunulur.
+            if (HasManualUpdates(check) && await OfferManualUpdatesAsync([check], onlyNotOffered: false))
+                await ShowResultsAsync(card.Title, "Sistemden okunan gerçek sonuç:", [card.Key]);
+            return;
+        }
 
         var isRecycle = card.Key == ComponentKeys.RecycleBin;
+        var isTemp = card.Key == ComponentKeys.TempFiles;
+        var cardChoices = BuildTempChoices([card.Key]);
+        var tempMessage = $"Geçici dosyalar temizlenecek.\n\nTahmini temizlenecek alan: {check.Summary.Replace("Temizlenebilir: ", "")}" +
+                          (string.IsNullOrWhiteSpace(check.Reason) ? string.Empty : "\n\n" + check.Reason) +
+                          "\n\nYalnızca seçili kategoriler temizlenir; kullanımdaki ve son 24 saatte değişen dosyalara dokunulmaz. " +
+                          "Temizlikten sonra alan yeniden ölçülür. Devam etmek istiyor musunuz?";
         var ok = await Dialog.ShowAsync(
-            isRecycle ? "Çöp kutusu temizlensin mi?" : card.Title + ": güncelleme mevcut",
-            (isRecycle
+            isRecycle ? "Çöp kutusu temizlensin mi?" : isTemp ? "Geçici dosyalar temizlensin mi?" : card.Title + ": güncelleme mevcut",
+            isRecycle
                 ? "Çöp kutusundaki öğeler kalıcı olarak silinecek. Bu işlem geri alınamaz."
-                : "Kontrol sonucunda aşağıdaki işlem bulundu. Şimdi uygulamak ister misiniz? " +
-                  "Bilgisayarınız sizin onayınız olmadan yeniden başlatılmaz."),
-            isRecycle ? Icons.RecycleBin : Icons.Download, DialogKind.Question,
-            isRecycle ? "Temizle" : "Şimdi güncelle", "Şimdi değil",
-            [BuildBullet(card.Key, check)]);
+                : isTemp
+                    ? tempMessage
+                    : "Kontrol sonucunda aşağıdaki işlem bulundu. Şimdi uygulamak ister misiniz? " +
+                      "Bilgisayarınız sizin onayınız olmadan yeniden başlatılmaz.",
+            isRecycle || isTemp ? Icons.RecycleBin : Icons.Download, DialogKind.Question,
+            isRecycle || isTemp ? "Temizle" : "Şimdi güncelle", "Şimdi değil",
+            isTemp ? null : [BuildBullet(card.Key, check)],
+            choices: cardChoices, choicesTitle: cardChoices is null ? null : "KATEGORİLER");
         if (!ok)
         {
             _logger.Info($"{card.Title}: kullanıcı işlemi erteledi; hiçbir değişiklik yapılmadı.");
             return;
         }
+        ApplyTempChoices(cardChoices);
 
         var snapshot = new Dictionary<string, ModuleResult>(_checks);
         Dictionary<string, ModuleResult>? updateResults = null;
-        await RunBusyAsync(updatePhase: true, async ct =>
-            updateResults = await _orchestrator.RunSingleUpdateAsync(snapshot, card.Key, Reporters(), ct));
-        StoreUpdates(updateResults);
-        StepText = card.Title + ": işlem tamamlandı";
+        await RunBusyAsync(updatePhase: true,
+            async ct => updateResults = await _orchestrator.RunSingleUpdateAsync(snapshot, card.Key, Reporters(), ct),
+            done =>
+            {
+                StoreUpdates(updateResults);
+                var anyError = FinishOperation($"{card.ShortTitle} işlemi", updateResults, done, updatePhase: true, single: true, NotifyPolicy.IfLong);
+                return new OperationEnd(anyError, card.Title + ": işlem tamamlandı", card.Title + ": işlem başarısız oldu");
+            });
 
+        await OfferInUseRetryAsync(updateResults);
+        await OfferManualUpdatesAsync([check], onlyNotOffered: false);
         await ShowResultsAsync(card.Title, "Sistemden okunan gerçek sonuç:", [card.Key]);
     }
 
@@ -637,22 +875,34 @@ public sealed class MainViewModel : ObservableObject, IDisposable
             }
         }
 
+        var scope = card.Key switch
+        {
+            ComponentKeys.Sfc => "SFC taraması",
+            ComponentKeys.Mrt => "MRT hızlı taraması",
+            _ => "DISM sağlık kontrolü"
+        };
         ModuleResult? result = null;
-        await RunBusyAsync(updatePhase: card.Key == ComponentKeys.Sfc, async ct =>
-            result = await _orchestrator.RunMaintenanceActionAsync(card.Key, Reporters(), ct));
-
+        await RunBusyAsync(updatePhase: card.Key == ComponentKeys.Sfc,
+            async ct => result = await _orchestrator.RunMaintenanceActionAsync(card.Key, Reporters(), ct),
+            done =>
+            {
+                if (result is null) return new OperationEnd(false, card.Title + " tamamlandı");
+                var anyError = FinishOperation(scope, new Dictionary<string, ModuleResult> { [card.Key] = result },
+                    done && result.Status != ComponentStatus.Skipped, updatePhase: false, single: true,
+                    card.Key == ComponentKeys.Dism ? NotifyPolicy.IfLong : NotifyPolicy.Always);
+                if (card.Key == ComponentKeys.Sfc)
+                {
+                    // /scannow bir onarım işlemidir; önceki kontrol sonucu artık geçersiz.
+                    _checks.Remove(ComponentKeys.Sfc);
+                    _updatesApplied = true;
+                }
+                else if (result.Status != ComponentStatus.Skipped)
+                {
+                    _checks[card.Key] = result;
+                }
+                return new OperationEnd(anyError, card.Title + " tamamlandı", card.Title + ": işlem başarısız oldu");
+            });
         if (result is null) return;
-        if (card.Key == ComponentKeys.Sfc)
-        {
-            // /scannow bir onarım işlemidir; önceki kontrol sonucu artık geçersiz.
-            _checks.Remove(ComponentKeys.Sfc);
-            _updatesApplied = true;
-        }
-        else if (result.Status != ComponentStatus.Skipped)
-        {
-            _checks[card.Key] = result;
-        }
-        RaiseSummaryChanged();
 
         // MRT tehdit bulduysa temizlik yalnızca açık onayla yapılır.
         if (card.Key == ComponentKeys.Mrt && result.HasActionableUpdates)
@@ -663,21 +913,189 @@ public sealed class MainViewModel : ObservableObject, IDisposable
                 "\n\nTespit edilenleri kaldırmak için MRT hızlı taraması temizleme modunda çalıştırılacak. Onaylıyor musunuz?",
                 Icons.Warning, DialogKind.Warning, "Temizle", "Şimdi değil");
             if (clean)
-            {
-                var snapshot = new Dictionary<string, ModuleResult>(_checks);
-                Dictionary<string, ModuleResult>? res = null;
-                await RunBusyAsync(updatePhase: true, async ct =>
-                    res = await _orchestrator.RunSingleUpdateAsync(snapshot, ComponentKeys.Mrt, Reporters(), ct));
-                StoreUpdates(res);
-            }
+                await RunSingleFollowUpAsync(card, "MRT temizliği");
             else
-            {
                 _logger.Warning("[MRT] Kullanıcı temizliği erteledi; tespit edilen tehditlere dokunulmadı.");
+        }
+
+        // DISM "onarılabilir" dediyse onarım (RestoreHealth) yalnızca açık onayla yapılır.
+        if (card.Key == ComponentKeys.Dism && result.HasActionableUpdates)
+        {
+            var repair = await Dialog.ShowAsync(
+                "Windows bileşen deposu onarılsın mı?",
+                "DISM CheckHealth, Windows bileşen deposunda onarılabilir bozulma buldu.\n\n" +
+                "Onaylarsanız " + DismManager.RepairCommand + " çalıştırılır: bozuk bileşenler Windows Update'ten alınan temiz " +
+                "dosyalarla onarılır. İşlem 10-60 dakika sürebilir ve başladıktan sonra yarıda kesilmez. " +
+                "Onarımdan sonra bileşen deposu yeniden kontrol edilerek sonuç doğrulanır.",
+                Icons.Dism, DialogKind.Question, "Onar", "Şimdi değil");
+            if (repair)
+                await RunSingleFollowUpAsync(card, "DISM onarımı");
+            else
+                _logger.Info("[DISM] Kullanıcı onarımı erteledi; bileşen deposuna dokunulmadı.");
+        }
+
+        await ShowResultsAsync(card.Title, "Windows aracının verdiği gerçek sonuç:", [card.Key]);
+    }
+
+    /// <summary>Bakım kartında onaylanan ek işlemi (MRT temizliği, DISM onarımı) kartın kontrol sonucuyla çalıştırır.</summary>
+    private async Task RunSingleFollowUpAsync(ComponentCardViewModel card, string scope)
+    {
+        var snapshot = new Dictionary<string, ModuleResult>(_checks);
+        Dictionary<string, ModuleResult>? res = null;
+        await RunBusyAsync(updatePhase: true,
+            async ct => res = await _orchestrator.RunSingleUpdateAsync(snapshot, card.Key, Reporters(), ct),
+            done =>
+            {
+                StoreUpdates(res);
+                var anyError = FinishOperation(scope, res, done, updatePhase: true, single: true, NotifyPolicy.Always);
+                return new OperationEnd(anyError, $"{scope} tamamlandı", $"{scope} başarısız oldu");
+            });
+    }
+
+    // ------------------------------------------------------------------ MANUEL (OTOMATİK UYGULANMAYAN) GÜNCELLEMELER
+
+    /// <summary>Kontrol akışlarında bir kez sunulup kullanıcının geçtiği manuel güncellemeler ("anahtar|Id|sürüm").</summary>
+    private readonly HashSet<string> _manualOffered = new(StringComparer.OrdinalIgnoreCase);
+
+    private static bool HasManualUpdates(ModuleResult r) =>
+        r.Items.Any(i => i.UpdateAvailable && i.Manual != ManualUpdateKind.None);
+
+    /// <summary>
+    /// Winget / Microsoft Store kontrolünde bulunan ve otomatik uygulanmayan güncellemeleri (açık hedefleme gerekli,
+    /// kurulum teknolojisi farklı) seçilebilir şekilde sunar. Hiçbiri varsayılan olarak seçili değildir; yalnızca kullanıcının
+    /// işaretledikleri uygulanır. Uygulandıysa true döner.
+    /// </summary>
+    /// <param name="onlyNotOffered">Kontrol akışlarında: bu oturumda zaten sunulmuş olanlar tekrar sorulmaz.</param>
+    private async Task<bool> OfferManualUpdatesAsync(IEnumerable<ModuleResult> checks, bool onlyNotOffered)
+    {
+        string KeyOf(ModuleResult r, UpdateItem i) => $"{r.Key}|{i.Id}|{i.NewVersion}";
+        var groups = checks
+            .Where(r => _orchestrator.Find(r.Key) is IManualUpdateModule)
+            .Select(r => (Result: r, Items: r.Items
+                .Where(i => i.UpdateAvailable && i.Manual != ManualUpdateKind.None && (!onlyNotOffered || !_manualOffered.Contains(KeyOf(r, i))))
+                .ToList()))
+            .Where(g => g.Items.Count > 0)
+            .ToList();
+        if (groups.Count == 0) return false;
+
+        foreach (var (r, items) in groups)
+            foreach (var i in items) _manualOffered.Add(KeyOf(r, i));
+
+        var choices = groups.SelectMany(g => g.Items.Select(i => new ChoiceItemViewModel(
+                $"{g.Result.Key}|{i.Id}",
+                $"{i.Name}   {i.CurrentVersion} → {i.NewVersion}",
+                0,
+                i.Manual == ManualUpdateKind.TechnologyMismatch ? "kaldır + yeni sürümü kur" : "açık hedeflemeyle güncelle",
+                isChecked: false)))
+            .ToList();
+
+        var ok = await Dialog.ShowAsync(
+            "Otomatik uygulanmayan güncellemeler",
+            "Winget bu güncellemeleri otomatik uygulamaz. Uygulamak istediklerinizi işaretleyin; hiçbiri varsayılan olarak seçili değildir.\n\n" +
+            "• Açık hedeflemeyle güncelle: uygulama genellikle kendini günceller (ör. Discord açıldığında). Seçerseniz yalnızca bu paket " +
+            "hedeflenerek winget ile güncellenir.\n" +
+            "• Kaldır + yeni sürümü kur: mevcut sürüm farklı bir kurulum türüyle (ör. MSI) kurulmuş; winget yerinde yükseltemez " +
+            "(0x8A15008E). Seçerseniz mevcut sürüm KALDIRILIR ve yeni sürüm kurulur. Kaldırma başarısız olursa hiçbir şey değişmez; " +
+            "kurulum başarısız olursa paket kurulu olmadan kalabilir ve bu açıkça bildirilir.",
+            Icons.Winget, DialogKind.Question, "Seçilenleri uygula", "Şimdi değil",
+            choices: choices, choicesTitle: "OTOMATİK UYGULANMAYAN GÜNCELLEMELER", choicesAreSizes: false);
+        var selected = choices.Where(c => c.IsChecked).Select(c => c.Id).ToList();
+        if (!ok || selected.Count == 0)
+        {
+            _logger.Info("Manuel güncellemeler uygulanmadı (kullanıcı seçmedi); hiçbir pakete dokunulmadı.");
+            return false;
+        }
+        _logger.Info("Manuel güncelleme için seçilenler: " + string.Join(", ", choices.Where(c => c.IsChecked).Select(c => c.Label.Replace("   ", " "))));
+
+        var results = new Dictionary<string, ModuleResult>();
+        await RunBusyAsync(updatePhase: true,
+            async ct =>
+            {
+                foreach (var (result, _) in groups)
+                {
+                    var ids = selected.Where(s => s.StartsWith(result.Key + "|", StringComparison.Ordinal))
+                        .Select(s => s[(result.Key.Length + 1)..]).ToList();
+                    if (ids.Count == 0) continue;
+                    var r = await _orchestrator.RunManualUpdatesAsync(result, ids, Reporters(), ct);
+                    if (r is not null) results[r.Key] = r;
+                }
+            },
+            done =>
+            {
+                StoreUpdates(results);
+                var anyError = FinishOperation("Manuel güncellemeler", results, done, updatePhase: true,
+                    single: results.Count == 1, NotifyPolicy.IfLong);
+                return new OperationEnd(anyError, "Manuel güncellemeler tamamlandı", "Manuel güncellemeler bitti – bazı paketler güncellenemedi");
+            });
+
+        await OfferInUseRetryAsync(results);
+        return true;
+    }
+
+    // ------------------------------------------------------------------ ÇALIŞAN UYGULAMAYI KAPAT VE YENİDEN DENE
+
+    /// <summary>
+    /// Güncellemesi çalışan bir uygulama nedeniyle başarısız olan paketler varsa, engelleyen GERÇEK işlemleri (Windows Restart
+    /// Manager tespiti) listeler; kullanıcı onaylarsa bu uygulamaları kapatıp güncellemeyi yeniden dener.
+    /// Onay verilmezse hiçbir işlem kapatılmaz. Windows hizmetleri ve sistem işlemleri hiçbir zaman kapatılmaz.
+    /// </summary>
+    private async Task OfferInUseRetryAsync(IReadOnlyDictionary<string, ModuleResult>? results)
+    {
+        if (results is null) return;
+        var candidates = results.Values
+            .Where(r => _orchestrator.Find(r.Key) is IInUseRetryModule)
+            .Select(r => (Result: r, Items: r.Items
+                .Where(i => i.Outcome is ItemOutcome.Failed or ItemOutcome.Unverified && i.InUse &&
+                            i.Manual != ManualUpdateKind.TechnologyMismatch && i.BlockingProcesses.Any(p => p.CanClose))
+                .ToList()))
+            .Where(x => x.Items.Count > 0)
+            .ToList();
+        if (candidates.Count == 0) return;
+
+        var bullets = new List<string>();
+        foreach (var (_, items) in candidates)
+        {
+            foreach (var i in items)
+            {
+                var line = $"{i.Name} ({i.CurrentVersion} → {i.NewVersion}) – kapatılacak: " +
+                           string.Join(", ", i.BlockingProcesses.Where(p => p.CanClose).Select(p => $"{p.Name} (PID {p.ProcessId})"));
+                var others = i.BlockingProcesses.Where(p => !p.CanClose).ToList();
+                if (others.Count > 0) line += ". Kapatılmayacak: " + string.Join(", ", others.Select(p => p.DisplayText));
+                bullets.Add(line);
             }
         }
 
-        StepText = card.Title + " tamamlandı";
-        await ShowResultsAsync(card.Title, "Windows aracının verdiği gerçek sonuç:", [card.Key]);
+        var ok = await Dialog.ShowAsync(
+            "Çalışan uygulamalar güncellemeyi engelliyor",
+            "Aşağıdaki paketler, çalışan uygulamalar dosyalarını kullandığı için güncellenemedi (Windows Restart Manager ile tespit edildi).\n\n" +
+            "Onaylarsanız bu uygulamalar kapatılır – önce normal kapatma istenir, 10 saniye içinde kapanmazsa Görev Yöneticisi'ndeki " +
+            "\"Görevi sonlandır\" gibi sonlandırılır – ve güncelleme yeniden denenir. Kaydedilmemiş çalışmalar kaybolabilir. " +
+            "Windows hizmetleri ve sistem işlemleri kapatılmaz.",
+            Icons.Warning, DialogKind.Warning, "Kapat ve tekrar dene", "Şimdi değil", bullets);
+        if (!ok)
+        {
+            _logger.Info("Kullanıcı engelleyen uygulamaların kapatılmasını onaylamadı; hiçbir uygulama kapatılmadı.");
+            return;
+        }
+
+        var retryResults = new Dictionary<string, ModuleResult>();
+        await RunBusyAsync(updatePhase: true,
+            async ct =>
+            {
+                foreach (var (result, items) in candidates)
+                {
+                    var approved = items.SelectMany(i => i.BlockingProcesses.Where(p => p.CanClose)).ToList();
+                    var r = await _orchestrator.RetryInUseAsync(result, approved, Reporters(), ct);
+                    if (r is not null) retryResults[r.Key] = r;
+                }
+            },
+            done =>
+            {
+                StoreUpdates(retryResults);
+                var anyError = FinishOperation("Yeniden deneme", retryResults, done, updatePhase: true,
+                    single: retryResults.Count == 1, NotifyPolicy.IfLong);
+                return new OperationEnd(anyError, "Yeniden deneme tamamlandı", "Yeniden deneme bitti – bazı paketler yine güncellenemedi");
+            });
     }
 
     // ------------------------------------------------------------------ SONUÇ / YENİDEN BAŞLATMA
@@ -728,8 +1146,8 @@ public sealed class MainViewModel : ObservableObject, IDisposable
         }
 
         var shutdown = Path.Combine(Environment.SystemDirectory, "shutdown.exe");
-        var r = await ProcessRunner.RunAsync(shutdown,
-            "/r /t 60 /c \"RTX Windows Updater: Guncellemeleri tamamlamak icin yeniden baslatiliyor. Iptal icin: shutdown /a\"",
+        var r = await ProcessRunner.RunCmdAsync(shutdown,
+            ["/r", "/t", "60", "/c", "RTX Windows Updater: Guncellemeleri tamamlamak icin yeniden baslatiliyor. Iptal icin: shutdown /a"],
             TimeSpan.FromSeconds(30), CancellationToken.None);
         if (r.Succeeded)
             _logger.Warning("Bilgisayar 60 saniye içinde yeniden başlatılacak (iptal için komut satırında: shutdown /a).");
@@ -750,6 +1168,33 @@ public sealed class MainViewModel : ObservableObject, IDisposable
 
     // ------------------------------------------------------------------ helpers
 
+    /// <summary>Geçici Dosyalar kartı işleme dahilse, kontrolde bulunan GERÇEK kategorileri seçilebilir öğe olarak döndürür.</summary>
+    private List<ChoiceItemViewModel>? BuildTempChoices(IEnumerable<string> keys)
+    {
+        if (!keys.Contains(ComponentKeys.TempFiles) ||
+            !_checks.TryGetValue(ComponentKeys.TempFiles, out var check) || !check.HasActionableUpdates)
+            return null;
+        return check.Items
+            .Where(i => i.UpdateAvailable)
+            .Select(i => new ChoiceItemViewModel(i.Id, i.Name, long.TryParse(i.Tag, out var b) ? b : 0, i.CurrentVersion))
+            .ToList();
+    }
+
+    /// <summary>Onay penceresindeki kategori seçimlerini kontrol sonucundaki öğelere uygular.</summary>
+    private void ApplyTempChoices(List<ChoiceItemViewModel>? choices)
+    {
+        if (choices is null || !_checks.TryGetValue(ComponentKeys.TempFiles, out var check)) return;
+        foreach (var item in check.Items)
+        {
+            var choice = choices.FirstOrDefault(c => c.Id == item.Id);
+            if (choice is not null) item.Selected = choice.IsChecked;
+        }
+        var chosen = choices.Where(c => c.IsChecked).Select(c => c.Label).ToList();
+        _logger.Info(chosen.Count == 0
+            ? "Geçici dosyalar: hiçbir kategori seçilmedi; temizlik yapılmayacak."
+            : "Geçici dosyalar: temizlenecek kategoriler – " + string.Join(", ", chosen));
+    }
+
     private string BuildBullet(string key, ModuleResult c)
     {
         switch (key)
@@ -767,36 +1212,120 @@ public sealed class MainViewModel : ObservableObject, IDisposable
                 return "Microsoft Defender: virüs ve tehdit tanımları güncellenecek.";
             case ComponentKeys.Sfc:
                 return "Windows Sistem Dosyası Kontrolü: doğrulamada bozuk dosya bulundu; sfc /scannow ile onarım yapılacak (10-30 dk).";
+            case ComponentKeys.Dism:
+                return "Windows Image: bileşen deposu " + DismManager.RepairCommand + " ile onarılacak (10-60 dk; onarım dosyaları " +
+                       "Windows Update'ten indirilebilir, başladıktan sonra yarıda kesilmez). Ardından durum yeniden kontrol edilir.";
             case ComponentKeys.Mrt:
                 return "MRT: tespit edilen kötü amaçlı yazılım, MRT hızlı taramasıyla (temizleme modu) kaldırılacak.";
             case ComponentKeys.RecycleBin:
                 return $"Çöp Kutusu: {c.ActionableCount} öğe KALICI olarak silinecek.";
+            case ComponentKeys.TempFiles:
+                return $"Windows Geçici Dosyalar: seçili kategoriler temizlenecek ({c.Summary}). Silinen geçici dosyalar geri alınamaz; " +
+                       "temizlikten sonra alan yeniden ölçülür.";
             default:
                 return $"{_orchestrator.NameOf(key)}: {c.Summary}";
         }
     }
 
-    /// <summary>İşlemi "meşgul" durumunda çalıştırır; iptal edilmeden tamamlandıysa true döner.</summary>
-    private async Task<bool> RunBusyAsync(bool updatePhase, Func<CancellationToken, Task> body)
+    /// <summary>İşlem sonundaki tek durum geçişinin girdisi: gerçek hata durumu ve duruma göre gösterilecek adım metinleri.</summary>
+    private readonly record struct OperationEnd(bool AnyError, string CompletedText, string? FailedText = null, string? CancelledText = null);
+
+    /// <summary>
+    /// İşlemi "meşgul" durumunda çalıştırır. İşlem nasıl biterse bitsin (tamamlandı / iptal / hata) TEK bir final durum
+    /// geçişi yapılır (<see cref="CompleteOperation"/>). İptal edilmeden tamamlandıysa true döner.
+    /// </summary>
+    /// <param name="finalize">
+    /// Final geçişte, işlem durumu hesaplanmadan ÖNCE çalışır: gerçek sonuçları kaydeder, işlem özetini oluşturur ve hata
+    /// durumunu + adım metinlerini döndürür. Parametre: işlem iptal edilmeden tamamlandı mı.
+    /// </param>
+    private async Task<bool> RunBusyAsync(bool updatePhase, Func<CancellationToken, Task> body, Func<bool, OperationEnd> finalize)
     {
-        _cts = new CancellationTokenSource();
+        var cts = new CancellationTokenSource();
+        _cts = cts;
         _cancelRequested = false;
         IsUpdatePhase = updatePhase;
-        IsBusy = true;
+        OperationState = updatePhase ? OperationState.Updating : OperationState.Checking;
+        Progress = 0;
+        SetBusy(true);
+        var watch = Stopwatch.StartNew();
+        var completed = false;
+        Exception? error = null;
         try
         {
-            await body(_cts.Token);
-            return !_cts.IsCancellationRequested;
+            await body(cts.Token);
+            completed = !cts.IsCancellationRequested;
         }
-        finally
+        catch (OperationCanceledException) when (cts.IsCancellationRequested)
         {
-            IsBusy = false;
-            IsUpdatePhase = false;
-            _cts.Dispose();
-            _cts = null;
-            RebuildUpdateRows();
-            RaiseSummaryChanged();
+            completed = false; // kullanıcı iptali hata değildir: durum "İptal edildi" olur
         }
+        catch (Exception ex)
+        {
+            error = ex;
+        }
+
+        _cts = null;
+        cts.Dispose();
+        error = CompleteOperation(completed, error, watch.Elapsed, finalize);
+        if (error is not null)
+            System.Runtime.ExceptionServices.ExceptionDispatchInfo.Capture(error).Throw();
+        return completed;
+    }
+
+    /// <summary>
+    /// İşlemin TEK final durum geçişi: sonuçlar kaydedilir, işlem durumu (Tamamlandı / Hata / İptal) GERÇEK sonuçlardan
+    /// belirlenir, "çalışıyor" durumu kapanır (ilerleme çubuğu parıltısı ve dönen ikon bu anda durur, tik/hata/iptal ikonu
+    /// görünür), gerçek tamamlanmada ilerleme %100 olur, adım metni, "Bulunan Güncellemeler" tablosu ve buton durumları
+    /// bir kez yeniden hesaplanır. Tümü aynı arayüz işleminde yapıldığından ara durumlar çizilmez.
+    /// </summary>
+    /// <returns>İşlemi sonlandıran hata (varsa); çağıran yeniden fırlatır.</returns>
+    private Exception? CompleteOperation(bool completed, Exception? error, TimeSpan elapsed, Func<bool, OperationEnd> finalize)
+    {
+        _lastBusyDuration = elapsed;
+        var end = new OperationEnd(false, "İşlem tamamlandı");
+        if (error is null)
+        {
+            try
+            {
+                end = finalize(completed);
+            }
+            catch (Exception ex)
+            {
+                error = ex;
+            }
+        }
+        // Winget'in bu işlemde bildirdiği kurulum teknolojisi uyuşmazlıkları kalıcı olarak saklanır (yalnızca değiştiyse yazılır).
+        _state.SetWingetTechnologyMismatch(WingetManager.KnownTechnologyMismatches);
+
+        var state = error is not null ? OperationState.Failed
+            : !completed ? OperationState.Cancelled
+            : end.AnyError ? OperationState.Failed
+            : OperationState.Completed;
+
+        if (completed && error is null) Progress = 100;
+        OperationState = state;
+        StepText = state switch
+        {
+            OperationState.Cancelled => end.CancelledText ?? "İşlem iptal edildi",
+            OperationState.Failed when error is not null => "İşlem beklenmeyen bir hatayla durdu (ayrıntılar günlükte)",
+            OperationState.Failed => end.FailedText ?? end.CompletedText,
+            _ => end.CompletedText
+        };
+        IsUpdatePhase = false;
+        SetBusy(false);
+        RebuildUpdateRows();
+        RaiseSummaryChanged();
+        return error;
+    }
+
+    /// <summary>"Çalışıyor" durumunu değiştirir; buton durumları çağıranın tek <see cref="RaiseSummaryChanged"/> çağrısıyla güncellenir.</summary>
+    private void SetBusy(bool busy)
+    {
+        if (_isBusy == busy) return;
+        _isBusy = busy;
+        OnPropertyChanged(nameof(IsBusy));
+        OnPropertyChanged(nameof(IsOperationRunning));
+        if (busy) RaiseUpdateAvailabilityChanged();
     }
 
     private void StoreChecks(Dictionary<string, ModuleResult>? results)
@@ -807,7 +1336,6 @@ public sealed class MainViewModel : ObservableObject, IDisposable
             if (r.Status is ComponentStatus.Skipped or ComponentStatus.Checking) continue;
             _checks[key] = r;
         }
-        RaiseSummaryChanged();
     }
 
     private void StoreUpdates(Dictionary<string, ModuleResult>? results)
@@ -819,17 +1347,35 @@ public sealed class MainViewModel : ObservableObject, IDisposable
             _checks.Remove(key); // işlem yapıldı; yeni durum için yeniden kontrol gerekir
             _updatesApplied = true;
         }
-        RaiseSummaryChanged();
     }
 
-    private OrchestratorReporters Reporters() => new(
-        new Progress<StepProgress>(p =>
+    /// <summary>
+    /// Orkestratör bildirimleri. Adım metni/yüzdesi ve kartların canlı ilerlemesi <see cref="ThrottledProgress{T}"/> ile
+    /// en fazla 100 ms'de bir (yalnızca en son değer) uygulanır; kart sonuçları ise sırasıyla ve anında uygulanır.
+    /// İşlem bittikten sonra gelen gecikmiş ara değerler final durumu değiştirmez.
+    /// </summary>
+    private OrchestratorReporters Reporters()
+    {
+        var activity = new ThrottledProgress<ModuleProgress>(_dispatcher, ProgressInterval, p => p.Key, p =>
         {
+            if (IsBusy) Cards.FirstOrDefault(c => c.Key == p.Key)?.ApplyProgress(p);
+        });
+        var step = new ThrottledProgress<StepProgress>(_dispatcher, ProgressInterval, _ => "step", p =>
+        {
+            if (!IsBusy) return;
             StepText = p.Text;
             Progress = p.Percent;
-        }),
-        new Progress<ModuleResult>(r => Cards.FirstOrDefault(c => c.Key == r.Key)?.Apply(r)),
-        new Progress<ModuleProgress>(p => Cards.FirstOrDefault(c => c.Key == p.Key)?.ApplyProgress(p)));
+        });
+        var state = new Progress<ModuleResult>(r =>
+        {
+            activity.Discard(r.Key);
+            // Tamamlanan her gerçek sonuç kartta gösterilir ve işlem geçmişine kaydedilir.
+            var snapshot = CardSnapshot.From(r);
+            Cards.FirstOrDefault(c => c.Key == r.Key)?.Apply(r, snapshot);
+            if (snapshot is not null) _state.SetCard(snapshot);
+        });
+        return new OrchestratorReporters(step, state, activity);
+    }
 
     private void OnSelectionChanged(object? sender, EventArgs e)
     {
@@ -843,14 +1389,14 @@ public sealed class MainViewModel : ObservableObject, IDisposable
 
     private void RebuildUpdateRows()
     {
-        UpdateRows.Clear();
+        var rows = new List<UpdateRowViewModel>();
         foreach (var card in Cards)
         {
             var r = card.LastResult;
             if (r is null) continue;
             foreach (var i in r.Items.OrderByDescending(i => i.UpdateAvailable))
             {
-                UpdateRows.Add(new UpdateRowViewModel
+                rows.Add(new UpdateRowViewModel
                 {
                     Category = card.Title,
                     Name = i.Name,
@@ -861,34 +1407,101 @@ public sealed class MainViewModel : ObservableObject, IDisposable
                 });
             }
         }
+        UpdateRows = new ObservableCollection<UpdateRowViewModel>(rows);
     }
-
     private void RaiseSummaryChanged()
     {
         OnPropertyChanged(nameof(UpdateAllText));
         OnPropertyChanged(nameof(AvailableSummary));
+        RaiseUpdateAvailabilityChanged();
+    }
+
+    /// <summary>Güncelleme butonlarının etkinliğini gerçek kontrol sonuçlarına göre yeniden hesaplatır.</summary>
+    private void RaiseUpdateAvailabilityChanged()
+    {
+        OnPropertyChanged(nameof(CanUpdateAll));
+        OnPropertyChanged(nameof(CanRunSelected));
         CommandManager.InvalidateRequerySuggested();
     }
 
+    /// <summary>
+    /// Herhangi bir iş parçacığından gelen günlük satırı kuyruğa alınır; arayüz 150 ms'de bir TEK seferde günceller.
+    /// (Dosyaya yazma Logger'da ayrıca ve eksiksiz yapılır; bu yalnızca ekrandaki görünümdür.)
+    /// </summary>
     private void OnLogAdded(LogEntry entry)
     {
+        _pendingLogs.Enqueue(entry);
+        if (Interlocked.CompareExchange(ref _logFlushScheduled, 1, 0) != 0) return;
         var dispatcher = Application.Current?.Dispatcher;
-        if (dispatcher is null) return;
-        dispatcher.BeginInvoke(() =>
+        if (dispatcher is null)
         {
-            Logs.Add(entry);
-            while (Logs.Count > MaxLogEntries) Logs.RemoveAt(0);
-        });
+            Interlocked.Exchange(ref _logFlushScheduled, 0);
+            return;
+        }
+        dispatcher.BeginInvoke(_logTimer.Start, DispatcherPriority.Background);
     }
 
-    private void OpenLogFile()
+    private void FlushPendingLogs(object? sender, EventArgs e)
+    {
+        var added = 0;
+        while (added < 2000 && _pendingLogs.TryDequeue(out var entry))
+        {
+            Logs.Add(entry);
+            added++;
+        }
+        var excess = Logs.Count - MaxLogEntries;
+        for (var i = 0; i < excess; i++) Logs.RemoveAt(0);
+        if (added > 0) LogsAppended?.Invoke(this, EventArgs.Empty);
+
+        if (_pendingLogs.IsEmpty)
+        {
+            _logTimer.Stop();
+            Interlocked.Exchange(ref _logFlushScheduled, 0);
+            // Durdurma ile kuyruk kontrolü arasında gelen satır kaçmasın.
+            if (!_pendingLogs.IsEmpty && Interlocked.CompareExchange(ref _logFlushScheduled, 1, 0) == 0)
+                _logTimer.Start();
+        }
+    }
+
+    // ------------------------------------------------------------------ günlük yönetimi
+
+    private bool PassesLogFilter(LogEntry e) => _logFilter switch
+    {
+        "info" => e.Level is LogLevel.Info or LogLevel.Output,
+        "success" => e.Level == LogLevel.Success,
+        "warning" => e.Level == LogLevel.Warning,
+        "error" => e.Level == LogLevel.Error,
+        _ => true
+    };
+
+    /// <summary>Oturum günlük dosyasını varsayılan metin düzenleyicide açar.</summary>
+    private async Task OpenLogFileAsync()
     {
         try
         {
+            await Task.Run(() => _logger.Flush(TimeSpan.FromSeconds(2)));
             if (File.Exists(_logger.LogFilePath))
-                Process.Start(new ProcessStartInfo("explorer.exe", $"/select,\"{_logger.LogFilePath}\"") { UseShellExecute = true });
+                Process.Start(new ProcessStartInfo(_logger.LogFilePath) { UseShellExecute = true });
             else
                 _logger.Warning("Log dosyası henüz oluşturulmadı.");
+        }
+        catch (Exception ex)
+        {
+            _logger.Error("Log dosyası açılamadı: " + ex.Message);
+        }
+    }
+
+    private async Task OpenLogFolderAsync()
+    {
+        try
+        {
+            await Task.Run(() => _logger.Flush(TimeSpan.FromSeconds(2)));
+            if (File.Exists(_logger.LogFilePath))
+                Process.Start(new ProcessStartInfo("explorer.exe", $"/select,\"{_logger.LogFilePath}\"") { UseShellExecute = true });
+            else if (Directory.Exists(_logger.LogDirectory))
+                Process.Start(new ProcessStartInfo("explorer.exe", $"\"{_logger.LogDirectory}\"") { UseShellExecute = true });
+            else
+                _logger.Warning("Log klasörü henüz oluşturulmadı.");
         }
         catch (Exception ex)
         {
@@ -896,17 +1509,261 @@ public sealed class MainViewModel : ObservableObject, IDisposable
         }
     }
 
+    /// <summary>Gerçek oturum günlük dosyasını kullanıcının seçtiği konuma kopyalar.</summary>
+    private async Task ExportLogsAsync()
+    {
+        var dialog = new Microsoft.Win32.SaveFileDialog
+        {
+            Title = "Günlüğü dışa aktar",
+            FileName = $"RTX-Windows-Updater-Log-{DateTime.Now:yyyy-MM-dd}.txt",
+            DefaultExt = ".txt",
+            Filter = "Metin dosyası (*.txt)|*.txt|Tüm dosyalar (*.*)|*.*",
+            AddExtension = true,
+            OverwritePrompt = true
+        };
+        if (dialog.ShowDialog(Application.Current?.MainWindow) != true) return;
+
+        try
+        {
+            _logger.Info($"Günlük dışa aktarılıyor: {dialog.FileName}");
+            var target = dialog.FileName;
+            var lines = await Task.Run(() =>
+            {
+                _logger.ExportTo(target);
+                return File.ReadLines(target).Count();
+            });
+            _logger.Success($"Günlük dışa aktarıldı: {dialog.FileName} ({lines} satır).");
+        }
+        catch (Exception ex)
+        {
+            _logger.Error($"Günlük dışa aktarılamadı: {ex.Message}");
+            _ = Dialog.ShowAsync("Dışa aktarılamadı", "Günlük dosyası kopyalanamadı:\n" + ex.Message,
+                Icons.Warning, DialogKind.Warning, "Tamam");
+        }
+    }
+
+    /// <summary>Yalnızca ekrandaki günlüğü temizler; diskteki günlük dosyası korunur.</summary>
+    private void ClearLogs()
+    {
+        Logs.Clear();
+        _logger.Info($"Ekrandaki günlük temizlendi. Günlük dosyası korunuyor: {_logger.LogFilePath}");
+    }
+
+    // ------------------------------------------------------------------ sistem bilgileri
+
+    private async Task RefreshSystemInfoAsync()
+    {
+        if (IsSystemInfoLoading) return;
+        IsSystemInfoLoading = true;
+        SystemInfoStatus = "Sistem bilgileri okunuyor...";
+        try
+        {
+            var snapshot = await _systemInfo.CollectAsync();
+            SystemInfoFields.Clear();
+            SystemInfoPrimaryFields.Clear();
+            foreach (var f in snapshot.Fields)
+            {
+                SystemInfoFields.Add(f);
+                if (f.Primary) SystemInfoPrimaryFields.Add(f);
+            }
+            var missing = snapshot.Fields.Count(f => !f.Available);
+            SystemInfoStatus = $"Okunma: {snapshot.CollectedAt:HH:mm}" + (missing > 0 ? $" · {missing} alan alınamadı" : string.Empty);
+        }
+        catch (Exception ex)
+        {
+            SystemInfoStatus = "Sistem bilgileri alınamadı";
+            _logger.Error("Sistem bilgileri okunamadı: " + ex.Message);
+        }
+        finally
+        {
+            IsSystemInfoLoading = false;
+        }
+    }
+
+    // ------------------------------------------------------------------ sistem sağlık özeti
+
+    /// <summary>
+    /// Genel sağlık durumunu kartların GERÇEK durumlarından hesaplar. Çalıştırılmamış kartlar sağlıklı sayılmaz,
+    /// hatalar ve bekleyen güncellemeler gizlenmez.
+    /// </summary>
+    private void RecomputeHealth()
+    {
+        int ok = 0, pending = 0, errors = 0, notRun = 0, running = 0;
+        foreach (var c in Cards)
+        {
+            switch (c.Status)
+            {
+                case ComponentStatus.UpToDate or ComponentStatus.Updated: ok++; break;
+                case ComponentStatus.UpdateAvailable or ComponentStatus.Attention or ComponentStatus.PartiallyUpdated
+                    or ComponentStatus.RebootRequired: pending++; break;
+                case ComponentStatus.Failed or ComponentStatus.CheckFailed or ComponentStatus.AdminRequired: errors++; break;
+                case ComponentStatus.Checking or ComponentStatus.Updating: running++; break;
+                default: notRun++; break;
+            }
+        }
+
+        var total = Cards.Count;
+        if (running > 0)
+        {
+            HealthStatus = ComponentStatus.Checking;
+            HealthHeadline = $"İşlem sürüyor ({running} kart çalışıyor)";
+        }
+        else if (notRun == total)
+        {
+            HealthStatus = ComponentStatus.NotChecked;
+            HealthHeadline = "Sistem bu oturumda henüz kontrol edilmedi";
+        }
+        else if (errors > 0)
+        {
+            HealthStatus = ComponentStatus.Failed;
+            HealthHeadline = errors == 1 ? "1 işlemde hata var" : $"{errors} işlemde hata var";
+        }
+        else if (pending > 0)
+        {
+            HealthStatus = ComponentStatus.UpdateAvailable;
+            HealthHeadline = $"{pending} işlem dikkat gerektiriyor";
+        }
+        else if (notRun > 0)
+        {
+            HealthStatus = ComponentStatus.NotChecked;
+            HealthHeadline = $"Kontrol edilen {ok} işlem sorunsuz · {notRun} işlem çalıştırılmadı";
+        }
+        else
+        {
+            HealthStatus = ComponentStatus.UpToDate;
+            HealthHeadline = "Sistem kontrol edildi – sorun bulunmadı";
+        }
+
+        var parts = new List<string> { $"{ok} sorunsuz", $"{pending} güncelleme / uyarı", $"{errors} hata", $"{notRun} çalıştırılmadı" };
+        if (running > 0) parts.Add($"{running} çalışıyor");
+        HealthCounts = string.Join(" · ", parts);
+    }
+
+    // ------------------------------------------------------------------ son işlem özeti + bildirim
+
+    private enum NotifyPolicy { Never, Always, IfLong }
+
+    private static bool IsErrorResult(ModuleResult r) =>
+        r.Status is ComponentStatus.Failed or ComponentStatus.CheckFailed or ComponentStatus.AdminRequired;
+
+    private static bool IsWarningResult(ModuleResult r) =>
+        r.Status is ComponentStatus.Attention or ComponentStatus.PartiallyUpdated or ComponentStatus.RebootRequired ||
+        (r.Status == ComponentStatus.UpdateAvailable && r.Key is ComponentKeys.Sfc or ComponentKeys.Dism or ComponentKeys.Mrt);
+
+    /// <summary>Kontrolde bulunan "güncelleme" (bakım bulguları, çöp kutusu ve geçici dosyalar hariç).</summary>
+    private static bool IsUpdateFinding(ModuleResult r) =>
+        r.Status == ComponentStatus.UpdateAvailable &&
+        r.Key is not (ComponentKeys.Sfc or ComponentKeys.Dism or ComponentKeys.Mrt or ComponentKeys.RecycleBin or ComponentKeys.TempFiles);
+
+    private string ShortName(string key) => Cards.FirstOrDefault(c => c.Key == key)?.ShortTitle ?? _orchestrator.NameOf(key);
+
+    /// <summary>
+    /// Tamamlanan işlemin özetini GERÇEK sonuçlardan hesaplar, "Son İşlem" alanını ve işlem geçmişini günceller,
+    /// gerekiyorsa Windows bildirimi gönderir. Hata varsa true döner.
+    /// </summary>
+    private bool FinishOperation(string scope, IReadOnlyDictionary<string, ModuleResult>? results, bool completed,
+        bool updatePhase, bool single, NotifyPolicy notify)
+    {
+        var all = results?.Values.Where(r => r.Status is not (ComponentStatus.Checking or ComponentStatus.Updating)).ToList() ?? [];
+        var anyError = all.Any(IsErrorResult);
+        if (all.Count == 0 && completed) return false; // hiçbir modül çalışmadı (ör. işlem gerekmedi)
+
+        var duration = _lastBusyDuration;
+        var rec = new OperationRecord
+        {
+            CompletedAt = DateTime.Now,
+            Title = !completed ? $"{scope} iptal edildi." : anyError ? $"{scope} tamamlandı – hata var." : $"{scope} tamamlandı.",
+            Keys = all.Select(r => r.Key).ToList(),
+            DurationMs = (long)duration.TotalMilliseconds,
+            Cancelled = !completed,
+            Completed = all.Count(r => r.CompletedAt is not null && r.Status != ComponentStatus.Skipped),
+            Skipped = all.Count(r => r.Status == ComponentStatus.Skipped),
+            Errors = all.Count(IsErrorResult),
+            Warnings = all.Count(IsWarningResult),
+            Updates = updatePhase
+                ? all.Count(r => r.Status == ComponentStatus.Updated)
+                : all.Where(IsUpdateFinding).Sum(r => Math.Max(1, r.ActionableCount))
+        };
+
+        var durationText = UpdateOrchestrator.FormatDuration(duration);
+        if (single && all.Count == 1)
+        {
+            rec.SummaryText = $"{all[0].Summary} · Süre: {durationText}";
+        }
+        else if (updatePhase)
+        {
+            // Ör: "4 işlem · 2 başarılı · 1 uyarı · 1 hata · Winget: 2 paket güncellenemedi · Süre: 21 sn"
+            var processed = all.Count(r => r.Status != ComponentStatus.Skipped);
+            var parts = new List<string> { $"{processed} işlem", $"{rec.Updates} başarılı", $"{rec.Warnings} uyarı", $"{rec.Errors} hata" };
+            if (rec.Skipped > 0) parts.Add($"{rec.Skipped} atlandı");
+            parts.AddRange(all
+                .Where(r => IsErrorResult(r) || r.Status is ComponentStatus.PartiallyUpdated or ComponentStatus.RebootRequired)
+                .Select(r => $"{ShortName(r.Key)}: {r.Summary}"));
+            parts.Add($"Süre: {durationText}");
+            rec.SummaryText = string.Join(" · ", parts);
+        }
+        else
+        {
+            // Ör: "10 kontrol tamamlandı · 3 güncelleme bulundu (Winget 2, Microsoft Defender 1) · 1 manuel güncelleme · ..."
+            var found = all.Where(IsUpdateFinding).Select(r => $"{ShortName(r.Key)} {Math.Max(1, r.ActionableCount)}").ToList();
+            var manual = all.Where(r => r.Key is ComponentKeys.Winget or ComponentKeys.Store)
+                .Sum(r => r.Items.Count(i => i.UpdateAvailable && !i.AutoUpdatable));
+            var parts = new List<string>
+            {
+                $"{rec.Completed} kontrol tamamlandı",
+                found.Count > 0 ? $"{rec.Updates} güncelleme bulundu ({string.Join(", ", found)})" : "güncelleme bulunamadı"
+            };
+            if (manual > 0) parts.Add($"{manual} manuel güncelleme (otomatik uygulanmaz)");
+            parts.Add($"{rec.Warnings} uyarı");
+            parts.Add($"{rec.Errors} hata");
+            if (rec.Skipped > 0) parts.Add($"{rec.Skipped} atlandı");
+            parts.AddRange(all
+                .Where(r => r.Status == ComponentStatus.UpdateAvailable && r.Key is ComponentKeys.Sfc or ComponentKeys.Dism or ComponentKeys.Mrt)
+                .Select(r => $"{ShortName(r.Key)}: {r.Summary}"));
+            var recycle = all.FirstOrDefault(r => r.Key == ComponentKeys.RecycleBin && r.Status == ComponentStatus.UpdateAvailable);
+            if (recycle is not null) parts.Add($"çöp kutusunda {recycle.ActionableCount} öğe");
+            var temp = all.FirstOrDefault(r => r.Key == ComponentKeys.TempFiles && r.Status == ComponentStatus.UpdateAvailable);
+            if (temp is not null) parts.Add($"Geçici dosyalar: {temp.Summary}");
+            parts.Add($"Süre: {durationText}");
+            rec.SummaryText = string.Join(" · ", parts);
+        }
+
+        _state.AddOperation(rec);
+        RecentOperations.Insert(0, rec);
+        while (RecentOperations.Count > 50) RecentOperations.RemoveAt(RecentOperations.Count - 1);
+        LastOperation = rec;
+        if (anyError) _logger.Warning($"Son işlem: {rec.Title} {rec.SummaryText}");
+        else _logger.Info($"Son işlem: {rec.Title} {rec.SummaryText}");
+
+        var shouldNotify = completed && notify switch
+        {
+            NotifyPolicy.Always => true,
+            NotifyPolicy.IfLong => duration >= TimeSpan.FromSeconds(30),
+            _ => false
+        };
+        if (shouldNotify) _ = _notifications.ShowAsync(rec.Title, rec.SummaryText);
+        return anyError;
+    }
+
     private void OnCommandError(Exception ex)
     {
-        _logger.Error("Beklenmeyen hata: " + ex.Message);
-        IsBusy = false;
+        _logger.Error("Beklenmeyen hata: " + ex);
+        if (!IsBusy) return;
+        // RunBusyAsync dışında kalan beklenmeyen bir durumda da "çalışıyor" hâli ve animasyonlar kapatılır.
+        OperationState = OperationState.Failed;
+        StepText = "İşlem beklenmeyen bir hatayla durdu (ayrıntılar günlükte)";
+        SetBusy(false);
+        RaiseSummaryChanged();
     }
 
     public void Dispose()
     {
         _logger.LogAdded -= OnLogAdded;
         _selection.SelectionChanged -= OnSelectionChanged;
+        _logTimer.Stop();
+        _logTimer.Tick -= FlushPendingLogs;
         _cts?.Cancel();
+        _cts?.Dispose();
         _orchestrator.Dispose();
     }
 }

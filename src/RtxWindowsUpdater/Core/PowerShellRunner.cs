@@ -63,7 +63,8 @@ public static class PowerShellRunner
         string script,
         TimeSpan timeout,
         CancellationToken cancellationToken,
-        Action<string>? onLog = null)
+        Action<string>? onLog = null,
+        string? traceName = null)
     {
         var fullScript = Prelude + "try {\n" + script + "\n} catch { Write-Failure $_ }\n";
         var encoded = Convert.ToBase64String(Encoding.Unicode.GetBytes(fullScript));
@@ -78,7 +79,8 @@ public static class PowerShellRunner
                     onLog?.Invoke(line[6..]);
                 else if (line.StartsWith("##RESULT|", StringComparison.Ordinal))
                     resultLine = line[9..];
-            }).ConfigureAwait(false);
+            },
+            displayCommand: "powershell.exe: " + (traceName ?? "PowerShell betiği")).ConfigureAwait(false);
 
         JsonElement? data = null;
         string? scriptError = null;

@@ -23,21 +23,28 @@ public static class AdminPrivilegeManager
 
     private const int ErrorCancelled = 1223; // ERROR_CANCELLED: UAC reddedildi
 
-    public static bool IsElevated
+    /// <summary>
+    /// İşlemin yönetici belirteciyle çalışıp çalışmadığı. Bir işlemin yükseltme durumu çalışırken değişemeyeceği için
+    /// belirteç bir kez okunur; sonraki kontroller aynı gerçek değeri kullanır (her modülde yeniden sorgu yapılmaz).
+    /// </summary>
+    public static bool IsElevated => Elevated.Value;
+
+    private static readonly Lazy<bool> Elevated = new(() =>
     {
-        get
+        try
         {
-            try
-            {
-                using var identity = WindowsIdentity.GetCurrent();
-                return new WindowsPrincipal(identity).IsInRole(WindowsBuiltInRole.Administrator);
-            }
-            catch
-            {
-                return false;
-            }
+            using var identity = WindowsIdentity.GetCurrent();
+            return new WindowsPrincipal(identity).IsInRole(WindowsBuiltInRole.Administrator);
         }
-    }
+        catch (System.Security.SecurityException)
+        {
+            return false;
+        }
+        catch (UnauthorizedAccessException)
+        {
+            return false;
+        }
+    });
 
     public static (ElevationOutcome Outcome, string? Error) RelaunchElevated(params string[] args)
     {
