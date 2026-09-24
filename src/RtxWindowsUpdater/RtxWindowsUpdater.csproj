@@ -13,9 +13,11 @@
     <AssemblyName>E-mre Hub</AssemblyName>
     <Product>E-mre Hub</Product>
     <AssemblyTitle>E-mre Hub</AssemblyTitle>
-    <Company>E-mre</Company>
-    <Copyright>© E-mre</Copyright>
-    <Version>1.3.0</Version>
+    <Company>E-mre Hub</Company>
+    <Copyright>© 2026 E-mre Hub</Copyright>
+    <Version>1.3.1</Version>
+    <!-- Dosya özelliklerinde "Ürün sürümü" yalın görünsün (varsayılan: 1.3.0+<git commit kimliği>) -->
+    <IncludeSourceRevisionInInformationalVersion>false</IncludeSourceRevisionInInformationalVersion>
 
     <!-- EXE ikonu (Windows Explorer / görev çubuğu / kısayol) -->
     <ApplicationIcon>..\..\assets\E-mreLogo.ico</ApplicationIcon>

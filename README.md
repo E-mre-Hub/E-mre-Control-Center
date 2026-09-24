@@ -27,13 +27,14 @@ kendi bakım araçlarını (SFC, DISM CheckHealth / onayla RestoreHealth, MRT h�
 
 ## Hızlı başlangıç (arkadaşlar için)
 
-1. GitHub'dan gelen davet e-postasını kabul edin (veya https://github.com/Emrefb06 adresindeki depo davetini onaylayın).
+1. GitHub'dan gelen davet e-postasını kabul edin (veya https://github.com/E-mre-Hub/E-mre_Hub adresindeki depo davetini onaylayın).
 2. Deponun **Releases** bölümünden en son `E-mre-Hub-vX.Y.Z.zip` dosyasını indirin (v1.2.0 ve öncesinin paketleri
    `RTX-Windows-Updater-vX.Y.Z.zip` adını taşır).
 3. ZIP'i bir klasöre çıkarın ve `E-mre Hub.exe` dosyasına çift tıklayın.
 4. **Windows SmartScreen uyarısı:** EXE dijital olarak imzalanmadığı için ilk açılışta
    "Windows kişisel bilgisayarınızı korudu" uyarısı çıkabilir. **Ek bilgi → Yine de çalıştır** seçin.
-   (Bu, imzasız her uygulamada görülen normal bir uyarıdır; kaynak kodun tamamı bu depodadır.)
+   (Bu, imzasız her uygulamada görülen normal bir uyarıdır; kaynak kodun tamamı bu depodadır.) Aynı nedenle UAC penceresinde
+   "Yayıncı: Bilinmeyen" yazar; bkz. [Kod imzalama](#kod-imzalama-ve-bilinmeyen-yayıncı).
 5. Uygulama yönetici izni isteyecektir; UAC penceresinde **Evet** deyin. (İzin vermezseniz uygulama açılır ama tüm kartlar
    kullanım dışı olur; hiçbir kontrol veya güncelleme yapılamaz.)
 
@@ -144,35 +145,64 @@ dotnet publish src\RtxWindowsUpdater\RtxWindowsUpdater.csproj -c Release -r win-
 Kaynaktan derlemek için (depoya erişimi olan herkes):
 
 ```bash
-git clone https://github.com/Emrefb06/RTX-Windows-Updater.git E-mre_Hub
+git clone https://github.com/E-mre-Hub/E-mre_Hub.git E-mre_Hub
 ```
 
-Ardından `E-mre_Hub` klasöründe `tools\Build-Exe.ps1` çalıştırılır. (GitHub'daki depo adı `RTX-Windows-Updater` olarak kaldı;
-uygulamanın adı E-mre Hub'dır. Depo adı GitHub'da Settings → Repository name ile değiştirilirse eski adres otomatik yönlenir.)
+Ardından `E-mre_Hub` klasöründe `tools\Build-Exe.ps1` çalıştırılır. Depo **E-mre Hub** organizasyonundadır:
+https://github.com/E-mre-Hub/E-mre_Hub (eski adres `github.com/Emrefb06/RTX-Windows-Updater` GitHub tarafından buraya yönlendirilir).
 
 ### Yeni sürüm yayınlama (depo sahibi)
 
-1. `src\RtxWindowsUpdater\RtxWindowsUpdater.csproj` içindeki `<Version>` değerini artırın (ör. `1.3.0`).
+1. `src\RtxWindowsUpdater\RtxWindowsUpdater.csproj` içindeki `<Version>` değerini artırın (ör. `1.3.1`).
 2. Değişiklikleri commit'leyip gönderin, ardından etiket oluşturun:
 
 ```bash
-git tag v1.3.0
+git tag v1.3.1
 ```
 
 ```bash
-git push origin v1.3.0
+git push origin v1.3.1
 ```
 
 3. GitHub Actions (`.github/workflows/release.yml`) EXE'yi Windows sunucusunda derler ve
-   `E-mre-Hub-v1.3.0.zip` olarak **Releases** sayfasına ekler. Davetli arkadaşlar oradan indirir.
-   Etiketteki sürüm (v1.3.0) EXE'nin sürümü olarak kullanılır; csproj'daki `<Version>` ile aynı olmalıdır.
+   `E-mre-Hub-v1.3.1.zip` olarak **Releases** sayfasına ekler. Davetli arkadaşlar oradan indirir.
+   Etiketteki sürüm (v1.3.1) EXE'nin sürümü olarak kullanılır; csproj'daki `<Version>` ile aynı olmalıdır.
 
 Not: Özel depolarda GitHub Actions ücretsiz planda aylık 2.000 dakika ile sınırlıdır (Windows dakikaları 2 kat sayılır);
 bir derleme yaklaşık 3-5 dakika sürer.
 
+### Kod imzalama ve "Bilinmeyen yayıncı"
+
+- UAC penceresindeki **"Yayıncı"** satırı yalnızca EXE'nin **dijital imzasından** (Authenticode) okunur. EXE imzasız olduğu için
+  "Bilinmeyen" yazar. EXE içindeki bilgiler (Şirket / Ürün / Açıklama / Telif: **E-mre Hub**, Özellikler → Ayrıntılar'da görünür)
+  bunu değiştirmez. Uyarıyı kaldırmanın meşru tek yolu, Windows'un güvendiği bir kuruluştan alınan **kod imzalama sertifikasıyla**
+  imzalamaktır; uyarı hiçbir şekilde atlatılmaz.
+- UAC'de görünecek ad sertifikayı veren kuruluşun **doğruladığı** addır: bireysel sertifikada kimlikteki ad-soyad, şirket
+  sertifikasında ticaret siciline kayıtlı unvan. "E-mre Hub" yayıncı olarak ancak bu adla kayıtlı bir işletme adına alınan
+  sertifikayla görünür.
+- Sertifika türleri: **OV** (bireylere de verilir; yıllık ücretli; 2023'ten beri anahtar USB donanım anahtarında veya bulut
+  imzalama hizmetinde tutulur) ve **EV** (yalnızca şirketlere). Sertifika kuruluşlarının güncel koşul ve fiyatlarını kontrol edin.
+- **SmartScreen** ("Windows kişisel bilgisayarınızı korudu") ayrı bir sistemdir: dosyanın indirme itibarına bakar. İmza UAC'deki
+  yayıncıyı hemen düzeltir ama SmartScreen uyarısı, itibar oluşana kadar imzalı EXE'de de bir süre görülebilir.
+- **İmzalı derleme:** sertifika (veya USB anahtar) takılıyken parmak iziyle çalıştırın:
+
+```bash
+powershell -ExecutionPolicy Bypass -File .\tools\Build-Exe.ps1 -SignThumbprint <sertifika parmak izi>
+```
+
+  Betik EXE'yi SHA-256 ve zaman damgasıyla imzalar (Windows SDK'daki `signtool` varsa onunla, RFC 3161 zaman damgası; yoksa
+  PowerShell'in `Set-AuthenticodeSignature` komutuyla, standart Authenticode zaman damgası), ardından imzayı doğrular: imza Windows tarafından "Geçerli" sayılmazsa, beklenen
+  sertifika değilse veya zaman damgası eklenemezse derleme hata verir ve EXE kök klasöre kopyalanmaz. Zaman damgası sunucusu
+  `-TimestampServer` ile değiştirilebilir (varsayılan `http://timestamp.digicert.com`). Parmak izini Windows'ta "Kullanıcı
+  sertifikalarını yönet" → Kişisel → sertifika → Ayrıntılar → Parmak izi bölümünden alabilirsiniz.
+- GitHub Actions EXE'yi imzasız derler (USB anahtardaki sertifika bulut sunucusunda kullanılamaz). İmzalı sürüm için EXE
+  yerelde `-SignThumbprint` ile üretilir, `E-mre-Hub-vX.Y.Z.zip` olarak sıkıştırılır ve Releases sayfasındaki dosyanın yerine yüklenir.
+- Kendinden imzalı (ücretsiz) bir sertifika yalnızca kendi bilgisayarınızda test içindir; başka bilgisayarlarda yayıncı yine
+  "Bilinmeyen" görünür. Başkalarından böyle bir sertifikayı "güvenilir" olarak yüklemelerini istemeyin (güvenlik riski).
+
 ### Arkadaş ekleme (depo sahibi)
 
-GitHub'da depo sayfası → **Settings → Collaborators → Add people** → arkadaşınızın GitHub kullanıcı adı.
+GitHub'da depo sayfası → **Settings → Collaborators and teams → Add people** → arkadaşınızın GitHub kullanıcı adı.
 Davet edilen kişi daveti kabul ettikten sonra depoyu ve Releases'ı görebilir. Erişimi aynı sayfadan kaldırabilirsiniz.
 
 ## 5. Yönetici izni (UAC) nasıl çalışır
@@ -402,6 +432,15 @@ Günlük dosyaları: `%LOCALAPPDATA%\E-mre Hub\Logs\` (arayüzde "Log dosyası" 
   kullanılırsa o yönetici hesabının çöp kutusu olur).
 
 ## Sürüm geçmişi
+
+### v1.3.1
+
+**İyileştirmeler**
+- EXE bilgileri (Özellikler → Ayrıntılar: Şirket / Ürün / Açıklama / Telif) "E-mre Hub"; ürün sürümü yalın (`1.3.1`,
+  git kimliği eklenmez).
+- Derleme betiği isteğe bağlı kod imzalamaya hazır (`-SignThumbprint`: SHA-256 + zaman damgası + imza doğrulaması; imza
+  doğrulanamazsa EXE üretilmez). UAC'deki "Yayıncı: Bilinmeyen" yalnızca kod imzalama sertifikasıyla düzelir (bkz. Kod imzalama).
+- Depo **E-mre Hub** organizasyonuna taşındı: https://github.com/E-mre-Hub/E-mre_Hub (sürümler ve Releases burada yayınlanır).
 
 ### v1.3.0
 
