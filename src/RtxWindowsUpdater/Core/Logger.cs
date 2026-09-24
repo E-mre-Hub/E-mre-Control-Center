@@ -33,7 +33,7 @@ public sealed record LogEntry(DateTime Time, LogLevel Level, string Message)
 
 /// <summary>
 /// Thread-safe uygulama günlüğü. Her kayıt hem arayüze (LogAdded olayı) hem de
-/// %LOCALAPPDATA%\E-mre Hub\Logs altındaki oturum dosyasına yazılır.
+/// %LOCALAPPDATA%\E-mre Control Center\Logs altındaki oturum dosyasına yazılır.
 /// Dosyaya yazma arka plandaki tek bir yazıcı iş parçacığında yapılır; çağıran (örn. arayüz)
 /// iş parçacığı disk G/Ç'si nedeniyle asla beklemez.
 /// </summary>
@@ -49,7 +49,7 @@ public sealed class Logger : IDisposable
 
     public string LogFilePath { get; }
 
-    /// <summary>Günlük klasörü (%LOCALAPPDATA%\E-mre Hub\Logs).</summary>
+    /// <summary>Günlük klasörü (%LOCALAPPDATA%\E-mre Control Center\Logs).</summary>
     public string LogDirectory => Path.GetDirectoryName(LogFilePath)!;
 
     /// <summary>Oturum günlük dosyasının diske yazılabildiği bilgisi.</summary>

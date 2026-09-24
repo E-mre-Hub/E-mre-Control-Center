@@ -12,7 +12,7 @@ namespace RtxWindowsUpdater;
 
 public partial class App : Application
 {
-    // İç kimlik bilinçli olarak eski adla aynı kaldı: eski sürüm (RTX Windows Updater) ile E-mre Hub aynı anda çalışamaz.
+    // İç kimlik bilinçli olarak ilk adla aynı kaldı: eski sürümler (RTX Windows Updater, E-mre Hub) ile aynı anda çalışamaz.
     private const string SingleInstanceMutexName = @"Local\RTXWindowsUpdater.SingleInstance";
 
     private Logger? _logger;

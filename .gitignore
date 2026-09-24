@@ -1,8 +1,9 @@
 # ---------------------------------------------------------------
-#  E-mre Hub - .gitignore
+#  E-mre Control Center - .gitignore
 # ---------------------------------------------------------------
 
 # Derleme çıktıları (EXE depoya konmaz; GitHub Releases üzerinden dağıtılır)
+/E-mre Control Center.exe
 /E-mre Hub.exe
 /RTX Windows Updater.exe
 *.zip

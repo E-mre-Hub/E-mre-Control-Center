@@ -67,15 +67,41 @@ public partial class MainWindow : Window
         if (e.PropertyName == nameof(MainViewModel.IsDashboard) && _vm.IsDashboard)
         {
             PlayPageIn(DashboardPage);
-            // Ana ekran her zaman en üstten (Sistem Durumu ve ilk kart satırı görünür şekilde) açılsın.
+            // Ana ekran her zaman en üstten açılsın.
             Dispatcher.BeginInvoke(ResetDashboardScroll, System.Windows.Threading.DispatcherPriority.ContextIdle);
+        }
+        else if (e.PropertyName == nameof(MainViewModel.CurrentCategory) && _vm.IsDashboard)
+        {
+            // Kontrol Merkezi ↔ kategori geçişi: kısa, tek seferlik belirme (sürekli animasyon yok).
+            PlayPageIn(_vm.IsHome ? HomeView : CategoryView);
+            Dispatcher.BeginInvoke(ResetDashboardScroll, System.Windows.Threading.DispatcherPriority.ContextIdle);
+        }
+        else if (e.PropertyName == nameof(MainViewModel.CurrentSection) && _vm.IsDashboard && !_vm.IsHome)
+        {
+            // Bölme değişince içerik en üstten açılır (sol menü yerinde kalır); İşlem Günlüğü ise en son satırdan.
+            Dispatcher.BeginInvoke(ResetSectionScroll, System.Windows.Threading.DispatcherPriority.ContextIdle);
+            if (_vm.CurrentSectionKey == SectionKeys.Log)
+                Dispatcher.BeginInvoke(ScrollLogToEnd, System.Windows.Threading.DispatcherPriority.ContextIdle);
         }
     }
 
     private void ResetDashboardScroll()
     {
+        HomeScroll.ScrollToTop();
         LeftScroll.ScrollToTop();
+        ResetSectionScroll();
+    }
+
+    private void ResetSectionScroll()
+    {
         CardsScroll.ScrollToTop();
+        SummaryScroll.ScrollToTop();
+        QuickScroll.ScrollToTop();
+        AdminScroll.ScrollToTop();
+        LogFilesScroll.ScrollToTop();
+        DeviceScroll.ScrollToTop();
+        DeviceStatusScroll.ScrollToTop();
+        DeviceAboutScroll.ScrollToTop();
     }
 
     private void OnDialogChanged(object? sender, PropertyChangedEventArgs e)
@@ -104,10 +130,16 @@ public partial class MainWindow : Window
 
     private void OnPreviewKeyDown(object sender, System.Windows.Input.KeyEventArgs e)
     {
-        // Esc: önce iletişim kutusu (varsa kendi İptal butonu), sonra Detaylı Sonuç paneli kapanır.
-        if (e.Key == System.Windows.Input.Key.Escape && _vm.Detail.IsOpen && !_vm.Dialog.IsOpen)
+        // Esc: önce iletişim kutusu (varsa kendi İptal butonu), sonra Detaylı Sonuç paneli kapanır, sonra Ana Sayfa'ya dönülür.
+        if (e.Key != System.Windows.Input.Key.Escape || _vm.Dialog.IsOpen) return;
+        if (_vm.Detail.IsOpen)
         {
             _vm.Detail.IsOpen = false;
+            e.Handled = true;
+        }
+        else if (_vm.IsDashboard && !_vm.IsHome && _vm.GoHomeCommand.CanExecute(null))
+        {
+            _vm.GoHomeCommand.Execute(null);
             e.Handled = true;
         }
     }
@@ -128,10 +160,15 @@ public partial class MainWindow : Window
         Dispatcher.BeginInvoke(() =>
         {
             _scrollPending = false;
-            // Filtre uygulanmış görünümdeki son öğeye kaydır (filtre dışı kalan öğeye kaydırılmaz).
-            if (LogList.Items.Count > 0)
-                LogList.ScrollIntoView(LogList.Items[LogList.Items.Count - 1]);
+            ScrollLogToEnd();
         }, System.Windows.Threading.DispatcherPriority.Background);
+    }
+
+    private void ScrollLogToEnd()
+    {
+        // Filtre uygulanmış görünümdeki son öğeye kaydır (filtre dışı kalan öğeye kaydırılmaz). Bölme gizliyken atlanır.
+        if (LogList.IsVisible && LogList.Items.Count > 0)
+            LogList.ScrollIntoView(LogList.Items[LogList.Items.Count - 1]);
     }
 
     private async void OnClosing(object? sender, CancelEventArgs e)

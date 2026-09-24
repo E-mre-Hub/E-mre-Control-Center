@@ -145,9 +145,10 @@ public sealed class AppState
 }
 
 /// <summary>
-/// Uygulama durumunu %LOCALAPPDATA%\E-mre Hub\state.json dosyasında saklar.
+/// Uygulama durumunu %LOCALAPPDATA%\E-mre Control Center\state.json dosyasında saklar.
 /// Kaydetme arka planda yapılır; dosya okunamaz/yazılamazsa uygulama çalışmaya devam eder ve nedeni günlüğe yazılır.
-/// Yeni klasörde henüz state.json yoksa eski addaki (RTX Windows Updater) geçmiş bir kez KOPYALANIR; eski dosya silinmez.
+/// Yeni klasörde henüz state.json yoksa eski adlardaki (önce E-mre Hub, yoksa RTX Windows Updater) en yeni geçmiş bir kez
+/// KOPYALANIR; eski dosyalar silinmez.
 /// </summary>
 public sealed class AppStateStore
 {
@@ -165,15 +166,17 @@ public sealed class AppStateStore
 
     public AppState State { get; }
 
-    public AppStateStore(Logger logger) : this(logger, AppInfo.DataDirectory, AppInfo.LegacyDataDirectory)
+    public AppStateStore(Logger logger) : this(logger, AppInfo.DataDirectory, AppInfo.LegacyDataDirectories)
     {
     }
 
-    internal AppStateStore(Logger logger, string dataDirectory, string? legacyDataDirectory)
+    /// <param name="legacyDataDirectories">Eski veri klasörleri, en yeniden en eskiye; geçmişi olan ilk klasör kullanılır.</param>
+    internal AppStateStore(Logger logger, string dataDirectory, IEnumerable<string> legacyDataDirectories)
     {
         _logger = logger;
         _path = Path.Combine(dataDirectory, "state.json");
-        if (legacyDataDirectory is not null) CopyLegacyState(Path.Combine(legacyDataDirectory, "state.json"));
+        var legacy = legacyDataDirectories.Select(d => Path.Combine(d, "state.json")).FirstOrDefault(File.Exists);
+        if (legacy is not null) CopyLegacyState(legacy);
         State = Load();
     }
 
@@ -182,7 +185,7 @@ public sealed class AppStateStore
     {
         try
         {
-            if (File.Exists(_path) || !File.Exists(legacyPath)) return;
+            if (File.Exists(_path)) return;
             Directory.CreateDirectory(Path.GetDirectoryName(_path)!);
             File.Copy(legacyPath, _path, overwrite: false);
             _logger.Info($"Önceki sürümün işlem geçmişi kopyalandı: {legacyPath} → {_path} (eski dosya silinmedi).");

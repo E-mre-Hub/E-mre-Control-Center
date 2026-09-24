@@ -18,7 +18,7 @@ public enum OperationState { Idle, Checking, Updating, Completed, Failed, Cancel
 /// Arayüz durumu ve akışı. Sistem işlemlerini doğrudan yapmaz; servisleri/orkestratörü çağırır.
 /// Seçim durumu merkezi olarak <see cref="SelectedOperationsManager"/> içinde tutulur.
 /// </summary>
-public sealed class MainViewModel : ObservableObject, IDisposable
+public sealed partial class MainViewModel : ObservableObject, IDisposable
 {
     public static class Icons
     {
@@ -68,6 +68,8 @@ public sealed class MainViewModel : ObservableObject, IDisposable
     private string _unsupportedMessage = string.Empty;
     private bool _hasRtx = true; // gereksinim kontrolü bitene kadar "kartsız" seçeneği gösterilmez
     private string _noRtxMessage = string.Empty;
+    private CategoryViewModel? _currentCategory;
+    private SectionViewModel? _currentSection;
     private bool _isBusy;
     private bool _isUpdatePhase;
     private string _stepText = "Henüz işlem yapılmadı";
@@ -89,7 +91,6 @@ public sealed class MainViewModel : ObservableObject, IDisposable
     private ComponentStatus _healthStatus = ComponentStatus.NotChecked;
     private OperationRecord? _lastOperation;
     private string _logFilter = "all";
-    private int _bottomTabIndex;
     private bool _notificationsEnabled;
 
     // --- performans: günlük satırları toplu (batch) işlenir, işlem durumu ayrı tutulur ---
@@ -229,6 +230,39 @@ public sealed class MainViewModel : ObservableObject, IDisposable
         }
         _selection.SelectionChanged += OnSelectionChanged;
 
+        // Kontrol Merkezi: mevcut kartlar (aynı nesneler) 6 kategori altında gruplanır; yalnızca arayüz düzenidir.
+        // Her kategori soldaki alt menüde bölmelere ayrılır (Monster düzeni); aynı bölme türü birden fazla kategoride bulunabilir.
+        ComponentCardViewModel CardOf(string key) => Cards.First(c => c.Key == key);
+        SectionViewModel Log() => new(SectionKeys.Log, "İşlem Günlüğü", "");
+        SectionViewModel Found() => new(SectionKeys.Found, "Bulunan Güncellemeler", "");
+        Categories =
+        [
+            new CategoryViewModel(CategoryKeys.Update, "Güncelleme", "", "Windows ve uygulama güncellemeleri",
+                [CardOf(ComponentKeys.WindowsUpdate), CardOf(ComponentKeys.Winget), CardOf(ComponentKeys.Store),
+                 CardOf(ComponentKeys.Nvidia), CardOf(ComponentKeys.Defender)],
+                [new(SectionKeys.Cards, "Güncellemeler", ""), Found(), Log()]),
+            new CategoryViewModel(CategoryKeys.Cleanup, "Temizleme", "", "Geçici dosyalar ve Çöp Kutusu",
+                [CardOf(ComponentKeys.TempFiles), CardOf(ComponentKeys.RecycleBin)],
+                [new(SectionKeys.Cards, "Temizlik", ""), Log()]),
+            new CategoryViewModel(CategoryKeys.Health, "Cihaz Sağlık", "", "Windows sistem sağlık kontrolleri",
+                [CardOf(ComponentKeys.Sfc), CardOf(ComponentKeys.Dism), CardOf(ComponentKeys.Mrt)],
+                [new(SectionKeys.Cards, "Sağlık Araçları", ""), Log()]),
+            new CategoryViewModel(CategoryKeys.Settings, "Genel Ayarlar", "", "Bildirimler, günlük ve uygulama tercihleri", [],
+                [new(SectionKeys.Quick, "Kolay Ayar", ""), new(SectionKeys.Admin, "Yönetici Yetkisi", ""),
+                 new(SectionKeys.LogFiles, "Günlük Dosyaları", "")]),
+            new CategoryViewModel(CategoryKeys.Summary, "Özet", "", "Sistem sağlığı, son işlem ve geçmiş", [],
+                [new(SectionKeys.Health, "Sağlık Özeti", ""), new(SectionKeys.Recent, "Son İşlemler", ""), Found(), Log()]),
+            new CategoryViewModel(CategoryKeys.Device, "Cihaz Bilgileri", "", "Donanım, Windows ve sistem durumu", [],
+                [new(SectionKeys.DeviceInfo, "Cihaz Bilgileri", ""), new(SectionKeys.DeviceStatus, "Cihaz Durumu", ""),
+                 new(SectionKeys.DeviceAbout, "Hakkında", "")])
+        ];
+        foreach (var category in Categories)
+        {
+            var c = category;
+            category.OpenCommand = new RelayCommand(() => CurrentCategory = c);
+        }
+        GoHomeCommand = new RelayCommand(() => CurrentCategory = null);
+
         RecentOperations = new ObservableCollection<OperationRecord>(_state.State.Recent);
         _lastOperation = RecentOperations.FirstOrDefault();
         LogsView = System.Windows.Data.CollectionViewSource.GetDefaultView(Logs);
@@ -249,7 +283,7 @@ public sealed class MainViewModel : ObservableObject, IDisposable
         OpenLogFolderCommand = new AsyncCommand(OpenLogFolderAsync, onError: OnCommandError);
         ExportLogsCommand = new AsyncCommand(ExportLogsAsync, onError: OnCommandError);
         ClearLogsCommand = new RelayCommand(ClearLogs, () => Logs.Count > 0);
-        ShowRecentCommand = new RelayCommand(() => BottomTabIndex = 2);
+        ShowRecentCommand = new RelayCommand(() => OpenSection(CategoryKeys.Summary, SectionKeys.Recent));
         RefreshSystemInfoCommand = new AsyncCommand(RefreshSystemInfoAsync, () => !IsSystemInfoLoading, OnCommandError);
 
         _logger.LogAdded += OnLogAdded;
@@ -321,9 +355,6 @@ public sealed class MainViewModel : ObservableObject, IDisposable
         }
     }
 
-    /// <summary>Alt paneldeki etkin sekme (0: günlük, 1: bulunan güncellemeler, 2: son işlemler).</summary>
-    public int BottomTabIndex { get => _bottomTabIndex; set => Set(ref _bottomTabIndex, value); }
-
     // --- Bildirimler ---
     public bool NotificationsEnabled
     {
@@ -334,6 +365,97 @@ public sealed class MainViewModel : ObservableObject, IDisposable
             _notifications.Enabled = value;
             _state.SetNotificationsEnabled(value);
             _logger.Info(value ? "Windows bildirimleri açıldı." : "Windows bildirimleri kapatıldı.");
+            RefreshCategories();
+        }
+    }
+
+    // --- Kontrol Merkezi (gezinme; yalnızca arayüz düzeni) ---
+
+    /// <summary>Ana sayfadaki 6 kategori (3x2): Güncelleme, Temizleme, Cihaz Sağlık, Genel Ayarlar, Özet, Cihaz Bilgileri.</summary>
+    public ObservableCollection<CategoryViewModel> Categories { get; }
+
+    /// <summary>Açık kategori; null ise Kontrol Merkezi ana sayfası gösterilir. Kategori her açılışta ilk bölmesiyle açılır.</summary>
+    public CategoryViewModel? CurrentCategory
+    {
+        get => _currentCategory;
+        private set
+        {
+            if (!Set(ref _currentCategory, value)) return;
+            _currentSection = value?.Sections.FirstOrDefault();
+            OnPropertyChanged(nameof(IsHome));
+            OnPropertyChanged(nameof(IsCardsPage));
+            OnPropertyChanged(nameof(IsSettingsPage));
+            OnPropertyChanged(nameof(IsSummaryPage));
+            OnPropertyChanged(nameof(IsDevicePage));
+            OnPropertyChanged(nameof(ShowProgressPanel));
+            // Bölme bildirimi kategoriden SONRA gelir: sol menü önce yeni bölme listesine geçer, sonra seçimi alır.
+            OnSectionChanged();
+        }
+    }
+
+    /// <summary>
+    /// Açık kategorinin seçili bölmesi (sol alt menü; sağda başlığı ve içeriği gösterilir). Menü listesi değişirken
+    /// gelen null veya başka kategoriye ait bölme yok sayılır.
+    /// </summary>
+    public SectionViewModel? CurrentSection
+    {
+        get => _currentSection;
+        set
+        {
+            if (value is null || ReferenceEquals(value, _currentSection) || CurrentCategory?.Sections.Contains(value) != true) return;
+            _currentSection = value;
+            OnSectionChanged();
+        }
+    }
+
+    /// <summary>Seçili bölmenin anahtarı (<see cref="SectionKeys"/>); görünüm bölme içeriklerini buna göre gösterir.</summary>
+    public string? CurrentSectionKey => _currentSection?.Key;
+
+    private void OnSectionChanged()
+    {
+        OnPropertyChanged(nameof(CurrentSection));
+        OnPropertyChanged(nameof(CurrentSectionKey));
+        // Cihaz Durumu canlı ölçümü yalnızca o bölme açıkken çalışır.
+        UpdateDeviceMonitoring();
+    }
+
+    /// <summary>Belirtilen kategoriyi açar ve bölmesini seçer (ör. "Geçmiş" → Özet / Son İşlemler).</summary>
+    public void OpenSection(string categoryKey, string sectionKey)
+    {
+        var category = Categories.FirstOrDefault(c => c.Key == categoryKey);
+        if (category is null) return;
+        CurrentCategory = category;
+        CurrentSection = category.Sections.FirstOrDefault(s => s.Key == sectionKey);
+    }
+
+    public bool IsHome => CurrentCategory is null;
+    public bool IsCardsPage => CurrentCategory?.HasCards == true;
+    public bool IsSettingsPage => CurrentCategory?.Key == CategoryKeys.Settings;
+    public bool IsSummaryPage => CurrentCategory?.Key == CategoryKeys.Summary;
+    public bool IsDevicePage => CurrentCategory?.Key == CategoryKeys.Device;
+
+    /// <summary>Sol menüdeki İlerleme kartı: işlem başlatılabilen kart kategorilerinde ve Özet'te gösterilir.</summary>
+    public bool ShowProgressPanel => IsCardsPage || IsSummaryPage;
+
+    public ICommand GoHomeCommand { get; }
+
+    /// <summary>Ana sayfa kartlarındaki kısa durum satırlarını mevcut gerçek durumlardan günceller.</summary>
+    private void RefreshCategories()
+    {
+        if (Categories is null) return; // kurucu tamamlanmadan gelen bildirimler
+        foreach (var c in Categories)
+        {
+            if (c.HasCards)
+            {
+                c.RefreshFromCards();
+                continue;
+            }
+            (c.Status, c.StatusText) = c.Key switch
+            {
+                CategoryKeys.Summary => (HealthStatus, HealthHeadline),
+                CategoryKeys.Device => (ComponentStatus.NotChecked, PlatformText),
+                _ => (ComponentStatus.NotChecked, NotificationsEnabled ? "Bildirimler açık" : "Bildirimler kapalı")
+            };
         }
     }
 
@@ -374,6 +496,7 @@ public sealed class MainViewModel : ObservableObject, IDisposable
             OnPropertyChanged(nameof(ShowNoRtx));
             OnPropertyChanged(nameof(ShowContinue));
             OnPropertyChanged(nameof(PlatformText));
+            RefreshCategories();
         }
     }
 
@@ -1604,7 +1727,7 @@ public sealed class MainViewModel : ObservableObject, IDisposable
         var dialog = new Microsoft.Win32.SaveFileDialog
         {
             Title = "Günlüğü dışa aktar",
-            FileName = $"E-mre-Hub-Log-{DateTime.Now:yyyy-MM-dd}.txt",
+            FileName = $"E-mre-Control-Center-Log-{DateTime.Now:yyyy-MM-dd}.txt",
             DefaultExt = ".txt",
             Filter = "Metin dosyası (*.txt)|*.txt|Tüm dosyalar (*.*)|*.*",
             AddExtension = true,
@@ -1657,6 +1780,7 @@ public sealed class MainViewModel : ObservableObject, IDisposable
             }
             var missing = snapshot.Fields.Count(f => !f.Available);
             SystemInfoStatus = $"Okunma: {snapshot.CollectedAt:HH:mm}" + (missing > 0 ? $" · {missing} alan alınamadı" : string.Empty);
+            RebuildDeviceSections();
         }
         catch (Exception ex)
         {
@@ -1736,6 +1860,7 @@ public sealed class MainViewModel : ObservableObject, IDisposable
         if (running > 0) parts.Add($"{running} çalışıyor");
         if (unavailable > 0) parts.Add($"{unavailable} kullanım dışı");
         HealthCounts = string.Join(" · ", parts);
+        RefreshCategories();
     }
 
     // ------------------------------------------------------------------ son işlem özeti + bildirim
@@ -1857,6 +1982,8 @@ public sealed class MainViewModel : ObservableObject, IDisposable
 
     public void Dispose()
     {
+        StopDeviceMonitoring();
+        _monitorInstance?.Dispose();
         _logger.LogAdded -= OnLogAdded;
         _selection.SelectionChanged -= OnSelectionChanged;
         _logTimer.Stop();

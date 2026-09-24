@@ -32,14 +32,14 @@ jobs:
       - name: ZIP paketi hazırla
         shell: powershell
         run: |
-          $name = if ($env:GITHUB_REF_TYPE -eq 'tag') { "E-mre-Hub-$($env:GITHUB_REF_NAME).zip" } else { 'E-mre-Hub.zip' }
-          Compress-Archive -Path 'E-mre Hub.exe' -DestinationPath $name -Force
+          $name = if ($env:GITHUB_REF_TYPE -eq 'tag') { "E-mre-Control-Center-$($env:GITHUB_REF_NAME).zip" } else { 'E-mre-Control-Center.zip' }
+          Compress-Archive -Path 'E-mre Control Center.exe' -DestinationPath $name -Force
           "ZIP_NAME=$name" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
 
       - name: Artifact yükle
         uses: actions/upload-artifact@v4
         with:
-          name: E-mre-Hub
+          name: E-mre-Control-Center
           path: ${{ env.ZIP_NAME }}
 
       - name: GitHub Release oluştur

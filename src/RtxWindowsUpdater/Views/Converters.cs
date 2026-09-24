@@ -157,3 +157,23 @@ public sealed class EqualsConverter : IValueConverter
     public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture) =>
         value is true ? parameter?.ToString() ?? Binding.DoNothing : Binding.DoNothing;
 }
+
+/// <summary>
+/// Değer ConverterParameter'daki anahtarlardan birine ('|' ile ayrılmış) eşitse Visible, değilse Collapsed
+/// (kategori ekranında seçili bölmenin içeriğini göstermek için).
+/// </summary>
+public sealed class EqualsToVisibilityConverter : IValueConverter
+{
+    public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
+    {
+        var text = value?.ToString();
+        if (string.IsNullOrEmpty(text) || parameter is not string keys) return Visibility.Collapsed;
+        foreach (var key in keys.Split('|'))
+        {
+            if (string.Equals(text, key.Trim(), StringComparison.OrdinalIgnoreCase)) return Visibility.Visible;
+        }
+        return Visibility.Collapsed;
+    }
+
+    public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture) => Binding.DoNothing;
+}

@@ -43,7 +43,7 @@ public sealed class UpdateOrchestrator : IDisposable
     {
         _logger = logger;
         _http = new HttpClient { Timeout = Timeout.InfiniteTimeSpan };
-        _http.DefaultRequestHeaders.UserAgent.ParseAdd("Mozilla/5.0 (Windows NT 10.0; Win64; x64) E-mreHub/" + AppInfo.Version);
+        _http.DefaultRequestHeaders.UserAgent.ParseAdd("Mozilla/5.0 (Windows NT 10.0; Win64; x64) E-mreControlCenter/" + AppInfo.Version);
 
         Modules =
         [

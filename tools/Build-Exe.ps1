@@ -1,10 +1,10 @@
 ﻿<#
-    E-mre Hub - tek dosya EXE üretimi
-    Çıktı: <proje klasörü (E-mre_Hub)>\E-mre Hub.exe  (klasör, betiğin konumundan bulunur; adı önemli değildir)
+    E-mre Control Center - tek dosya EXE üretimi
+    Çıktı: <proje klasörü (E-mre Control Center)>\E-mre Control Center.exe  (klasör, betiğin konumundan bulunur; adı önemli değildir)
 
     Kullanım (proje klasöründe):
         powershell -ExecutionPolicy Bypass -File .\tools\Build-Exe.ps1
-        powershell -ExecutionPolicy Bypass -File .\tools\Build-Exe.ps1 -Version 1.3.0
+        powershell -ExecutionPolicy Bypass -File .\tools\Build-Exe.ps1 -Version 1.4.0
         powershell -ExecutionPolicy Bypass -File .\tools\Build-Exe.ps1 -SignThumbprint <sertifika parmak izi>
 
     Kod imzalama (isteğe bağlı): Windows'un güvendiği bir kuruluştan alınmış kod imzalama sertifikası (USB anahtar veya
@@ -23,6 +23,7 @@ param(
 )
 
 $ErrorActionPreference = 'Stop'
+$appName = 'E-mre Control Center'   # csproj <AssemblyName> ile aynı olmalı (EXE adı)
 
 $root    = (Resolve-Path (Join-Path $PSScriptRoot '..')).Path
 $project = Join-Path $root 'src\RtxWindowsUpdater\RtxWindowsUpdater.csproj'
@@ -71,7 +72,7 @@ if ($Version) {
 & $dotnet @publishArgs
 if ($LASTEXITCODE -ne 0) { throw "dotnet publish başarısız (çıkış kodu $LASTEXITCODE)." }
 
-$exe = Join-Path $publish 'E-mre Hub.exe'
+$exe = Join-Path $publish "$appName.exe"
 if (-not (Test-Path $exe)) { throw "Yayın çıktısında EXE bulunamadı: $exe" }
 
 # 4) (İsteğe bağlı) Kod imzalama. İmza doğrulanamazsa derleme hata verir ve EXE kök klasöre KOPYALANMAZ.
@@ -97,7 +98,7 @@ if ($SignThumbprint) {
     }
     if ($signtool) {
         $storeArgs = if ($cert.PSParentPath -like '*LocalMachine*') { @('/sm') } else { @() }
-        & $signtool sign @storeArgs /sha1 $thumb /fd sha256 /tr $TimestampServer /td sha256 /d 'E-mre Hub' $exe
+        & $signtool sign @storeArgs /sha1 $thumb /fd sha256 /tr $TimestampServer /td sha256 /d $appName $exe
         if ($LASTEXITCODE -ne 0) { throw "signtool imzalama başarısız (çıkış kodu $LASTEXITCODE)." }
     } else {
         $r = Set-AuthenticodeSignature -FilePath $exe -Certificate $cert -HashAlgorithm SHA256 -TimestampServer $TimestampServer
@@ -113,7 +114,7 @@ if ($SignThumbprint) {
 }
 
 # 5) EXE'yi proje kök klasörüne kopyala
-$target = Join-Path $root 'E-mre Hub.exe'
+$target = Join-Path $root "$appName.exe"
 Copy-Item $exe $target -Force
 
 $size = [Math]::Round((Get-Item $target).Length / 1MB, 1)

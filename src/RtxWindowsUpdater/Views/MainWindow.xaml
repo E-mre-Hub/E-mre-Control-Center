@@ -4,6 +4,7 @@
         xmlns:vm="clr-namespace:RtxWindowsUpdater.ViewModels"
         xmlns:services="clr-namespace:RtxWindowsUpdater.Services"
         xmlns:core="clr-namespace:RtxWindowsUpdater.Core"
+        xmlns:views="clr-namespace:RtxWindowsUpdater.Views"
         Title="{x:Static core:AppInfo.Name}"
         Icon="pack://application:,,,/Assets/E-mreLogo.ico"
         Width="1340" Height="900" MinWidth="1120" MinHeight="760"
@@ -135,7 +136,7 @@
         <DataTemplate x:Key="SystemInfoRowTemplate" DataType="{x:Type services:SystemInfoField}">
             <Grid Margin="0,0,0,7">
                 <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="124" />
+                    <ColumnDefinition Width="160" />
                     <ColumnDefinition Width="*" />
                 </Grid.ColumnDefinitions>
                 <TextBlock Text="{Binding Label}" FontSize="11.5" Foreground="{StaticResource B.Text3}" TextWrapping="Wrap" Margin="0,0,10,0" />
@@ -213,185 +214,201 @@
             </Setter>
         </Style>
 
-        <!-- Sistem İşlemleri kartı: 10 kartın tamamı aynı yapıyı kullanır -->
+        <!-- Kategori ekranı satırları (Cihaz Bilgileri düzeni): solda büyük ikon karosu, sağda geniş kart -->
+        <Style x:Key="IconTile" TargetType="Border">
+            <Setter Property="Width" Value="68" />
+            <Setter Property="Height" Value="68" />
+            <Setter Property="CornerRadius" Value="20" />
+            <Setter Property="Background" Value="#FF0E1A30" />
+            <Setter Property="BorderBrush" Value="#FF1E3A66" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="VerticalAlignment" Value="Top" />
+            <Setter Property="HorizontalAlignment" Value="Left" />
+            <Setter Property="Margin" Value="4,4,0,0" />
+        </Style>
+        <Style x:Key="T.TileIcon" TargetType="TextBlock" BasedOn="{StaticResource T.Icon}">
+            <Setter Property="FontSize" Value="30" />
+            <Setter Property="Foreground" Value="{StaticResource B.Neon}" />
+            <Setter Property="Effect" Value="{StaticResource Fx.SoftGlow}" />
+        </Style>
+
+        <!-- Sistem İşlemleri kartı (10 kartın tamamı aynı yapıyı kullanır): solda büyük ikon karosu, sağda geniş kart.
+             Performans: gölge, kartla aynı biçimdeki ayrı ve statik katmandadır. Kart içindeki dönen ikon ve ilerleme
+             animasyonları böylece gölge efektini her karede yeniden hesaplatmaz. -->
         <DataTemplate x:Key="CardTemplate" DataType="{x:Type vm:ComponentCardViewModel}">
-            <!-- Performans: gölge, kartla aynı biçimdeki ayrı ve statik katmandadır. Kart içindeki dönen ikon ve ilerleme
-                 animasyonları böylece gölge efektini her karede yeniden hesaplatmaz (görünüm aynıdır). -->
-            <Grid Style="{StaticResource CardLift}" Margin="8" MinHeight="286">
-            <Border Style="{StaticResource CardShadowLayer}" />
-            <Border Style="{StaticResource Card.Flat.Interactive}" Padding="0">
-                <Grid>
-                    <!-- üst kenarda durum renginde ince neon çizgi -->
-                    <Border Height="2" VerticalAlignment="Top" Margin="18,0" CornerRadius="1"
-                            Background="{Binding Status, Converter={StaticResource StatusBrush}}" Opacity="0.85" />
-                    <Grid Margin="18,18,18,16">
-                        <Grid.RowDefinitions>
-                            <RowDefinition Height="Auto" />
-                            <RowDefinition Height="Auto" />
-                            <RowDefinition Height="Auto" />
-                            <RowDefinition Height="Auto" />
-                            <RowDefinition Height="*" />
-                            <RowDefinition Height="Auto" />
-                            <RowDefinition Height="Auto" />
-                            <RowDefinition Height="Auto" />
-                        </Grid.RowDefinitions>
-
-                        <!-- Başlık: ikon · ad · ? bilgi · seçim -->
-                        <Grid>
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="Auto" />
-                                <ColumnDefinition Width="*" />
-                                <ColumnDefinition Width="Auto" />
-                                <ColumnDefinition Width="Auto" />
-                            </Grid.ColumnDefinitions>
-                            <Border Style="{StaticResource IconBadge}" VerticalAlignment="Top">
-                                <TextBlock Text="{Binding Glyph}" Style="{StaticResource T.Icon}" FontSize="18"
-                                           Foreground="{StaticResource B.Neon}" Effect="{StaticResource Fx.SoftGlow}" />
-                            </Border>
-                            <TextBlock Grid.Column="1" Text="{Binding Title}" Style="{StaticResource T.H2}"
-                                       VerticalAlignment="Center" Margin="12,0,6,0" TextWrapping="Wrap" />
-                            <ToggleButton x:Name="InfoButton" Grid.Column="2" Style="{StaticResource InfoToggle}" VerticalAlignment="Top" Margin="0,5,0,0"
-                                          IsHitTestVisible="{Binding IsOpen, ElementName=InfoPopup, Converter={StaticResource InverseBool}}" />
-                            <Popup x:Name="InfoPopup" Grid.Column="2" PlacementTarget="{Binding ElementName=InfoButton}" Placement="Bottom"
-                                   HorizontalOffset="-282" VerticalOffset="2" StaysOpen="False" AllowsTransparency="True" PopupAnimation="Fade"
-                                   IsOpen="{Binding IsChecked, ElementName=InfoButton, Mode=TwoWay}">
-                                <Border Margin="12" Width="300" CornerRadius="12" Padding="16,14" Background="#FF0E1930"
-                                        BorderBrush="{StaticResource B.Neon}" BorderThickness="1">
-                                    <Border.Effect>
-                                        <DropShadowEffect BlurRadius="24" ShadowDepth="4" Direction="270" Opacity="0.6" Color="#000000" />
-                                    </Border.Effect>
-                                    <StackPanel>
-                                        <Grid>
-                                            <Grid.ColumnDefinitions>
-                                                <ColumnDefinition Width="Auto" />
-                                                <ColumnDefinition Width="*" />
-                                            </Grid.ColumnDefinitions>
-                                            <TextBlock Text="&#xE946;" Style="{StaticResource T.Icon}" FontSize="14" VerticalAlignment="Top"
-                                                       Margin="0,2,10,0" Foreground="{StaticResource B.Neon}" />
-                                            <TextBlock Grid.Column="1" Text="{Binding Title}" FontSize="13" FontWeight="SemiBold"
-                                                       Foreground="{StaticResource B.Text}" TextWrapping="Wrap" />
-                                        </Grid>
-                                        <TextBlock Text="{Binding InfoText}" FontSize="12.5" LineHeight="19" TextWrapping="Wrap"
-                                                   Margin="0,8,0,0" Foreground="{StaticResource B.Text2}" />
-                                    </StackPanel>
-                                </Border>
-                            </Popup>
-                            <CheckBox Grid.Column="3" Style="{StaticResource SelectCheck}" VerticalAlignment="Top" Margin="8,9,0,0"
-                                      IsChecked="{Binding IsSelected}"
-                                      IsEnabled="{Binding IsUnavailable, Converter={StaticResource InverseBool}}"
-                                      ToolTipService.ShowOnDisabled="True" />
-                        </Grid>
-
-                        <!-- Kullanılan gerçek Windows mekanizması -->
-                        <Border Grid.Row="1" HorizontalAlignment="Left" Margin="0,14,0,0" Padding="9,3" CornerRadius="6"
-                                Background="#FF0A1730" BorderBrush="#FF1E3A66" BorderThickness="1">
-                            <TextBlock Text="{Binding CommandText}" FontFamily="{StaticResource F.Mono}" FontSize="11.5" TextWrapping="Wrap"
-                                       Foreground="{StaticResource B.Neon}" />
-                        </Border>
-
-                        <!-- Açıklama (1-2 satır) -->
-                        <TextBlock Grid.Row="2" Text="{Binding Description}" FontSize="12" LineHeight="18" TextWrapping="Wrap"
-                                   Margin="0,10,0,0" Foreground="{StaticResource B.Text3}" />
-
-                        <!-- Durum -->
-                        <Grid Grid.Row="3" Margin="0,14,0,4">
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="Auto" />
-                                <ColumnDefinition Width="*" />
-                            </Grid.ColumnDefinitions>
-                            <Border Width="26" Height="26" CornerRadius="13" VerticalAlignment="Top"
-                                    Background="{Binding Status, Converter={StaticResource StatusSoftBrush}}">
-                                <TextBlock Tag="{Binding Status}" Text="{Binding Status, Converter={StaticResource StatusGlyph}}"
-                                           Style="{StaticResource T.StatusIcon}" FontSize="12"
-                                           Foreground="{Binding Status, Converter={StaticResource StatusBrush}}" />
-                            </Border>
-                            <TextBlock Grid.Column="1" Text="{Binding Summary}" Margin="10,2,0,0" FontSize="15" FontWeight="SemiBold"
-                                       TextWrapping="Wrap" Foreground="{Binding Status, Converter={StaticResource StatusBrush}}" />
-                        </Grid>
-
-                        <!-- Gerçek sonuç ayrıntıları / nedeni -->
-                        <StackPanel Grid.Row="4">
-                            <TextBlock Text="{Binding Details}" FontSize="12" LineHeight="18" TextWrapping="Wrap"
-                                       MaxHeight="90" TextTrimming="CharacterEllipsis" ToolTip="{Binding Details}"
-                                       Foreground="{StaticResource B.Text2}"
-                                       Visibility="{Binding Details, Converter={StaticResource Visible}}" />
-                            <TextBlock Text="{Binding Reason}" FontSize="12" LineHeight="17" TextWrapping="Wrap" Margin="0,6,0,0"
-                                       MaxHeight="52" TextTrimming="CharacterEllipsis" ToolTip="{Binding Reason}"
-                                       Foreground="{Binding Status, Converter={StaticResource StatusBrush}}" Opacity="0.9"
-                                       Visibility="{Binding Reason, Converter={StaticResource Visible}}" />
-                        </StackPanel>
-
-                        <!-- Canlı ilerleme (yalnızca işlem sürerken) -->
-                        <StackPanel Grid.Row="5" Margin="0,10,0,0" Visibility="{Binding IsBusy, Converter={StaticResource Visible}}">
-                            <TextBlock Text="{Binding ActivityText}" FontSize="11.5" Foreground="{StaticResource B.Text2}"
-                                       TextTrimming="CharacterEllipsis" Margin="0,0,0,6" />
-                            <ProgressBar Height="6" Minimum="0" Maximum="100" Value="{Binding Progress, Mode=OneWay}" Tag="{Binding IsBusy}">
-                                <ProgressBar.Style>
-                                    <Style TargetType="ProgressBar" BasedOn="{StaticResource Progress.Neon}">
-                                        <Setter Property="IsIndeterminate" Value="True" />
-                                        <Style.Triggers>
-                                            <DataTrigger Binding="{Binding ProgressKnown}" Value="True">
-                                                <Setter Property="IsIndeterminate" Value="False" />
-                                            </DataTrigger>
-                                        </Style.Triggers>
-                                    </Style>
-                                </ProgressBar.Style>
-                            </ProgressBar>
-                        </StackPanel>
-
-                        <!-- Çöp Kutusu: "Tümünü Güncelle" ile birlikte boşaltma tercihi -->
-                        <CheckBox Grid.Row="6" Margin="0,12,0,0" FontSize="12.5"
-                                  Content="Tümünü Güncelle ile birlikte boşalt"
-                                  IsEnabled="{Binding IsUnavailable, Converter={StaticResource InverseBool}}"
-                                  IsChecked="{Binding DataContext.CleanRecycleBin, RelativeSource={RelativeSource AncestorType=Window}}">
-                            <CheckBox.Style>
-                                <Style TargetType="CheckBox" BasedOn="{StaticResource {x:Type CheckBox}}">
-                                    <Setter Property="Visibility" Value="Collapsed" />
-                                    <Style.Triggers>
-                                        <DataTrigger Binding="{Binding Key}" Value="recyclebin">
-                                            <Setter Property="Visibility" Value="Visible" />
-                                        </DataTrigger>
-                                    </Style.Triggers>
-                                </Style>
-                            </CheckBox.Style>
-                        </CheckBox>
-
-                        <!-- Son çalıştırılma + Detaylı Sonuç + kartın kendi işlem butonu -->
-                        <StackPanel Grid.Row="7" Margin="0,12,0,0">
-                            <Grid Margin="0,0,0,8" Visibility="{Binding HasLastRun, Converter={StaticResource Visible}}">
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="Auto" />
-                                    <ColumnDefinition Width="*" />
-                                </Grid.ColumnDefinitions>
-                                <TextBlock Text="&#xE823;" Style="{StaticResource T.Icon}" FontSize="11" Margin="0,1,6,0" VerticalAlignment="Top"
-                                           Foreground="{StaticResource B.Text3}" />
-                                <TextBlock Grid.Column="1" Text="{Binding LastRunText}" FontSize="11.5" Foreground="{StaticResource B.Text3}"
-                                           TextWrapping="Wrap" />
-                            </Grid>
-                            <Grid>
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="*" />
-                                    <ColumnDefinition Width="Auto" />
-                                </Grid.ColumnDefinitions>
-                                <Button Style="{StaticResource Btn.Secondary}" Height="40" Command="{Binding ActionCommand}">
-                                    <StackPanel Orientation="Horizontal">
-                                        <TextBlock Text="{Binding ActionGlyph}" Style="{StaticResource T.Icon}" FontSize="13" Margin="0,0,9,0"
-                                                   Foreground="{StaticResource B.Neon}" />
-                                        <TextBlock Text="{Binding ActionText}" FontSize="13.5" />
-                                    </StackPanel>
-                                </Button>
-                                <Button Grid.Column="1" Style="{StaticResource Btn.Secondary}" Width="40" Height="40" Padding="0" Margin="8,0,0,0"
-                                        Command="{Binding DetailsCommand}" AutomationProperties.Name="Detaylı Sonuç"
-                                        ToolTip="Detaylı Sonuç – son işlemin gerçek komutları, çıkış kodları ve çıktısı"
-                                        Visibility="{Binding HasLastRun, Converter={StaticResource Visible}}">
-                                    <TextBlock Text="&#xE8FD;" Style="{StaticResource T.Icon}" FontSize="14" Foreground="{StaticResource B.Neon}" />
-                                </Button>
-                            </Grid>
-                        </StackPanel>
-                    </Grid>
-                    <Border Style="{StaticResource SelectedOverlay}" />
+            <Grid Margin="8,0,8,16">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="96" />
+                    <ColumnDefinition Width="*" />
+                </Grid.ColumnDefinitions>
+                <Grid VerticalAlignment="Top" HorizontalAlignment="Left">
+                    <Border Style="{StaticResource IconTile}">
+                        <TextBlock Text="{Binding Glyph}" Style="{StaticResource T.TileIcon}" />
+                    </Border>
+                    <!-- durum renginde küçük nokta (ikon karosunun köşesinde) -->
+                    <Ellipse Width="14" Height="14" HorizontalAlignment="Right" VerticalAlignment="Top" Margin="0,0,-3,0"
+                             Stroke="#FF070C18" StrokeThickness="2.5" Fill="{Binding Status, Converter={StaticResource StatusBrush}}" />
                 </Grid>
-            </Border>
+
+                <Grid Grid.Column="1" Style="{StaticResource CardLift}">
+                    <Border Style="{StaticResource CardShadowLayer}" />
+                    <Border Style="{StaticResource Card.Flat.Interactive}" Padding="0">
+                        <Grid>
+                            <!-- üst kenarda durum renginde ince neon çizgi -->
+                            <Border Height="2" VerticalAlignment="Top" Margin="22,0" CornerRadius="1"
+                                    Background="{Binding Status, Converter={StaticResource StatusBrush}}" Opacity="0.85" />
+                            <Grid Margin="22,16,18,16">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="Auto" />
+                                </Grid.ColumnDefinitions>
+
+                                <StackPanel>
+                                    <!-- Başlık + kullanılan gerçek Windows mekanizması -->
+                                    <TextBlock Text="{Binding Title}" Style="{StaticResource T.H2}" FontSize="16" TextWrapping="Wrap" />
+                                    <Border HorizontalAlignment="Left" Margin="0,8,0,0" Padding="9,3" CornerRadius="6"
+                                            Background="#FF0A1730" BorderBrush="#FF1E3A66" BorderThickness="1">
+                                        <TextBlock Text="{Binding CommandText}" FontFamily="{StaticResource F.Mono}" FontSize="11.5" TextWrapping="Wrap"
+                                                   Foreground="{StaticResource B.Neon}" />
+                                    </Border>
+
+                                    <!-- Açıklama -->
+                                    <TextBlock Text="{Binding Description}" FontSize="12" LineHeight="18" TextWrapping="Wrap"
+                                               Margin="0,8,0,0" Foreground="{StaticResource B.Text3}" />
+
+                                    <!-- Durum -->
+                                    <Grid Margin="0,12,0,0">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="Auto" />
+                                            <ColumnDefinition Width="*" />
+                                        </Grid.ColumnDefinitions>
+                                        <Border Width="26" Height="26" CornerRadius="13" VerticalAlignment="Top"
+                                                Background="{Binding Status, Converter={StaticResource StatusSoftBrush}}">
+                                            <TextBlock Tag="{Binding Status}" Text="{Binding Status, Converter={StaticResource StatusGlyph}}"
+                                                       Style="{StaticResource T.StatusIcon}" FontSize="12"
+                                                       Foreground="{Binding Status, Converter={StaticResource StatusBrush}}" />
+                                        </Border>
+                                        <TextBlock Grid.Column="1" Text="{Binding Summary}" Margin="10,2,0,0" FontSize="15" FontWeight="SemiBold"
+                                                   TextWrapping="Wrap" Foreground="{Binding Status, Converter={StaticResource StatusBrush}}" />
+                                    </Grid>
+
+                                    <!-- Gerçek sonuç ayrıntıları / nedeni -->
+                                    <TextBlock Text="{Binding Details}" FontSize="12" LineHeight="18" TextWrapping="Wrap" Margin="0,6,0,0"
+                                               MaxHeight="90" TextTrimming="CharacterEllipsis" ToolTip="{Binding Details}"
+                                               Foreground="{StaticResource B.Text2}"
+                                               Visibility="{Binding Details, Converter={StaticResource Visible}}" />
+                                    <TextBlock Text="{Binding Reason}" FontSize="12" LineHeight="17" TextWrapping="Wrap" Margin="0,6,0,0"
+                                               MaxHeight="52" TextTrimming="CharacterEllipsis" ToolTip="{Binding Reason}"
+                                               Foreground="{Binding Status, Converter={StaticResource StatusBrush}}" Opacity="0.9"
+                                               Visibility="{Binding Reason, Converter={StaticResource Visible}}" />
+
+                                    <!-- Canlı ilerleme (yalnızca işlem sürerken) -->
+                                    <StackPanel Margin="0,10,0,0" Visibility="{Binding IsBusy, Converter={StaticResource Visible}}">
+                                        <TextBlock Text="{Binding ActivityText}" FontSize="11.5" Foreground="{StaticResource B.Text2}"
+                                                   TextTrimming="CharacterEllipsis" Margin="0,0,0,6" />
+                                        <ProgressBar Height="6" Minimum="0" Maximum="100" Value="{Binding Progress, Mode=OneWay}" Tag="{Binding IsBusy}">
+                                            <ProgressBar.Style>
+                                                <Style TargetType="ProgressBar" BasedOn="{StaticResource Progress.Neon}">
+                                                    <Setter Property="IsIndeterminate" Value="True" />
+                                                    <Style.Triggers>
+                                                        <DataTrigger Binding="{Binding ProgressKnown}" Value="True">
+                                                            <Setter Property="IsIndeterminate" Value="False" />
+                                                        </DataTrigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </ProgressBar.Style>
+                                        </ProgressBar>
+                                    </StackPanel>
+
+                                    <!-- Çöp Kutusu: "Tümünü Güncelle" ile birlikte boşaltma tercihi -->
+                                    <CheckBox Margin="0,12,0,0" FontSize="12.5"
+                                              Content="Tümünü Güncelle ile birlikte boşalt"
+                                              IsEnabled="{Binding IsUnavailable, Converter={StaticResource InverseBool}}"
+                                              IsChecked="{Binding DataContext.CleanRecycleBin, RelativeSource={RelativeSource AncestorType=Window}}">
+                                        <CheckBox.Style>
+                                            <Style TargetType="CheckBox" BasedOn="{StaticResource {x:Type CheckBox}}">
+                                                <Setter Property="Visibility" Value="Collapsed" />
+                                                <Style.Triggers>
+                                                    <DataTrigger Binding="{Binding Key}" Value="recyclebin">
+                                                        <Setter Property="Visibility" Value="Visible" />
+                                                    </DataTrigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </CheckBox.Style>
+                                    </CheckBox>
+
+                                    <!-- Son çalıştırılma -->
+                                    <Grid Margin="0,12,0,0" Visibility="{Binding HasLastRun, Converter={StaticResource Visible}}">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="Auto" />
+                                            <ColumnDefinition Width="*" />
+                                        </Grid.ColumnDefinitions>
+                                        <TextBlock Text="&#xE823;" Style="{StaticResource T.Icon}" FontSize="11" Margin="0,1,6,0" VerticalAlignment="Top"
+                                                   Foreground="{StaticResource B.Text3}" />
+                                        <TextBlock Grid.Column="1" Text="{Binding LastRunText}" FontSize="11.5" Foreground="{StaticResource B.Text3}"
+                                                   TextWrapping="Wrap" />
+                                    </Grid>
+                                </StackPanel>
+
+                                <!-- Sağ: ? bilgi · seçim (üstte), kartın kendi işlem butonu + Detaylı Sonuç (altta) -->
+                                <DockPanel Grid.Column="1" Margin="20,0,0,0" LastChildFill="False">
+                                    <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" HorizontalAlignment="Right">
+                                        <ToggleButton x:Name="InfoButton" Style="{StaticResource InfoToggle}" VerticalAlignment="Center"
+                                                      IsHitTestVisible="{Binding IsOpen, ElementName=InfoPopup, Converter={StaticResource InverseBool}}" />
+                                        <Popup x:Name="InfoPopup" PlacementTarget="{Binding ElementName=InfoButton}" Placement="Bottom"
+                                               HorizontalOffset="-282" VerticalOffset="2" StaysOpen="False" AllowsTransparency="True" PopupAnimation="Fade"
+                                               IsOpen="{Binding IsChecked, ElementName=InfoButton, Mode=TwoWay}">
+                                            <Border Margin="12" Width="300" CornerRadius="12" Padding="16,14" Background="#FF0E1930"
+                                                    BorderBrush="{StaticResource B.Neon}" BorderThickness="1">
+                                                <Border.Effect>
+                                                    <DropShadowEffect BlurRadius="24" ShadowDepth="4" Direction="270" Opacity="0.6" Color="#000000" />
+                                                </Border.Effect>
+                                                <StackPanel>
+                                                    <Grid>
+                                                        <Grid.ColumnDefinitions>
+                                                            <ColumnDefinition Width="Auto" />
+                                                            <ColumnDefinition Width="*" />
+                                                        </Grid.ColumnDefinitions>
+                                                        <TextBlock Text="&#xE946;" Style="{StaticResource T.Icon}" FontSize="14" VerticalAlignment="Top"
+                                                                   Margin="0,2,10,0" Foreground="{StaticResource B.Neon}" />
+                                                        <TextBlock Grid.Column="1" Text="{Binding Title}" FontSize="13" FontWeight="SemiBold"
+                                                                   Foreground="{StaticResource B.Text}" TextWrapping="Wrap" />
+                                                    </Grid>
+                                                    <TextBlock Text="{Binding InfoText}" FontSize="12.5" LineHeight="19" TextWrapping="Wrap"
+                                                               Margin="0,8,0,0" Foreground="{StaticResource B.Text2}" />
+                                                </StackPanel>
+                                            </Border>
+                                        </Popup>
+                                        <CheckBox Style="{StaticResource SelectCheck}" Margin="10,0,0,0"
+                                                  IsChecked="{Binding IsSelected}"
+                                                  IsEnabled="{Binding IsUnavailable, Converter={StaticResource InverseBool}}"
+                                                  ToolTipService.ShowOnDisabled="True" />
+                                    </StackPanel>
+                                    <Grid DockPanel.Dock="Bottom" Margin="0,16,0,0">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="Auto" />
+                                        </Grid.ColumnDefinitions>
+                                        <Button Style="{StaticResource Btn.Secondary}" Height="40" MinWidth="176" Command="{Binding ActionCommand}">
+                                            <StackPanel Orientation="Horizontal">
+                                                <TextBlock Text="{Binding ActionGlyph}" Style="{StaticResource T.Icon}" FontSize="13" Margin="0,0,9,0"
+                                                           Foreground="{StaticResource B.Neon}" />
+                                                <TextBlock Text="{Binding ActionText}" FontSize="13.5" />
+                                            </StackPanel>
+                                        </Button>
+                                        <Button Grid.Column="1" Style="{StaticResource Btn.Secondary}" Width="40" Height="40" Padding="0" Margin="8,0,0,0"
+                                                Command="{Binding DetailsCommand}" AutomationProperties.Name="Detaylı Sonuç"
+                                                ToolTip="Detaylı Sonuç – son işlemin gerçek komutları, çıkış kodları ve çıktısı"
+                                                Visibility="{Binding HasLastRun, Converter={StaticResource Visible}}">
+                                            <TextBlock Text="&#xE8FD;" Style="{StaticResource T.Icon}" FontSize="14" Foreground="{StaticResource B.Neon}" />
+                                        </Button>
+                                    </Grid>
+                                </DockPanel>
+                            </Grid>
+                            <Border Style="{StaticResource SelectedOverlay}" />
+                        </Grid>
+                    </Border>
+                </Grid>
             </Grid>
         </DataTemplate>
 
@@ -406,6 +423,282 @@
                 </Setter.Value>
             </Setter>
         </Style>
+        <!-- Kontrol Merkezi kategori kartı (ana sayfa 3x2). Sürekli animasyon yok: yalnızca üzerine gelince kısa büyüme, neon kenarlık,
+             ikon parlaması ve hafif glow. Glow katmanı boştayken gizlidir (efekt hesaplanmaz); gölge ayrı statik katmandadır. -->
+        <Style x:Key="Btn.CategoryTile" TargetType="Button">
+            <Setter Property="Cursor" Value="Hand" />
+            <Setter Property="FocusVisualStyle" Value="{x:Null}" />
+            <Setter Property="Margin" Value="10" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Grid x:Name="root" RenderTransformOrigin="0.5,0.5" MinHeight="192">
+                            <Grid.RenderTransform>
+                                <ScaleTransform />
+                            </Grid.RenderTransform>
+                            <Border Style="{StaticResource CardShadowLayer}" CornerRadius="18" />
+                            <Border x:Name="glow" CornerRadius="18" BorderBrush="{StaticResource B.Neon}" BorderThickness="1.5"
+                                    Visibility="Hidden" Opacity="0" IsHitTestVisible="False" Effect="{StaticResource Fx.NeonGlow}" />
+                            <Border x:Name="surface" CornerRadius="18" BorderThickness="1" BorderBrush="{StaticResource B.Border}" Padding="20,20,20,18">
+                                <Border.Background>
+                                    <LinearGradientBrush StartPoint="0,0" EndPoint="0,1">
+                                        <GradientStop Color="#E6101B31" Offset="0" />
+                                        <GradientStop Color="#E60A1222" Offset="1" />
+                                    </LinearGradientBrush>
+                                </Border.Background>
+                                <StackPanel VerticalAlignment="Center">
+                                    <Grid Width="66" Height="66" HorizontalAlignment="Center">
+                                        <Border x:Name="iconBg" CornerRadius="20" Background="#FF0E1A30" BorderBrush="#FF1E3A66" BorderThickness="1" />
+                                        <TextBlock x:Name="icon" Text="{Binding Glyph}" Style="{StaticResource T.Icon}" FontSize="31"
+                                                   Foreground="{StaticResource B.Neon}" Opacity="0.85" Effect="{StaticResource Fx.SoftGlow}" />
+                                    </Grid>
+                                    <TextBlock Text="{Binding TileTitle}" FontFamily="{StaticResource F.Display}" FontSize="15.5" FontWeight="SemiBold"
+                                               Foreground="{StaticResource B.Text}" HorizontalAlignment="Center" Margin="0,15,0,0" />
+                                    <TextBlock Text="{Binding Description}" FontSize="12.5" LineHeight="18" Foreground="{StaticResource B.Text2}"
+                                               TextAlignment="Center" TextWrapping="Wrap" HorizontalAlignment="Center" MaxWidth="240" Margin="0,6,0,0" />
+                                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,12,0,0">
+                                        <Ellipse Width="7" Height="7" VerticalAlignment="Center" Margin="0,0,7,0"
+                                                 Fill="{Binding Status, Converter={StaticResource StatusBrush}}" />
+                                        <TextBlock Text="{Binding StatusText}" FontSize="11.5" Foreground="{StaticResource B.Text3}"
+                                                   TextTrimming="CharacterEllipsis" MaxWidth="250" ToolTip="{Binding StatusText}" />
+                                    </StackPanel>
+                                </StackPanel>
+                            </Border>
+                        </Grid>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="surface" Property="BorderBrush" Value="#FF2A6FB0" />
+                                <Setter TargetName="iconBg" Property="BorderBrush" Value="{StaticResource B.Neon}" />
+                                <Setter TargetName="icon" Property="Foreground" Value="#FF8BDBFF" />
+                                <Setter TargetName="glow" Property="Visibility" Value="Visible" />
+                                <Trigger.EnterActions>
+                                    <BeginStoryboard>
+                                        <Storyboard>
+                                            <DoubleAnimation Storyboard.TargetName="root" Storyboard.TargetProperty="RenderTransform.(ScaleTransform.ScaleX)" To="1.025" Duration="0:0:0.16">
+                                                <DoubleAnimation.EasingFunction><CubicEase EasingMode="EaseOut" /></DoubleAnimation.EasingFunction>
+                                            </DoubleAnimation>
+                                            <DoubleAnimation Storyboard.TargetName="root" Storyboard.TargetProperty="RenderTransform.(ScaleTransform.ScaleY)" To="1.025" Duration="0:0:0.16">
+                                                <DoubleAnimation.EasingFunction><CubicEase EasingMode="EaseOut" /></DoubleAnimation.EasingFunction>
+                                            </DoubleAnimation>
+                                            <DoubleAnimation Storyboard.TargetName="glow" Storyboard.TargetProperty="Opacity" To="0.85" Duration="0:0:0.16" />
+                                            <DoubleAnimation Storyboard.TargetName="icon" Storyboard.TargetProperty="Opacity" To="1" Duration="0:0:0.16" />
+                                        </Storyboard>
+                                    </BeginStoryboard>
+                                </Trigger.EnterActions>
+                                <Trigger.ExitActions>
+                                    <BeginStoryboard>
+                                        <Storyboard>
+                                            <DoubleAnimation Storyboard.TargetName="root" Storyboard.TargetProperty="RenderTransform.(ScaleTransform.ScaleX)" To="1" Duration="0:0:0.22">
+                                                <DoubleAnimation.EasingFunction><CubicEase EasingMode="EaseOut" /></DoubleAnimation.EasingFunction>
+                                            </DoubleAnimation>
+                                            <DoubleAnimation Storyboard.TargetName="root" Storyboard.TargetProperty="RenderTransform.(ScaleTransform.ScaleY)" To="1" Duration="0:0:0.22">
+                                                <DoubleAnimation.EasingFunction><CubicEase EasingMode="EaseOut" /></DoubleAnimation.EasingFunction>
+                                            </DoubleAnimation>
+                                            <DoubleAnimation Storyboard.TargetName="glow" Storyboard.TargetProperty="Opacity" To="0" Duration="0:0:0.12" />
+                                            <DoubleAnimation Storyboard.TargetName="icon" Storyboard.TargetProperty="Opacity" To="0.85" Duration="0:0:0.22" />
+                                        </Storyboard>
+                                    </BeginStoryboard>
+                                </Trigger.ExitActions>
+                            </Trigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter TargetName="surface" Property="BorderBrush" Value="{StaticResource B.Neon}" />
+                            </Trigger>
+                            <Trigger Property="IsKeyboardFocused" Value="True">
+                                <Setter TargetName="surface" Property="BorderBrush" Value="{StaticResource B.Neon}" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- Kategori alt menüsü (Monster tarzı): bölme listesi. Seçili bölmede solda neon çizgi ve vurgulu ikon. -->
+        <Style x:Key="SectionNav" TargetType="ListBox">
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="Focusable" Value="False" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="ListBox">
+                        <!-- Kendi kaydırma alanı yok: fare tekerleği sol sütunun kaydırma alanına geçer -->
+                        <ItemsPresenter />
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+        <Style x:Key="SectionNavItem" TargetType="ListBoxItem">
+            <Setter Property="Cursor" Value="Hand" />
+            <Setter Property="FocusVisualStyle" Value="{x:Null}" />
+            <Setter Property="Foreground" Value="{StaticResource B.Text2}" />
+            <Setter Property="FontSize" Value="13.5" />
+            <Setter Property="Margin" Value="0,0,0,4" />
+            <Setter Property="AutomationProperties.Name" Value="{Binding Title}" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="ListBoxItem">
+                        <Grid Height="44" Background="Transparent">
+                            <Border x:Name="fill" CornerRadius="10" Background="Transparent" BorderThickness="1" BorderBrush="Transparent" />
+                            <Border x:Name="bar" Width="3" CornerRadius="2" Margin="0,11" HorizontalAlignment="Left"
+                                    Background="{StaticResource B.Neon}" Visibility="Hidden" />
+                            <StackPanel Orientation="Horizontal" Margin="16,0,10,0" VerticalAlignment="Center">
+                                <TextBlock x:Name="icon" Text="{Binding Glyph}" Style="{StaticResource T.Icon}" FontSize="16"
+                                           Foreground="{StaticResource B.Text3}" Margin="0,0,12,0" />
+                                <TextBlock x:Name="title" Text="{Binding Title}" VerticalAlignment="Center" />
+                            </StackPanel>
+                        </Grid>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="fill" Property="Background" Value="#FF0F1A2E" />
+                                <Setter Property="Foreground" Value="{StaticResource B.Text}" />
+                            </Trigger>
+                            <Trigger Property="IsSelected" Value="True">
+                                <Setter TargetName="fill" Property="Background" Value="#FF12203A" />
+                                <Setter TargetName="bar" Property="Visibility" Value="Visible" />
+                                <Setter TargetName="icon" Property="Foreground" Value="{StaticResource B.Neon}" />
+                                <Setter TargetName="title" Property="FontWeight" Value="SemiBold" />
+                                <Setter Property="Foreground" Value="{StaticResource B.Text}" />
+                            </Trigger>
+                            <Trigger Property="IsKeyboardFocused" Value="True">
+                                <Setter TargetName="fill" Property="BorderBrush" Value="#FF245C9C" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- Açık / kapalı anahtarı (Kolay Ayar satırları). Sürekli animasyon yok; durum metni "Açık" / "Kapalı". -->
+        <Style x:Key="ToggleSwitch" TargetType="CheckBox">
+            <Setter Property="Cursor" Value="Hand" />
+            <Setter Property="FocusVisualStyle" Value="{x:Null}" />
+            <Setter Property="VerticalAlignment" Value="Center" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="CheckBox">
+                        <StackPanel Orientation="Horizontal" Background="Transparent">
+                            <TextBlock x:Name="state" Text="Kapalı" FontSize="12.5" Foreground="{StaticResource B.Text3}"
+                                       VerticalAlignment="Center" Margin="0,0,12,0" />
+                            <Grid Width="48" Height="26">
+                                <Border x:Name="track" CornerRadius="13" Background="#FF0A1222" BorderBrush="#FF34496F" BorderThickness="1.5" />
+                                <Ellipse x:Name="knob" Width="16" Height="16" HorizontalAlignment="Left" Margin="5,0,0,0" Fill="#FF5A6A88" />
+                            </Grid>
+                        </StackPanel>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="track" Property="BorderBrush" Value="{StaticResource B.Neon}" />
+                            </Trigger>
+                            <Trigger Property="IsChecked" Value="True">
+                                <Setter TargetName="track" Property="Background" Value="{StaticResource B.NeonGradient}" />
+                                <Setter TargetName="track" Property="BorderBrush" Value="{StaticResource B.Neon}" />
+                                <Setter TargetName="knob" Property="Fill" Value="White" />
+                                <Setter TargetName="knob" Property="HorizontalAlignment" Value="Right" />
+                                <Setter TargetName="knob" Property="Margin" Value="0,0,5,0" />
+                                <Setter TargetName="state" Property="Text" Value="Açık" />
+                                <Setter TargetName="state" Property="Foreground" Value="{StaticResource B.Text}" />
+                            </Trigger>
+                            <Trigger Property="IsKeyboardFocused" Value="True">
+                                <Setter TargetName="track" Property="BorderBrush" Value="{StaticResource B.Neon}" />
+                            </Trigger>
+                            <Trigger Property="IsEnabled" Value="False">
+                                <Setter Property="Opacity" Value="0.5" />
+                                <Setter Property="Cursor" Value="Arrow" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- Cihaz Bilgileri kartı: solda büyük donanım ikonu, sağda başlık + sistem bilgisi alanları -->
+        <DataTemplate x:Key="DeviceSectionTemplate" DataType="{x:Type vm:DeviceInfoSectionViewModel}">
+            <Grid Margin="0,0,0,16">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="96" />
+                    <ColumnDefinition Width="*" />
+                </Grid.ColumnDefinitions>
+                <Border Style="{StaticResource IconTile}">
+                    <TextBlock Text="{Binding Glyph}" Style="{StaticResource T.TileIcon}" />
+                </Border>
+                <Border Grid.Column="1" Style="{StaticResource Card}" Padding="22,16,22,10">
+                    <StackPanel>
+                        <TextBlock Text="{Binding Title}" Style="{StaticResource T.H2}" FontSize="16" />
+                        <ItemsControl Margin="0,10,0,0" ItemsSource="{Binding Fields}" ItemTemplate="{StaticResource SystemInfoRowTemplate}" />
+                    </StackPanel>
+                </Border>
+            </Grid>
+        </DataTemplate>
+
+        <!-- Cihaz Durumu halka göstergesi (değer yoksa "—" ve "okunamıyor"; neden araç ipucunda) -->
+        <DataTemplate x:Key="GaugeTemplate" DataType="{x:Type vm:DeviceGaugeViewModel}">
+            <StackPanel Width="120" Margin="0,0,16,0" ToolTip="{Binding ToolTipText}" ToolTipService.ShowOnDisabled="True">
+                <Grid Width="104" Height="104">
+                    <views:RingGauge Ratio="{Binding Ratio}" Thickness="6" TrackBrush="#FF17304C">
+                        <views:RingGauge.Style>
+                            <Style TargetType="views:RingGauge">
+                                <Setter Property="FillBrush" Value="{StaticResource B.Neon}" />
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding Level}" Value="warm">
+                                        <Setter Property="FillBrush" Value="{StaticResource B.Orange}" />
+                                    </DataTrigger>
+                                    <DataTrigger Binding="{Binding Level}" Value="hot">
+                                        <Setter Property="FillBrush" Value="{StaticResource B.Red}" />
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </views:RingGauge.Style>
+                    </views:RingGauge>
+                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" VerticalAlignment="Center">
+                        <TextBlock Text="{Binding DisplayValue}" FontFamily="{StaticResource F.Display}" FontSize="26" FontWeight="SemiBold"
+                                   Foreground="{StaticResource B.Text}" />
+                        <TextBlock Text="{Binding DisplayUnit}" FontSize="12" Margin="3,0,0,5" VerticalAlignment="Bottom"
+                                   Foreground="{StaticResource B.Text2}" />
+                    </StackPanel>
+                </Grid>
+                <TextBlock Text="{Binding CaptionText}" FontSize="12" Margin="0,7,0,0" HorizontalAlignment="Center" TextAlignment="Center"
+                           TextWrapping="Wrap" Foreground="{StaticResource B.Text2}" />
+            </StackPanel>
+        </DataTemplate>
+
+        <!-- Cihaz Durumu satırı: başlık (+ aygıt adı) ve göstergeler / açıklama -->
+        <DataTemplate x:Key="DeviceStatusRowTemplate" DataType="{x:Type vm:DeviceStatusRowViewModel}">
+            <Grid Margin="0,0,0,20">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="210" />
+                    <ColumnDefinition Width="*" />
+                </Grid.ColumnDefinitions>
+                <StackPanel VerticalAlignment="Center" Margin="0,0,16,0">
+                    <TextBlock Text="{Binding Title}" FontSize="15.5" FontWeight="SemiBold" Foreground="{StaticResource B.Text}" />
+                    <TextBlock Text="{Binding Subtitle}" FontSize="11.5" Margin="0,3,0,0" TextWrapping="Wrap" Foreground="{StaticResource B.Text3}"
+                               Visibility="{Binding Subtitle, Converter={StaticResource Visible}}" />
+                </StackPanel>
+                <ItemsControl Grid.Column="1" ItemsSource="{Binding Gauges}" ItemTemplate="{StaticResource GaugeTemplate}" Focusable="False">
+                    <ItemsControl.ItemsPanel>
+                        <ItemsPanelTemplate>
+                            <WrapPanel />
+                        </ItemsPanelTemplate>
+                    </ItemsControl.ItemsPanel>
+                </ItemsControl>
+                <Border Grid.Column="1" Visibility="{Binding HasNote, Converter={StaticResource Visible}}" HorizontalAlignment="Left"
+                        CornerRadius="10" Padding="14,10" Background="#FF0B1426" BorderBrush="{StaticResource B.Border}" BorderThickness="1">
+                    <StackPanel Orientation="Horizontal">
+                        <TextBlock Text="&#xE946;" Style="{StaticResource T.Icon}" FontSize="13" Foreground="{StaticResource B.Text3}"
+                                   VerticalAlignment="Top" Margin="0,2,10,0" />
+                        <TextBlock Text="{Binding Note}" FontSize="12.5" LineHeight="18" TextWrapping="Wrap" MaxWidth="560"
+                                   Foreground="{StaticResource B.Text2}" />
+                    </StackPanel>
+                </Border>
+            </Grid>
+        </DataTemplate>
+        <!-- Satır kartlarındaki açıklama metni -->
+        <Style x:Key="T.SettingDesc" TargetType="TextBlock">
+            <Setter Property="FontSize" Value="12" />
+            <Setter Property="LineHeight" Value="18" />
+            <Setter Property="TextWrapping" Value="Wrap" />
+            <Setter Property="Foreground" Value="{StaticResource B.Text3}" />
+        </Style>
+
+        <!-- Seçili bölmenin içeriği: Visibility="{Binding CurrentSectionKey, Converter={StaticResource SectionVisible}, ConverterParameter=anahtar}" -->
+        <views:EqualsToVisibilityConverter x:Key="SectionVisible" />
     </Window.Resources>
 
     <Grid x:Name="RootGrid">
@@ -550,51 +843,194 @@
                 </ScrollViewer>
             </Grid>
 
-            <!-- ============ SAYFA 2: ANA EKRAN ============ -->
+            <!-- ============ SAYFA 2: ANA EKRAN – KONTROL MERKEZİ ============
+                 Ana sayfa: 6 kategori (3x2). Kategori ekranı: solda Ana Sayfa + kategori başlığı + bölmeler (+ İlerleme),
+                 sağda seçili bölmenin içeriği. Yalnızca düzen değişti: kartlar, komutlar ve veriler aynıdır. -->
             <Grid x:Name="DashboardPage" Visibility="{Binding IsDashboard, Converter={StaticResource Visible}}" Margin="28,6,28,24">
                 <Grid.RenderTransform><TranslateTransform /></Grid.RenderTransform>
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="350" />
-                    <ColumnDefinition Width="20" />
-                    <ColumnDefinition Width="*" />
-                </Grid.ColumnDefinitions>
 
-                <!-- Sol sütun -->
-                <ScrollViewer x:Name="LeftScroll" Grid.Column="0" VerticalScrollBarVisibility="Auto" Margin="0,0,-8,0" Padding="0,0,8,0">
-                    <StackPanel>
-                        <!-- Marka -->
-                        <Grid Margin="4,4,0,22">
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="Auto" />
-                                <ColumnDefinition Width="*" />
-                            </Grid.ColumnDefinitions>
-                            <Grid Width="52" Height="52">
-                                <Border CornerRadius="14" Background="{StaticResource B.NeonGradient}" Opacity="0.4" Margin="4">
-                                    <Border.Effect><BlurEffect Radius="18" /></Border.Effect>
+                <!-- ===================== ANA SAYFA (KONTROL MERKEZİ) ===================== -->
+                <Grid x:Name="HomeView" Visibility="{Binding IsHome, Converter={StaticResource Visible}}">
+                    <Grid.RenderTransform><TranslateTransform /></Grid.RenderTransform>
+                    <ScrollViewer x:Name="HomeScroll" VerticalScrollBarVisibility="Auto">
+                        <Grid MinHeight="{Binding ViewportHeight, RelativeSource={RelativeSource AncestorType=ScrollViewer}}">
+                            <StackPanel MaxWidth="1020" VerticalAlignment="Center" Margin="0,0,0,8">
+                                <!-- Logo + ad -->
+                                <Grid HorizontalAlignment="Center" Width="76" Height="76">
+                                    <Border CornerRadius="22" Background="{StaticResource B.NeonGradient}" Opacity="0.4" Margin="6">
+                                        <Border.Effect><BlurEffect Radius="26" /></Border.Effect>
+                                    </Border>
+                                    <Rectangle RadiusX="20" RadiusY="20" Fill="{StaticResource LogoBrush}" Stroke="#FF24365C" StrokeThickness="1" />
+                                </Grid>
+                                <TextBlock Text="{x:Static core:AppInfo.Name}" Style="{StaticResource T.H1}" FontSize="28"
+                                           HorizontalAlignment="Center" Margin="0,14,0,4" />
+                                <TextBlock Text="KONTROL MERKEZİ" Style="{StaticResource T.Label}" Foreground="{StaticResource B.Neon}"
+                                           HorizontalAlignment="Center" />
+                                <TextBlock Text="{Binding PlatformText}" FontSize="12" Foreground="{StaticResource B.Text3}"
+                                           HorizontalAlignment="Center" Margin="0,6,0,0" />
+
+                                <!-- Yönetici değil: tüm kartlar kullanım dışı (yetki yalnızca UAC onayıyla yeniden başlatarak alınır) -->
+                                <Border Visibility="{Binding ShowElevate, Converter={StaticResource Visible}}" HorizontalAlignment="Center" MaxWidth="780"
+                                        Background="#14FFA63D" BorderBrush="#55FFA63D" BorderThickness="1" CornerRadius="11" Padding="16,10" Margin="10,16,10,0">
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="Auto" />
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="Auto" />
+                                        </Grid.ColumnDefinitions>
+                                        <TextBlock Text="&#xEA18;" Style="{StaticResource T.Icon}" FontSize="16" Foreground="{StaticResource B.Orange}" Margin="0,0,12,0" />
+                                        <TextBlock Grid.Column="1" FontSize="12.5" LineHeight="18" TextWrapping="Wrap" VerticalAlignment="Center"
+                                                   Foreground="{StaticResource B.Text}"
+                                                   Text="Yönetici yetkisi yok: tüm kartlar kullanım dışı. Kontrol ve güncelleme için uygulamayı yönetici olarak yeniden başlatın." />
+                                        <Button Grid.Column="2" Style="{StaticResource Btn.Secondary}" Height="36" Margin="14,0,0,0" Command="{Binding ElevateCommand}"
+                                                ToolTip="Uygulama UAC onayıyla yönetici olarak yeniden açılır; onay vermezseniz hiçbir şey değişmez.">
+                                            <StackPanel Orientation="Horizontal">
+                                                <TextBlock Text="&#xE7EF;" Style="{StaticResource T.Icon}" FontSize="14" Margin="0,0,8,0" />
+                                                <TextBlock Text="Yönetici olarak yeniden başlat" FontSize="13" />
+                                            </StackPanel>
+                                        </Button>
+                                    </Grid>
                                 </Border>
-                                <Rectangle RadiusX="13" RadiusY="13" Fill="{StaticResource LogoBrush}" Stroke="#FF24365C" StrokeThickness="1" />
-                            </Grid>
-                            <StackPanel Grid.Column="1" Margin="14,0,0,0" VerticalAlignment="Center">
-                                <TextBlock Text="{x:Static core:AppInfo.Name}" Style="{StaticResource T.H1}" FontSize="20" />
-                                <TextBlock Text="{Binding PlatformText}" FontSize="12" Foreground="{StaticResource B.Text3}" Margin="0,2,0,0" />
+
+                                <!-- 6 kategori (3x2) -->
+                                <ItemsControl ItemsSource="{Binding Categories}" Margin="0,16,0,0" Focusable="False">
+                                    <ItemsControl.ItemsPanel>
+                                        <ItemsPanelTemplate>
+                                            <UniformGrid Columns="3" />
+                                        </ItemsPanelTemplate>
+                                    </ItemsControl.ItemsPanel>
+                                    <ItemsControl.ItemTemplate>
+                                        <DataTemplate DataType="{x:Type vm:CategoryViewModel}">
+                                            <Button Style="{StaticResource Btn.CategoryTile}" Command="{Binding OpenCommand}"
+                                                    AutomationProperties.Name="{Binding Title}" ToolTip="{Binding Description}" />
+                                        </DataTemplate>
+                                    </ItemsControl.ItemTemplate>
+                                </ItemsControl>
+
+                                <!-- Hızlı işlemler + işlem durumu (mevcut komutlar ve gerçek durum) -->
+                                <Grid Margin="10,8,10,0">
+                                    <Border Style="{StaticResource CardShadowLayer}" />
+                                    <Border Style="{StaticResource Card.Flat}" Padding="18,14">
+                                        <Grid>
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="Auto" />
+                                                <ColumnDefinition Width="Auto" />
+                                                <ColumnDefinition Width="*" />
+                                            </Grid.ColumnDefinitions>
+                                            <Button Style="{StaticResource Btn.Primary}" Height="48" MinWidth="200" Command="{Binding StartCheckCommand}"
+                                                    ToolTip="Tüm kartları kontrol eder (seçimlere bakılmaz).">
+                                                <StackPanel Orientation="Horizontal">
+                                                    <TextBlock Text="&#xE721;" Style="{StaticResource T.Icon}" FontSize="15" Margin="0,0,10,0" />
+                                                    <TextBlock Text="Tümünü Kontrol Et" />
+                                                </StackPanel>
+                                            </Button>
+                                            <Button Grid.Column="1" Style="{StaticResource Btn.Accent}" Height="48" MinWidth="200" Margin="12,0,0,0"
+                                                    Command="{Binding UpdateAllCommand}" ToolTip="Kontrolde işlem gerektiren tüm kartları işler.">
+                                                <StackPanel Orientation="Horizontal">
+                                                    <TextBlock Text="&#xE896;" Style="{StaticResource T.Icon}" FontSize="15" Margin="0,0,10,0" />
+                                                    <TextBlock Text="{Binding UpdateAllText}" />
+                                                </StackPanel>
+                                            </Button>
+                                            <StackPanel Grid.Column="2" Margin="20,0,0,0" VerticalAlignment="Center">
+                                                <DockPanel LastChildFill="True">
+                                                    <TextBlock DockPanel.Dock="Right" FontSize="12" FontWeight="SemiBold" Foreground="{StaticResource B.Neon}"
+                                                               Margin="10,0,0,0" Text="{Binding Progress, StringFormat={}%{0:0}}" />
+                                                    <TextBlock Text="{Binding OperationStateText}" FontSize="13" FontWeight="SemiBold" TextTrimming="CharacterEllipsis">
+                                                        <TextBlock.Style>
+                                                            <Style TargetType="TextBlock">
+                                                                <Setter Property="Foreground" Value="{StaticResource B.Text}" />
+                                                                <Style.Triggers>
+                                                                    <DataTrigger Binding="{Binding OperationState}" Value="Completed">
+                                                                        <Setter Property="Foreground" Value="{StaticResource B.Green}" />
+                                                                    </DataTrigger>
+                                                                    <DataTrigger Binding="{Binding OperationState}" Value="Failed">
+                                                                        <Setter Property="Foreground" Value="{StaticResource B.Red}" />
+                                                                    </DataTrigger>
+                                                                    <DataTrigger Binding="{Binding OperationState}" Value="Cancelled">
+                                                                        <Setter Property="Foreground" Value="{StaticResource B.Orange}" />
+                                                                    </DataTrigger>
+                                                                    <DataTrigger Binding="{Binding IsOperationRunning}" Value="True">
+                                                                        <Setter Property="Foreground" Value="{StaticResource B.Neon}" />
+                                                                    </DataTrigger>
+                                                                </Style.Triggers>
+                                                            </Style>
+                                                        </TextBlock.Style>
+                                                    </TextBlock>
+                                                </DockPanel>
+                                                <!-- İşlem sürerken gerçek adım, boştayken uygulanabilir işlem özeti -->
+                                                <TextBlock FontSize="11.5" Margin="0,3,0,0" Foreground="{StaticResource B.Text2}" TextTrimming="CharacterEllipsis">
+                                                    <TextBlock.Style>
+                                                        <Style TargetType="TextBlock">
+                                                            <Setter Property="Text" Value="{Binding AvailableSummary}" />
+                                                            <Setter Property="ToolTip" Value="{Binding AvailableSummary}" />
+                                                            <Style.Triggers>
+                                                                <DataTrigger Binding="{Binding IsOperationRunning}" Value="True">
+                                                                    <Setter Property="Text" Value="{Binding StepText}" />
+                                                                    <Setter Property="ToolTip" Value="{Binding StepText}" />
+                                                                </DataTrigger>
+                                                            </Style.Triggers>
+                                                        </Style>
+                                                    </TextBlock.Style>
+                                                </TextBlock>
+                                                <ProgressBar Style="{StaticResource Progress.Neon}" Margin="0,9,0,0" Minimum="0" Maximum="100"
+                                                             Tag="{Binding IsOperationRunning}" Value="{Binding Progress, Mode=OneWay}" />
+                                            </StackPanel>
+                                        </Grid>
+                                    </Border>
+                                </Grid>
                             </StackPanel>
                         </Grid>
+                    </ScrollViewer>
+                </Grid>
 
-                        <!-- Sistem Durumu -->
-                        <Border Style="{StaticResource Card}" Padding="18,18,18,8">
-                            <StackPanel>
-                                <TextBlock Text="SİSTEM DURUMU" Style="{StaticResource T.Label}" Margin="2,0,0,12" />
-                                <ItemsControl ItemsSource="{Binding Requirements}" ItemTemplate="{StaticResource RequirementRowTemplate}" />
-                            </StackPanel>
-                        </Border>
+                <!-- ===================== KATEGORİ EKRANI (Monster düzeni) =====================
+                     Solda Ana Sayfa + kategori başlığı + bölmeler (alt menü) + İlerleme; sağda seçili bölmenin başlığı ve içeriği.
+                     Satırlar Cihaz Bilgileri'ndeki gibi: solda büyük ikon karosu, sağda geniş kart. Kartlar, komutlar ve veriler aynıdır. -->
+                <Grid x:Name="CategoryView" Visibility="{Binding IsHome, Converter={StaticResource Hidden}}">
+                    <Grid.RenderTransform><TranslateTransform /></Grid.RenderTransform>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="300" />
+                        <ColumnDefinition Width="28" />
+                        <ColumnDefinition Width="*" />
+                    </Grid.ColumnDefinitions>
 
-                        <!-- İşlemler -->
-                        <Border Style="{StaticResource Card}" Margin="0,18,0,0" Padding="18">
-                            <StackPanel>
-                                <TextBlock Text="İŞLEMLER" Style="{StaticResource T.Label}" Margin="2,0,0,14" />
+                    <!-- Sol sütun: Ana Sayfa + kategori başlığı + bölmeler + (yönetici uyarısı, İlerleme) -->
+                    <ScrollViewer x:Name="LeftScroll" Grid.Column="0" VerticalScrollBarVisibility="Auto" Margin="0,0,-8,0" Padding="0,0,8,0">
+                        <StackPanel>
+                            <Button Style="{StaticResource Btn.Ghost}" HorizontalAlignment="Left" Height="34" Padding="10,0" Margin="0,2,0,12"
+                                    Command="{Binding GoHomeCommand}" ToolTip="Kontrol Merkezi'ne dön (Esc)" AutomationProperties.Name="Ana Sayfa">
+                                <StackPanel Orientation="Horizontal">
+                                    <TextBlock Text="&#xE80F;" Style="{StaticResource T.Icon}" FontSize="14" Margin="0,0,9,0" Foreground="{StaticResource B.Neon}" />
+                                    <TextBlock Text="Ana Sayfa" FontSize="13" />
+                                </StackPanel>
+                            </Button>
+
+                            <Grid Margin="4,0,0,20">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto" />
+                                    <ColumnDefinition Width="*" />
+                                </Grid.ColumnDefinitions>
+                                <Border Style="{StaticResource IconBadge}" Width="52" Height="52" VerticalAlignment="Top">
+                                    <TextBlock Text="{Binding CurrentCategory.Glyph}" Style="{StaticResource T.Icon}" FontSize="22"
+                                               Foreground="{StaticResource B.Neon}" Effect="{StaticResource Fx.SoftGlow}" />
+                                </Border>
+                                <StackPanel Grid.Column="1" Margin="14,0,0,0" VerticalAlignment="Center">
+                                    <TextBlock Text="{Binding CurrentCategory.Title}" Style="{StaticResource T.H1}" FontSize="22" TextWrapping="Wrap" />
+                                    <TextBlock Text="{Binding CurrentCategory.Description}" FontSize="12" Foreground="{StaticResource B.Text3}"
+                                               Margin="0,3,0,0" TextWrapping="Wrap" />
+                                </StackPanel>
+                            </Grid>
+
+                            <!-- Bölmeler (alt menü) -->
+                            <ListBox x:Name="SectionList" Style="{StaticResource SectionNav}" ItemContainerStyle="{StaticResource SectionNavItem}"
+                                     ItemsSource="{Binding CurrentCategory.Sections}" SelectedItem="{Binding CurrentSection, Mode=TwoWay}"
+                                     AutomationProperties.Name="Bölmeler" />
+
+                            <!-- İşlem başlatılabilen kategorilerde: yönetici uyarısı + İlerleme -->
+                            <StackPanel Margin="0,18,0,4" Visibility="{Binding ShowProgressPanel, Converter={StaticResource Visible}}">
                                 <!-- Yönetici değil: tüm kartlar kullanım dışı; yetki yalnızca UAC onayıyla yeniden başlatarak alınır -->
                                 <Border Visibility="{Binding ShowElevate, Converter={StaticResource Visible}}"
-                                        Background="#14FFA63D" BorderBrush="#55FFA63D" BorderThickness="1" CornerRadius="11" Padding="14,12" Margin="0,0,0,14">
+                                        Background="#14FFA63D" BorderBrush="#55FFA63D" BorderThickness="1" CornerRadius="11" Padding="14,12" Margin="0,0,0,18">
                                     <StackPanel>
                                         <Grid>
                                             <Grid.ColumnDefinitions>
@@ -615,483 +1051,231 @@
                                         </Button>
                                     </StackPanel>
                                 </Border>
-                                <Button Style="{StaticResource Btn.Primary}" Command="{Binding StartCheckCommand}"
-                                        ToolTip="Tüm kartları kontrol eder (seçimlere bakılmaz).">
-                                    <StackPanel Orientation="Horizontal">
-                                        <TextBlock Text="&#xE721;" Style="{StaticResource T.Icon}" FontSize="16" Margin="0,0,10,0" />
-                                        <TextBlock Text="Tümünü Kontrol Et" />
-                                    </StackPanel>
-                                </Button>
-                                <Button Style="{StaticResource Btn.Secondary}" Margin="0,10,0,0" Command="{Binding CheckSelectedCommand}"
-                                        ToolTip="Yalnızca seçtiğiniz kartları kontrol eder.">
-                                    <StackPanel Orientation="Horizontal">
-                                        <TextBlock Text="&#xE73A;" Style="{StaticResource T.Icon}" FontSize="15" Margin="0,0,10,0"
-                                                   Foreground="{StaticResource B.Neon}" />
-                                        <TextBlock Text="Seçilenleri Kontrol Et" />
-                                    </StackPanel>
-                                </Button>
 
-                                <Border Height="1" Background="{StaticResource B.Border}" Margin="4,16,4,16" />
+                                <!-- İlerleme (gölge ayrı statik katmanda: dönen ikon ve parıltı gölgeyi her karede yeniden hesaplatmaz) -->
+                                <Grid>
+                                    <Border Style="{StaticResource CardShadowLayer}" />
+                                    <Border Style="{StaticResource Card.Flat}" Padding="18">
+                                        <StackPanel>
+                                            <Grid Margin="2,0,0,12">
+                                                <TextBlock Text="İLERLEME" Style="{StaticResource T.Label}" />
+                                                <TextBlock HorizontalAlignment="Right" FontSize="12" FontWeight="SemiBold" Foreground="{StaticResource B.Neon}"
+                                                           Text="{Binding Progress, StringFormat={}%{0:0}}" />
+                                            </Grid>
+                                            <!-- İşlem durumu: ikon yalnızca işlem GERÇEKTEN sürerken döner (DataTrigger Begin/StopStoryboard).
+                                                 İşlem bitince animasyon durdurulur ve sonuca göre tik / hata / uyarı ikonu gösterilir. -->
+                                            <Grid>
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="Auto" />
+                                                    <ColumnDefinition Width="*" />
+                                                </Grid.ColumnDefinitions>
+                                                <Border Width="30" Height="30" CornerRadius="9" Margin="0,0,11,0" VerticalAlignment="Top"
+                                                        Background="#FF0B1426" BorderBrush="{StaticResource B.Border}" BorderThickness="1">
+                                                    <TextBlock FontSize="14" RenderTransformOrigin="0.5,0.5">
+                                                        <TextBlock.RenderTransform><RotateTransform /></TextBlock.RenderTransform>
+                                                        <TextBlock.Style>
+                                                            <Style TargetType="TextBlock" BasedOn="{StaticResource T.Icon}">
+                                                                <Setter Property="Text" Value="&#xE946;" />
+                                                                <Setter Property="Foreground" Value="{StaticResource B.Text3}" />
+                                                                <Style.Triggers>
+                                                                    <DataTrigger Binding="{Binding OperationState}" Value="Completed">
+                                                                        <Setter Property="Text" Value="&#xE73E;" />
+                                                                        <Setter Property="Foreground" Value="{StaticResource B.Green}" />
+                                                                    </DataTrigger>
+                                                                    <DataTrigger Binding="{Binding OperationState}" Value="Failed">
+                                                                        <Setter Property="Text" Value="&#xE783;" />
+                                                                        <Setter Property="Foreground" Value="{StaticResource B.Red}" />
+                                                                    </DataTrigger>
+                                                                    <DataTrigger Binding="{Binding OperationState}" Value="Cancelled">
+                                                                        <Setter Property="Text" Value="&#xE7BA;" />
+                                                                        <Setter Property="Foreground" Value="{StaticResource B.Orange}" />
+                                                                    </DataTrigger>
+                                                                    <DataTrigger Binding="{Binding IsOperationRunning}" Value="True">
+                                                                        <Setter Property="Text" Value="&#xE895;" />
+                                                                        <Setter Property="Foreground" Value="{StaticResource B.Neon}" />
+                                                                        <DataTrigger.EnterActions>
+                                                                            <BeginStoryboard x:Name="OperationSpin" Storyboard="{StaticResource Sb.Spin}" />
+                                                                        </DataTrigger.EnterActions>
+                                                                        <DataTrigger.ExitActions>
+                                                                            <StopStoryboard BeginStoryboardName="OperationSpin" />
+                                                                        </DataTrigger.ExitActions>
+                                                                    </DataTrigger>
+                                                                </Style.Triggers>
+                                                            </Style>
+                                                        </TextBlock.Style>
+                                                    </TextBlock>
+                                                </Border>
+                                                <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                                                    <TextBlock Text="{Binding OperationStateText}" FontSize="13.5" FontWeight="SemiBold" TextWrapping="Wrap">
+                                                        <TextBlock.Style>
+                                                            <Style TargetType="TextBlock">
+                                                                <Setter Property="Foreground" Value="{StaticResource B.Text}" />
+                                                                <Style.Triggers>
+                                                                    <DataTrigger Binding="{Binding OperationState}" Value="Completed">
+                                                                        <Setter Property="Foreground" Value="{StaticResource B.Green}" />
+                                                                    </DataTrigger>
+                                                                    <DataTrigger Binding="{Binding OperationState}" Value="Failed">
+                                                                        <Setter Property="Foreground" Value="{StaticResource B.Red}" />
+                                                                    </DataTrigger>
+                                                                    <DataTrigger Binding="{Binding OperationState}" Value="Cancelled">
+                                                                        <Setter Property="Foreground" Value="{StaticResource B.Orange}" />
+                                                                    </DataTrigger>
+                                                                    <DataTrigger Binding="{Binding IsOperationRunning}" Value="True">
+                                                                        <Setter Property="Foreground" Value="{StaticResource B.Neon}" />
+                                                                    </DataTrigger>
+                                                                </Style.Triggers>
+                                                            </Style>
+                                                        </TextBlock.Style>
+                                                    </TextBlock>
+                                                    <TextBlock Text="{Binding StepText}" FontSize="12" Margin="0,3,0,0" Foreground="{StaticResource B.Text2}"
+                                                               TextWrapping="Wrap" />
+                                                </StackPanel>
+                                            </Grid>
+                                            <!-- Değer yalnızca modüllerin bildirdiği gerçek adımlardan gelir; parıltı animasyonu yalnızca işlem sürerken (Tag=True) çalışır. -->
+                                            <ProgressBar Style="{StaticResource Progress.Neon}" Margin="0,14,0,2" Minimum="0" Maximum="100"
+                                                         Tag="{Binding IsOperationRunning}" Value="{Binding Progress, Mode=OneWay}" />
+                                        </StackPanel>
+                                    </Border>
+                                </Grid>
+                            </StackPanel>
+                        </StackPanel>
+                    </ScrollViewer>
 
-                                <Button Style="{StaticResource Btn.Accent}" Command="{Binding UpdateAllCommand}"
-                                        ToolTip="Kontrolde işlem gerektiren tüm kartları işler.">
-                                    <StackPanel Orientation="Horizontal">
-                                        <TextBlock Text="&#xE896;" Style="{StaticResource T.Icon}" FontSize="16" Margin="0,0,10,0" />
-                                        <TextBlock Text="{Binding UpdateAllText}" />
-                                    </StackPanel>
-                                </Button>
-                                <Button Style="{StaticResource Btn.Secondary}" Margin="0,10,0,0" Command="{Binding UpdateSelectedCommand}"
-                                        ToolTip="Yalnızca seçilen kartlardan gerçekten işlem gerektirenleri çalıştırır.">
-                                    <StackPanel Orientation="Horizontal">
-                                        <TextBlock Text="&#xE768;" Style="{StaticResource T.Icon}" FontSize="14" Margin="0,0,10,0"
-                                                   Foreground="{StaticResource B.Green}" />
-                                        <TextBlock Text="{Binding UpdateSelectedText}" />
-                                    </StackPanel>
-                                </Button>
-                                <DockPanel Margin="2,12,0,0" LastChildFill="True">
-                                    <Button DockPanel.Dock="Right" Style="{StaticResource Btn.Ghost}" Margin="8,0,0,0" VerticalAlignment="Center"
-                                            Command="{Binding CancelCommand}"
+                    <!-- Sağ sütun: seçili bölmenin başlığı ve içeriği -->
+                    <Grid Grid.Column="2">
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="*" />
+                        </Grid.RowDefinitions>
+                        <TextBlock Text="{Binding CurrentSection.Title}" FontFamily="{StaticResource F.Display}" FontSize="24"
+                                   Foreground="{StaticResource B.Text}" Margin="8,4,8,18" />
+
+                        <!-- ============ Kartlar (Güncellemeler / Temizlik / Sağlık Araçları): işlem çubuğu + kart satırları ============ -->
+                        <Grid Grid.Row="1" Visibility="{Binding CurrentSectionKey, Converter={StaticResource SectionVisible}, ConverterParameter=cards}">
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="*" />
+                            </Grid.RowDefinitions>
+                            <StackPanel Margin="8,0,8,12">
+                                <WrapPanel>
+                                    <Button Style="{StaticResource Btn.Primary}" Height="46" Margin="0,0,10,10" Command="{Binding StartCheckCommand}"
+                                            ToolTip="Tüm kartları kontrol eder (seçimlere bakılmaz).">
+                                        <StackPanel Orientation="Horizontal">
+                                            <TextBlock Text="&#xE721;" Style="{StaticResource T.Icon}" FontSize="15" Margin="0,0,10,0" />
+                                            <TextBlock Text="Tümünü Kontrol Et" FontSize="14" />
+                                        </StackPanel>
+                                    </Button>
+                                    <Button Style="{StaticResource Btn.Secondary}" Height="46" Margin="0,0,10,10" Command="{Binding CheckSelectedCommand}"
+                                            ToolTip="Yalnızca seçtiğiniz kartları kontrol eder.">
+                                        <StackPanel Orientation="Horizontal">
+                                            <TextBlock Text="&#xE73A;" Style="{StaticResource T.Icon}" FontSize="14" Margin="0,0,10,0"
+                                                       Foreground="{StaticResource B.Neon}" />
+                                            <TextBlock Text="Seçilenleri Kontrol Et" FontSize="13.5" />
+                                        </StackPanel>
+                                    </Button>
+                                    <Button Style="{StaticResource Btn.Accent}" Height="46" Margin="0,0,10,10" Command="{Binding UpdateAllCommand}"
+                                            ToolTip="Kontrolde işlem gerektiren tüm kartları işler.">
+                                        <StackPanel Orientation="Horizontal">
+                                            <TextBlock Text="&#xE896;" Style="{StaticResource T.Icon}" FontSize="15" Margin="0,0,10,0" />
+                                            <TextBlock Text="{Binding UpdateAllText}" FontSize="14" />
+                                        </StackPanel>
+                                    </Button>
+                                    <Button Style="{StaticResource Btn.Secondary}" Height="46" Margin="0,0,10,10" Command="{Binding UpdateSelectedCommand}"
+                                            ToolTip="Yalnızca seçilen kartlardan gerçekten işlem gerektirenleri çalıştırır.">
+                                        <StackPanel Orientation="Horizontal">
+                                            <TextBlock Text="&#xE768;" Style="{StaticResource T.Icon}" FontSize="13" Margin="0,0,10,0"
+                                                       Foreground="{StaticResource B.Green}" />
+                                            <TextBlock Text="{Binding UpdateSelectedText}" FontSize="13.5" />
+                                        </StackPanel>
+                                    </Button>
+                                    <Button Style="{StaticResource Btn.Ghost}" Height="46" Margin="0,0,10,10" Command="{Binding CancelCommand}"
                                             Visibility="{Binding IsBusy, Converter={StaticResource Visible}}">
                                         <StackPanel Orientation="Horizontal">
                                             <TextBlock Text="&#xE711;" Style="{StaticResource T.Icon}" FontSize="11" Margin="0,0,7,0" />
-                                            <TextBlock Text="İptal" />
+                                            <TextBlock Text="İptal" FontSize="13" />
                                         </StackPanel>
                                     </Button>
-                                    <TextBlock Text="{Binding AvailableSummary}" FontSize="12" LineHeight="17" Foreground="{StaticResource B.Text3}"
-                                               VerticalAlignment="Center" TextWrapping="Wrap" />
-                                </DockPanel>
-                                <CheckBox Margin="2,12,0,0" FontSize="12.5" IsChecked="{Binding NotificationsEnabled}"
-                                          Content="İşlem bitince Windows bildirimi göster"
-                                          ToolTip="Uzun süren işlemler (SFC, MRT, toplu kontrol ve güncellemeler) tamamlandığında Windows bildirimi gönderilir." />
-                            </StackPanel>
-                        </Border>
-
-                        <!-- İlerleme (gölge ayrı statik katmanda: dönen ikon ve parıltı gölgeyi her karede yeniden hesaplatmaz) -->
-                        <Grid Margin="0,18,0,4">
-                        <Border Style="{StaticResource CardShadowLayer}" />
-                        <Border Style="{StaticResource Card.Flat}" Padding="18">
-                            <StackPanel>
-                                <Grid Margin="2,0,0,12">
-                                    <TextBlock Text="İLERLEME" Style="{StaticResource T.Label}" />
-                                    <TextBlock HorizontalAlignment="Right" FontSize="12" FontWeight="SemiBold" Foreground="{StaticResource B.Neon}"
-                                               Text="{Binding Progress, StringFormat={}%{0:0}}" />
-                                </Grid>
-                                <!-- İşlem durumu: ikon yalnızca işlem GERÇEKTEN sürerken döner (DataTrigger Begin/StopStoryboard).
-                                     İşlem bitince animasyon durdurulur ve sonuca göre tik / hata / uyarı ikonu gösterilir. -->
+                                </WrapPanel>
                                 <Grid>
                                     <Grid.ColumnDefinitions>
                                         <ColumnDefinition Width="Auto" />
                                         <ColumnDefinition Width="*" />
                                     </Grid.ColumnDefinitions>
-                                    <Border Width="30" Height="30" CornerRadius="9" Margin="0,0,11,0" VerticalAlignment="Top"
-                                            Background="#FF0B1426" BorderBrush="{StaticResource B.Border}" BorderThickness="1">
-                                        <TextBlock FontSize="14" RenderTransformOrigin="0.5,0.5">
-                                            <TextBlock.RenderTransform><RotateTransform /></TextBlock.RenderTransform>
-                                            <TextBlock.Style>
-                                                <Style TargetType="TextBlock" BasedOn="{StaticResource T.Icon}">
-                                                    <Setter Property="Text" Value="&#xE946;" />
-                                                    <Setter Property="Foreground" Value="{StaticResource B.Text3}" />
-                                                    <Style.Triggers>
-                                                        <DataTrigger Binding="{Binding OperationState}" Value="Completed">
-                                                            <Setter Property="Text" Value="&#xE73E;" />
-                                                            <Setter Property="Foreground" Value="{StaticResource B.Green}" />
-                                                        </DataTrigger>
-                                                        <DataTrigger Binding="{Binding OperationState}" Value="Failed">
-                                                            <Setter Property="Text" Value="&#xE783;" />
-                                                            <Setter Property="Foreground" Value="{StaticResource B.Red}" />
-                                                        </DataTrigger>
-                                                        <DataTrigger Binding="{Binding OperationState}" Value="Cancelled">
-                                                            <Setter Property="Text" Value="&#xE7BA;" />
-                                                            <Setter Property="Foreground" Value="{StaticResource B.Orange}" />
-                                                        </DataTrigger>
-                                                        <DataTrigger Binding="{Binding IsOperationRunning}" Value="True">
-                                                            <Setter Property="Text" Value="&#xE895;" />
-                                                            <Setter Property="Foreground" Value="{StaticResource B.Neon}" />
-                                                            <DataTrigger.EnterActions>
-                                                                <BeginStoryboard x:Name="OperationSpin" Storyboard="{StaticResource Sb.Spin}" />
-                                                            </DataTrigger.EnterActions>
-                                                            <DataTrigger.ExitActions>
-                                                                <StopStoryboard BeginStoryboardName="OperationSpin" />
-                                                            </DataTrigger.ExitActions>
-                                                        </DataTrigger>
-                                                    </Style.Triggers>
-                                                </Style>
-                                            </TextBlock.Style>
-                                        </TextBlock>
+                                    <!-- Seçim durumu (kartların sağ üstündeki seçim kutuları) -->
+                                    <Border CornerRadius="10" Padding="12,5,6,5" Background="#FF0B1426" VerticalAlignment="Center"
+                                            BorderBrush="{StaticResource B.Border}" BorderThickness="1">
+                                        <StackPanel Orientation="Horizontal">
+                                            <TextBlock Text="&#xE73A;" FontSize="14" Margin="0,0,9,0" VerticalAlignment="Center">
+                                                <TextBlock.Style>
+                                                    <Style TargetType="TextBlock" BasedOn="{StaticResource T.Icon}">
+                                                        <Setter Property="Foreground" Value="{StaticResource B.Text3}" />
+                                                        <Style.Triggers>
+                                                            <DataTrigger Binding="{Binding HasSelection}" Value="True">
+                                                                <Setter Property="Foreground" Value="{StaticResource B.Neon}" />
+                                                            </DataTrigger>
+                                                        </Style.Triggers>
+                                                    </Style>
+                                                </TextBlock.Style>
+                                            </TextBlock>
+                                            <TextBlock Text="{Binding SelectionText}" FontSize="12.5" FontWeight="SemiBold" VerticalAlignment="Center"
+                                                       Foreground="{StaticResource B.Text}" Margin="0,0,10,0" />
+                                            <Button Style="{StaticResource Btn.Ghost}" Height="28" Padding="10,0" Command="{Binding ClearSelectionCommand}">
+                                                <StackPanel Orientation="Horizontal">
+                                                    <TextBlock Text="&#xE894;" Style="{StaticResource T.Icon}" FontSize="11" Margin="0,0,7,0" />
+                                                    <TextBlock Text="Seçimi Temizle" FontSize="12" />
+                                                </StackPanel>
+                                            </Button>
+                                        </StackPanel>
                                     </Border>
-                                    <StackPanel Grid.Column="1" VerticalAlignment="Center">
-                                        <TextBlock Text="{Binding OperationStateText}" FontSize="13.5" FontWeight="SemiBold" TextWrapping="Wrap">
-                                            <TextBlock.Style>
-                                                <Style TargetType="TextBlock">
-                                                    <Setter Property="Foreground" Value="{StaticResource B.Text}" />
-                                                    <Style.Triggers>
-                                                        <DataTrigger Binding="{Binding OperationState}" Value="Completed">
-                                                            <Setter Property="Foreground" Value="{StaticResource B.Green}" />
-                                                        </DataTrigger>
-                                                        <DataTrigger Binding="{Binding OperationState}" Value="Failed">
-                                                            <Setter Property="Foreground" Value="{StaticResource B.Red}" />
-                                                        </DataTrigger>
-                                                        <DataTrigger Binding="{Binding OperationState}" Value="Cancelled">
-                                                            <Setter Property="Foreground" Value="{StaticResource B.Orange}" />
-                                                        </DataTrigger>
-                                                        <DataTrigger Binding="{Binding IsOperationRunning}" Value="True">
-                                                            <Setter Property="Foreground" Value="{StaticResource B.Neon}" />
-                                                        </DataTrigger>
-                                                    </Style.Triggers>
-                                                </Style>
-                                            </TextBlock.Style>
-                                        </TextBlock>
-                                        <TextBlock Text="{Binding StepText}" FontSize="12" Margin="0,3,0,0" Foreground="{StaticResource B.Text2}"
-                                                   TextWrapping="Wrap" />
+                                    <TextBlock Grid.Column="1" Text="{Binding AvailableSummary}" FontSize="12" LineHeight="17" Margin="14,0,0,0"
+                                               Foreground="{StaticResource B.Text3}" VerticalAlignment="Center" TextWrapping="Wrap" />
+                                </Grid>
+                            </StackPanel>
+
+                            <ScrollViewer x:Name="CardsScroll" Grid.Row="1" VerticalScrollBarVisibility="Auto" Padding="0,0,4,0">
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*" MaxWidth="1120" />
+                                    </Grid.ColumnDefinitions>
+                                    <StackPanel Margin="0,6,0,0">
+                                        <ItemsControl ItemsSource="{Binding CurrentCategory.Cards}" ItemTemplate="{StaticResource CardTemplate}" Focusable="False" />
+                                        <!-- Renk açıklaması -->
+                                        <WrapPanel Margin="104,0,8,10">
+                                            <Ellipse Width="8" Height="8" Fill="{StaticResource B.Green}" Margin="0,0,6,0" VerticalAlignment="Center" />
+                                            <TextBlock Text="Güncel / Sağlıklı" FontSize="11.5" Foreground="{StaticResource B.Text3}" Margin="0,0,14,0" VerticalAlignment="Center" />
+                                            <Ellipse Width="8" Height="8" Fill="{StaticResource B.Orange}" Margin="0,0,6,0" VerticalAlignment="Center" />
+                                            <TextBlock Text="Güncelleme / Uyarı" FontSize="11.5" Foreground="{StaticResource B.Text3}" Margin="0,0,14,0" VerticalAlignment="Center" />
+                                            <Ellipse Width="8" Height="8" Fill="{StaticResource B.Red}" Margin="0,0,6,0" VerticalAlignment="Center" />
+                                            <TextBlock Text="Hata" FontSize="11.5" Foreground="{StaticResource B.Text3}" Margin="0,0,14,0" VerticalAlignment="Center" />
+                                            <Ellipse Width="8" Height="8" Fill="{StaticResource B.Blue}" Margin="0,0,6,0" VerticalAlignment="Center" />
+                                            <TextBlock Text="Çalışıyor" FontSize="11.5" Foreground="{StaticResource B.Text3}" Margin="0,0,14,0" VerticalAlignment="Center" />
+                                            <Ellipse Width="8" Height="8" Fill="{StaticResource B.Gray}" Margin="0,0,6,0" VerticalAlignment="Center" />
+                                            <TextBlock Text="Çalıştırılmadı / Kullanım dışı" FontSize="11.5" Foreground="{StaticResource B.Text3}" VerticalAlignment="Center" />
+                                        </WrapPanel>
                                     </StackPanel>
                                 </Grid>
-                                <!-- Değer yalnızca modüllerin bildirdiği gerçek adımlardan gelir; parıltı animasyonu yalnızca işlem sürerken (Tag=True) çalışır. -->
-                                <ProgressBar Style="{StaticResource Progress.Neon}" Margin="0,14,0,2" Minimum="0" Maximum="100"
-                                             Tag="{Binding IsOperationRunning}" Value="{Binding Progress, Mode=OneWay}" />
-                            </StackPanel>
-                        </Border>
+                            </ScrollViewer>
                         </Grid>
-                    </StackPanel>
-                </ScrollViewer>
 
-                <!-- Sağ sütun -->
-                <Grid Grid.Column="2">
-                    <Grid.RowDefinitions>
-                        <RowDefinition Height="Auto" />
-                        <RowDefinition Height="*" MinHeight="220" />
-                        <RowDefinition Height="Auto" />
-                        <RowDefinition Height="250" MinHeight="150" />
-                    </Grid.RowDefinitions>
-
-                    <!-- Seçim çubuğu + renk açıklaması -->
-                    <Grid Margin="8,6,8,8">
-                        <Border HorizontalAlignment="Left" CornerRadius="10" Padding="12,5,6,5" Background="#FF0B1426"
-                                BorderBrush="{StaticResource B.Border}" BorderThickness="1">
-                            <StackPanel Orientation="Horizontal">
-                                <TextBlock Text="&#xE73A;" FontSize="14" Margin="0,0,9,0">
-                                    <TextBlock.Style>
-                                        <Style TargetType="TextBlock" BasedOn="{StaticResource T.Icon}">
-                                            <Setter Property="Foreground" Value="{StaticResource B.Text3}" />
-                                            <Style.Triggers>
-                                                <DataTrigger Binding="{Binding HasSelection}" Value="True">
-                                                    <Setter Property="Foreground" Value="{StaticResource B.Neon}" />
-                                                </DataTrigger>
-                                            </Style.Triggers>
-                                        </Style>
-                                    </TextBlock.Style>
-                                </TextBlock>
-                                <TextBlock Text="{Binding SelectionText}" FontSize="12.5" FontWeight="SemiBold" VerticalAlignment="Center"
-                                           Foreground="{StaticResource B.Text}" Margin="0,0,10,0" />
-                                <Button Style="{StaticResource Btn.Ghost}" Height="28" Padding="10,0" Command="{Binding ClearSelectionCommand}">
-                                    <StackPanel Orientation="Horizontal">
-                                        <TextBlock Text="&#xE894;" Style="{StaticResource T.Icon}" FontSize="11" Margin="0,0,7,0" />
-                                        <TextBlock Text="Seçimi Temizle" FontSize="12" />
-                                    </StackPanel>
-                                </Button>
-                            </StackPanel>
-                        </Border>
-                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center">
-                            <Ellipse Width="8" Height="8" Fill="{StaticResource B.Green}" Margin="0,0,6,0" />
-                            <TextBlock Text="Güncel / Sağlıklı" FontSize="11.5" Foreground="{StaticResource B.Text3}" Margin="0,0,12,0" />
-                            <Ellipse Width="8" Height="8" Fill="{StaticResource B.Orange}" Margin="0,0,6,0" />
-                            <TextBlock Text="Güncelleme / Uyarı" FontSize="11.5" Foreground="{StaticResource B.Text3}" Margin="0,0,12,0" />
-                            <Ellipse Width="8" Height="8" Fill="{StaticResource B.Red}" Margin="0,0,6,0" />
-                            <TextBlock Text="Hata" FontSize="11.5" Foreground="{StaticResource B.Text3}" Margin="0,0,12,0" />
-                            <Ellipse Width="8" Height="8" Fill="{StaticResource B.Blue}" Margin="0,0,6,0" />
-                            <TextBlock Text="Çalışıyor" FontSize="11.5" Foreground="{StaticResource B.Text3}" Margin="0,0,12,0" />
-                            <Ellipse Width="8" Height="8" Fill="{StaticResource B.Gray}" Margin="0,0,6,0" />
-                            <TextBlock Text="Çalıştırılmadı" FontSize="11.5" Foreground="{StaticResource B.Text3}" />
-                        </StackPanel>
-                    </Grid>
-
-                    <!-- Kartlar: tek kategori "Sistem İşlemleri" -->
-                    <ScrollViewer x:Name="CardsScroll" Grid.Row="1" VerticalScrollBarVisibility="Auto" Padding="0,0,4,0">
-                        <StackPanel>
-                            <!-- ÜST BÖLÜM: Sistem Sağlık Özeti + Sistem Bilgileri -->
-                            <Grid Margin="0,0,0,4">
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="1.6*" />
-                                    <ColumnDefinition Width="1*" MinWidth="300" />
-                                </Grid.ColumnDefinitions>
-
-                                <!-- Sistem Sağlık Özeti (kartların gerçek durumlarından) -->
-                                <Border Style="{StaticResource Card}" Margin="8" Padding="20,18">
-                                    <StackPanel>
-                                        <Grid>
-                                            <Grid.ColumnDefinitions>
-                                                <ColumnDefinition Width="Auto" />
-                                                <ColumnDefinition Width="*" />
-                                            </Grid.ColumnDefinitions>
-                                            <Border Style="{StaticResource IconBadge}">
-                                                <TextBlock Text="&#xE9D9;" Style="{StaticResource T.Icon}" FontSize="18"
-                                                           Foreground="{StaticResource B.Neon}" Effect="{StaticResource Fx.SoftGlow}" />
-                                            </Border>
-                                            <StackPanel Grid.Column="1" Margin="12,0,0,0" VerticalAlignment="Center">
-                                                <TextBlock Text="Sistem Sağlık Özeti" Style="{StaticResource T.H2}" />
-                                                <TextBlock Text="{Binding HealthCounts}" FontSize="11.5" Foreground="{StaticResource B.Text3}"
-                                                           Margin="0,2,0,0" TextWrapping="Wrap" />
-                                            </StackPanel>
-                                        </Grid>
-
-                                        <Border HorizontalAlignment="Left" Margin="0,14,0,0" Padding="12,6" CornerRadius="12"
-                                                Background="{Binding HealthStatus, Converter={StaticResource StatusSoftBrush}}">
-                                            <StackPanel Orientation="Horizontal">
-                                                <Ellipse Width="9" Height="9" VerticalAlignment="Center" Margin="0,0,9,0"
-                                                         Fill="{Binding HealthStatus, Converter={StaticResource StatusBrush}}" />
-                                                <TextBlock Text="{Binding HealthHeadline}" FontSize="13" FontWeight="SemiBold" TextWrapping="Wrap"
-                                                           Foreground="{Binding HealthStatus, Converter={StaticResource StatusBrush}}" />
-                                            </StackPanel>
-                                        </Border>
-
-                                        <ItemsControl ItemsSource="{Binding Cards}" Margin="0,12,0,0">
-                                            <ItemsControl.ItemsPanel>
-                                                <ItemsPanelTemplate>
-                                                    <UniformGrid Columns="3" />
-                                                </ItemsPanelTemplate>
-                                            </ItemsControl.ItemsPanel>
-                                            <ItemsControl.ItemTemplate>
-                                                <DataTemplate DataType="{x:Type vm:ComponentCardViewModel}">
-                                                    <Border Margin="0,0,8,8" Padding="10,7" CornerRadius="9" Background="#FF0A1222"
-                                                            BorderBrush="#FF16223A" BorderThickness="1" ToolTip="{Binding Summary}">
-                                                        <Grid>
-                                                            <Grid.ColumnDefinitions>
-                                                                <ColumnDefinition Width="Auto" />
-                                                                <ColumnDefinition Width="*" />
-                                                            </Grid.ColumnDefinitions>
-                                                            <Ellipse Width="8" Height="8" VerticalAlignment="Top" Margin="0,5,9,0"
-                                                                     Fill="{Binding Status, Converter={StaticResource StatusBrush}}" />
-                                                            <StackPanel Grid.Column="1">
-                                                                <TextBlock Text="{Binding ShortTitle}" FontSize="12" FontWeight="SemiBold"
-                                                                           Foreground="{StaticResource B.Text}" TextTrimming="CharacterEllipsis" />
-                                                                <TextBlock Text="{Binding HealthText}" FontSize="11.5" TextTrimming="CharacterEllipsis"
-                                                                           Foreground="{Binding Status, Converter={StaticResource StatusBrush}}" />
-                                                            </StackPanel>
-                                                        </Grid>
-                                                    </Border>
-                                                </DataTemplate>
-                                            </ItemsControl.ItemTemplate>
-                                        </ItemsControl>
-
-                                        <!-- Son İşlem özeti (gerçek sonuçlardan) -->
-                                        <Border Height="1" Background="{StaticResource B.Border}" Margin="0,4,0,12" />
-                                        <Grid>
-                                            <Grid.ColumnDefinitions>
-                                                <ColumnDefinition Width="Auto" />
-                                                <ColumnDefinition Width="*" />
-                                                <ColumnDefinition Width="Auto" />
-                                            </Grid.ColumnDefinitions>
-                                            <TextBlock Text="SON İŞLEM" Style="{StaticResource T.Label}" VerticalAlignment="Top" Margin="0,2,14,0" />
-                                            <StackPanel Grid.Column="1" Visibility="{Binding HasLastOperation, Converter={StaticResource Visible}}">
-                                                <StackPanel Orientation="Horizontal">
-                                                    <Ellipse Width="8" Height="8" VerticalAlignment="Center" Margin="0,0,8,0"
-                                                             Fill="{Binding LastOperation.Status, Converter={StaticResource StatusBrush}}" />
-                                                    <TextBlock Text="{Binding LastOperation.Title}" FontSize="13" FontWeight="SemiBold"
-                                                               Foreground="{StaticResource B.Text}" />
-                                                    <TextBlock Text="{Binding LastOperation.TimeText}" FontSize="11.5" Margin="10,1,0,0"
-                                                               Foreground="{StaticResource B.Text3}" />
-                                                </StackPanel>
-                                                <TextBlock Text="{Binding LastOperation.SummaryText}" FontSize="12" Margin="16,3,0,0"
-                                                           TextWrapping="Wrap" Foreground="{StaticResource B.Text2}" />
-                                            </StackPanel>
-                                            <TextBlock Grid.Column="1" Text="Henüz işlem yapılmadı." FontSize="12" Foreground="{StaticResource B.Text3}"
-                                                       Visibility="{Binding HasLastOperation, Converter={StaticResource Hidden}}" />
-                                            <Button Grid.Column="2" Style="{StaticResource Btn.Ghost}" Height="26" Padding="8,0" FontSize="11.5"
-                                                    VerticalAlignment="Top" Command="{Binding ShowRecentCommand}"
-                                                    Visibility="{Binding HasLastOperation, Converter={StaticResource Visible}}">
-                                                <StackPanel Orientation="Horizontal">
-                                                    <TextBlock Text="&#xE81C;" Style="{StaticResource T.Icon}" FontSize="11" Margin="0,0,6,0" />
-                                                    <TextBlock Text="Geçmiş" />
-                                                </StackPanel>
-                                            </Button>
-                                        </Grid>
-                                    </StackPanel>
-                                </Border>
-
-                                <!-- Sistem Bilgileri (kompakt, açılır/kapanır) -->
-                                <Border Grid.Column="1" Style="{StaticResource Card}" Margin="8" Padding="20,18">
-                                    <StackPanel>
-                                        <Grid>
-                                            <Grid.ColumnDefinitions>
-                                                <ColumnDefinition Width="Auto" />
-                                                <ColumnDefinition Width="*" />
-                                                <ColumnDefinition Width="Auto" />
-                                            </Grid.ColumnDefinitions>
-                                            <Border Style="{StaticResource IconBadge}">
-                                                <TextBlock Text="&#xE770;" Style="{StaticResource T.Icon}" FontSize="18"
-                                                           Foreground="{StaticResource B.Neon}" Effect="{StaticResource Fx.SoftGlow}" />
-                                            </Border>
-                                            <StackPanel Grid.Column="1" Margin="12,0,0,0" VerticalAlignment="Center">
-                                                <TextBlock Text="Sistem Bilgileri" Style="{StaticResource T.H2}" />
-                                                <TextBlock Text="{Binding SystemInfoStatus}" FontSize="11.5" Foreground="{StaticResource B.Text3}"
-                                                           Margin="0,2,0,0" TextTrimming="CharacterEllipsis" />
-                                            </StackPanel>
-                                            <Button Grid.Column="2" Style="{StaticResource Btn.Ghost}" Width="32" Height="32" Padding="0"
-                                                    VerticalAlignment="Center" Command="{Binding RefreshSystemInfoCommand}" ToolTip="Sistem bilgilerini yenile">
-                                                <TextBlock Text="&#xE72C;" Style="{StaticResource T.Icon}" FontSize="13" />
-                                            </Button>
-                                        </Grid>
-
-                                        <ItemsControl Margin="0,12,0,0" ItemsSource="{Binding SystemInfoPrimaryFields}"
-                                                      Visibility="{Binding IsSystemInfoExpanded, Converter={StaticResource Hidden}}"
-                                                      ItemTemplate="{StaticResource SystemInfoRowTemplate}" />
-                                        <ItemsControl Margin="0,12,0,0" ItemsSource="{Binding SystemInfoFields}"
-                                                      Visibility="{Binding IsSystemInfoExpanded, Converter={StaticResource Visible}}"
-                                                      ItemTemplate="{StaticResource SystemInfoRowTemplate}" />
-
-                                        <ToggleButton HorizontalAlignment="Left" Margin="0,6,0,0" Cursor="Hand" FocusVisualStyle="{x:Null}"
-                                                      IsChecked="{Binding IsSystemInfoExpanded}">
-                                            <ToggleButton.Template>
-                                                <ControlTemplate TargetType="ToggleButton">
-                                                    <Border x:Name="bg" CornerRadius="8" Padding="8,5" Background="Transparent">
-                                                        <StackPanel Orientation="Horizontal">
-                                                            <TextBlock x:Name="chev" Text="&#xE70D;" Style="{StaticResource T.Icon}" FontSize="10"
-                                                                       Margin="0,0,8,0" Foreground="{StaticResource B.Neon}" />
-                                                            <TextBlock x:Name="txt" Text="Tüm bilgileri göster" FontSize="12" FontWeight="SemiBold"
-                                                                       Foreground="{StaticResource B.Text2}" />
-                                                        </StackPanel>
-                                                    </Border>
-                                                    <ControlTemplate.Triggers>
-                                                        <Trigger Property="IsChecked" Value="True">
-                                                            <Setter TargetName="chev" Property="Text" Value="&#xE70E;" />
-                                                            <Setter TargetName="txt" Property="Text" Value="Daha az göster" />
-                                                        </Trigger>
-                                                        <Trigger Property="IsMouseOver" Value="True">
-                                                            <Setter TargetName="bg" Property="Background" Value="#FF132038" />
-                                                            <Setter TargetName="txt" Property="Foreground" Value="{StaticResource B.Text}" />
-                                                        </Trigger>
-                                                    </ControlTemplate.Triggers>
-                                                </ControlTemplate>
-                                            </ToggleButton.Template>
-                                        </ToggleButton>
-                                    </StackPanel>
-                                </Border>
-                            </Grid>
-
-                            <TextBlock Text="Sistem İşlemleri" Style="{StaticResource T.H2}" FontSize="17" Margin="8,4,8,2" />
-
-                            <ItemsControl ItemsSource="{Binding Cards}" ItemTemplate="{StaticResource CardTemplate}" Margin="0,0,0,6">
-                                <ItemsControl.ItemsPanel>
-                                    <ItemsPanelTemplate>
-                                        <UniformGrid Columns="3" />
-                                    </ItemsPanelTemplate>
-                                </ItemsControl.ItemsPanel>
-                            </ItemsControl>
-                        </StackPanel>
-                    </ScrollViewer>
-                    <!-- Kartlar ile günlük arasındaki boyutlandırma tutamacı -->
-                    <GridSplitter Grid.Row="2" Height="12" HorizontalAlignment="Stretch" ResizeDirection="Rows"
-                                  ResizeBehavior="PreviousAndNext" Background="Transparent" Cursor="SizeNS" Focusable="False"
-                                  ToolTip="Sürükleyerek günlük alanını büyütün / küçültün">
-                        <GridSplitter.Template>
-                            <ControlTemplate TargetType="GridSplitter">
-                                <Grid Background="Transparent">
-                                    <Border Width="48" Height="4" CornerRadius="2" Background="#FF22314F" />
-                                </Grid>
-                            </ControlTemplate>
-                        </GridSplitter.Template>
-                    </GridSplitter>
-
-                    <!-- Günlük + bulunan güncellemeler -->
-                    <Border Grid.Row="3" Style="{StaticResource Card}" Margin="8,0,8,4" Padding="20,16,20,14">
-                        <Grid>
-                            <TabControl SelectedIndex="{Binding BottomTabIndex, Mode=TwoWay}">
-                                <TabItem>
-                                    <TabItem.Header>
-                                        <StackPanel Orientation="Horizontal">
-                                            <TextBlock Text="&#xE81C;" Style="{StaticResource T.Icon}" FontSize="13" Margin="0,0,8,0" />
-                                            <TextBlock Text="İşlem Günlüğü" />
-                                        </StackPanel>
-                                    </TabItem.Header>
-                                    <Grid>
-                                        <Grid.RowDefinitions>
-                                            <RowDefinition Height="Auto" />
-                                            <RowDefinition Height="*" />
-                                        </Grid.RowDefinitions>
-
-                                        <!-- Log filtreleri (yalnızca görünümü değiştirir) + Log Yönetimi -->
-                                        <Grid Margin="0,0,0,8">
-                                            <Grid.ColumnDefinitions>
-                                                <ColumnDefinition Width="Auto" />
-                                                <ColumnDefinition Width="*" />
-                                                <ColumnDefinition Width="Auto" />
-                                            </Grid.ColumnDefinitions>
-                                            <StackPanel Orientation="Horizontal">
-                                                <RadioButton Style="{StaticResource Chip}" GroupName="LogFilter" Content="Tümü"
-                                                             IsChecked="{Binding LogFilter, Converter={StaticResource EqualsParam}, ConverterParameter=all}" />
-                                                <RadioButton Style="{StaticResource Chip}" GroupName="LogFilter" Content="Bilgi"
-                                                             IsChecked="{Binding LogFilter, Converter={StaticResource EqualsParam}, ConverterParameter=info}" />
-                                                <RadioButton Style="{StaticResource Chip}" GroupName="LogFilter" Content="Başarılı"
-                                                             IsChecked="{Binding LogFilter, Converter={StaticResource EqualsParam}, ConverterParameter=success}" />
-                                                <RadioButton Style="{StaticResource Chip}" GroupName="LogFilter" Content="Uyarı"
-                                                             IsChecked="{Binding LogFilter, Converter={StaticResource EqualsParam}, ConverterParameter=warning}" />
-                                                <RadioButton Style="{StaticResource Chip}" GroupName="LogFilter" Content="Hata"
-                                                             IsChecked="{Binding LogFilter, Converter={StaticResource EqualsParam}, ConverterParameter=error}" />
-                                            </StackPanel>
-                                            <StackPanel Grid.Column="2" Orientation="Horizontal">
-                                                <Button Style="{StaticResource Btn.Ghost}" Height="28" Padding="9,0" Command="{Binding ClearLogsCommand}"
-                                                        ToolTip="Ekrandaki günlüğü temizler; günlük dosyası korunur">
-                                                    <StackPanel Orientation="Horizontal">
-                                                        <TextBlock Text="&#xE894;" Style="{StaticResource T.Icon}" FontSize="11" Margin="0,0,6,0" />
-                                                        <TextBlock Text="Logları Temizle" FontSize="12" />
-                                                    </StackPanel>
-                                                </Button>
-                                                <Button Style="{StaticResource Btn.Ghost}" Height="28" Padding="9,0" Command="{Binding ExportLogsCommand}"
-                                                        ToolTip="Gerçek günlük dosyasını seçtiğiniz konuma .txt olarak kaydeder">
-                                                    <StackPanel Orientation="Horizontal">
-                                                        <TextBlock Text="&#xE74E;" Style="{StaticResource T.Icon}" FontSize="11" Margin="0,0,6,0" />
-                                                        <TextBlock Text="Dışa Aktar" FontSize="12" />
-                                                    </StackPanel>
-                                                </Button>
-                                                <Button Style="{StaticResource Btn.Ghost}" Height="28" Padding="9,0" Command="{Binding OpenLogFolderCommand}"
-                                                        ToolTip="Günlük klasörünü açar">
-                                                    <StackPanel Orientation="Horizontal">
-                                                        <TextBlock Text="&#xE838;" Style="{StaticResource T.Icon}" FontSize="11" Margin="0,0,6,0" />
-                                                        <TextBlock Text="Klasör" FontSize="12" />
-                                                    </StackPanel>
-                                                </Button>
-                                                <Button Style="{StaticResource Btn.Ghost}" Height="28" Padding="9,0" Command="{Binding ShowRecentCommand}"
-                                                        ToolTip="Son işlemleri görüntüle">
-                                                    <StackPanel Orientation="Horizontal">
-                                                        <TextBlock Text="&#xE81C;" Style="{StaticResource T.Icon}" FontSize="11" Margin="0,0,6,0" />
-                                                        <TextBlock Text="Son İşlemler" FontSize="12" />
-                                                    </StackPanel>
-                                                </Button>
-                                            </StackPanel>
-                                        </Grid>
-
-                                        <Border Grid.Row="1" Background="#FF060A14" CornerRadius="10" BorderBrush="#FF141F36" BorderThickness="1" Padding="12,8">
-                                            <ListBox x:Name="LogList" ItemsSource="{Binding LogsView}" Background="Transparent" BorderThickness="0"
-                                                     ItemContainerStyle="{StaticResource LogItem}"
-                                                     ScrollViewer.HorizontalScrollBarVisibility="Disabled"
-                                                     VirtualizingPanel.IsVirtualizing="True" VirtualizingPanel.VirtualizationMode="Recycling"
-                                                     FontFamily="{StaticResource F.Mono}" FontSize="12">
-                                                <ListBox.ItemTemplate>
-                                                    <DataTemplate>
-                                                        <TextBlock TextWrapping="Wrap">
-                                                            <Run Text="{Binding TimeText, Mode=OneWay, StringFormat='[{0}]'}" Foreground="#FF3E5078" />
-                                                            <Run Text="{Binding LevelText, Mode=OneWay, StringFormat='[{0}]'}" Foreground="{Binding Level, Converter={StaticResource LogBrush}}" FontWeight="SemiBold" />
-                                                            <Run Text="{Binding Message, Mode=OneWay}" Foreground="{Binding Level, Converter={StaticResource LogBrush}}" />
-                                                        </TextBlock>
-                                                    </DataTemplate>
-                                                </ListBox.ItemTemplate>
-                                            </ListBox>
-                                        </Border>
-                                    </Grid>
-                                </TabItem>
-                                <TabItem>
-                                    <TabItem.Header>
-                                        <StackPanel Orientation="Horizontal">
-                                            <TextBlock Text="&#xE8FD;" Style="{StaticResource T.Icon}" FontSize="13" Margin="0,0,8,0" />
-                                            <TextBlock Text="Bulunan Güncellemeler" />
-                                        </StackPanel>
-                                    </TabItem.Header>
-                                    <DataGrid ItemsSource="{Binding UpdateRows}">
+                        <!-- ============ Bulunan Güncellemeler (kartların son gerçek sonuçlarındaki öğeler) ============ -->
+                        <Grid Grid.Row="1" Margin="8,0,8,8"
+                              Visibility="{Binding CurrentSectionKey, Converter={StaticResource SectionVisible}, ConverterParameter=found}">
+                            <Border Style="{StaticResource CardShadowLayer}" />
+                            <Border Style="{StaticResource Card.Flat}" Padding="20,16,20,14">
+                                <Grid>
+                                    <Grid.RowDefinitions>
+                                        <RowDefinition Height="Auto" />
+                                        <RowDefinition Height="*" />
+                                    </Grid.RowDefinitions>
+                                    <TextBlock Style="{StaticResource T.SettingDesc}" Margin="2,0,0,12"
+                                               Text="Kartların son kontrol ve işlem sonuçlarında bildirilen güncellemeler, paketler ve bileşenler (turuncu: işlem gerektiriyor). Liste her kontrol ve işlemden sonra gerçek sonuçlardan yenilenir." />
+                                    <DataGrid Grid.Row="1" ItemsSource="{Binding UpdateRows}">
                                         <DataGrid.Columns>
-                                            <DataGridTextColumn Header="KATEGORİ" Binding="{Binding Category}" Width="130" />
+                                            <DataGridTextColumn Header="KATEGORİ" Binding="{Binding Category}" Width="150" />
                                             <DataGridTextColumn Header="PROGRAM / GÜNCELLEME" Binding="{Binding Name}" Width="*" />
-                                            <DataGridTextColumn Header="MEVCUT" Binding="{Binding CurrentVersion}" Width="140" />
-                                            <DataGridTextColumn Header="YENİ" Binding="{Binding NewVersion}" Width="140" />
-                                            <DataGridTemplateColumn Header="DURUM" Width="230">
+                                            <DataGridTextColumn Header="MEVCUT" Binding="{Binding CurrentVersion}" Width="130" />
+                                            <DataGridTextColumn Header="YENİ" Binding="{Binding NewVersion}" Width="130" />
+                                            <DataGridTemplateColumn Header="DURUM" Width="220">
                                                 <DataGridTemplateColumn.CellTemplate>
                                                     <DataTemplate>
                                                         <TextBlock Text="{Binding Status}" TextTrimming="CharacterEllipsis" ToolTip="{Binding Status}">
@@ -1111,15 +1295,109 @@
                                             </DataGridTemplateColumn>
                                         </DataGrid.Columns>
                                     </DataGrid>
-                                </TabItem>
-                                <TabItem>
-                                    <TabItem.Header>
-                                        <StackPanel Orientation="Horizontal">
-                                            <TextBlock Text="&#xE823;" Style="{StaticResource T.Icon}" FontSize="13" Margin="0,0,8,0" />
-                                            <TextBlock Text="Son İşlemler" />
+                                    <TextBlock Grid.Row="1" VerticalAlignment="Top" Margin="10,52,10,0" FontSize="12.5" TextWrapping="Wrap"
+                                               Foreground="{StaticResource B.Text3}" Visibility="{Binding UpdateRows.Count, Converter={StaticResource Hidden}}"
+                                               Text="Henüz listelenecek sonuç yok. Kartları kontrol ettiğinizde bulunan güncellemeler ve paketler burada görünür." />
+                                </Grid>
+                            </Border>
+                        </Grid>
+
+                        <!-- ============ İşlem Günlüğü (filtreler yalnızca görünümü değiştirir) ============ -->
+                        <Grid Grid.Row="1" Margin="8,0,8,8"
+                              Visibility="{Binding CurrentSectionKey, Converter={StaticResource SectionVisible}, ConverterParameter=log}">
+                            <Border Style="{StaticResource CardShadowLayer}" />
+                            <Border Style="{StaticResource Card.Flat}" Padding="20,16,20,14">
+                                <Grid>
+                                    <Grid.RowDefinitions>
+                                        <RowDefinition Height="Auto" />
+                                        <RowDefinition Height="*" />
+                                    </Grid.RowDefinitions>
+                                    <DockPanel Margin="0,0,0,10" LastChildFill="False">
+                                        <StackPanel DockPanel.Dock="Left" Orientation="Horizontal" Margin="0,0,12,6">
+                                            <RadioButton Style="{StaticResource Chip}" GroupName="LogFilter" Content="Tümü"
+                                                         IsChecked="{Binding LogFilter, Converter={StaticResource EqualsParam}, ConverterParameter=all}" />
+                                            <RadioButton Style="{StaticResource Chip}" GroupName="LogFilter" Content="Bilgi"
+                                                         IsChecked="{Binding LogFilter, Converter={StaticResource EqualsParam}, ConverterParameter=info}" />
+                                            <RadioButton Style="{StaticResource Chip}" GroupName="LogFilter" Content="Başarılı"
+                                                         IsChecked="{Binding LogFilter, Converter={StaticResource EqualsParam}, ConverterParameter=success}" />
+                                            <RadioButton Style="{StaticResource Chip}" GroupName="LogFilter" Content="Uyarı"
+                                                         IsChecked="{Binding LogFilter, Converter={StaticResource EqualsParam}, ConverterParameter=warning}" />
+                                            <RadioButton Style="{StaticResource Chip}" GroupName="LogFilter" Content="Hata"
+                                                         IsChecked="{Binding LogFilter, Converter={StaticResource EqualsParam}, ConverterParameter=error}" />
                                         </StackPanel>
-                                    </TabItem.Header>
-                                    <DataGrid ItemsSource="{Binding RecentOperations}">
+                                        <WrapPanel DockPanel.Dock="Right" Margin="0,0,0,6">
+                                            <Button Style="{StaticResource Btn.Ghost}" Height="28" Padding="9,0" Command="{Binding ClearLogsCommand}"
+                                                    ToolTip="Ekrandaki günlüğü temizler; günlük dosyası korunur">
+                                                <StackPanel Orientation="Horizontal">
+                                                    <TextBlock Text="&#xE894;" Style="{StaticResource T.Icon}" FontSize="11" Margin="0,0,6,0" />
+                                                    <TextBlock Text="Logları Temizle" FontSize="12" />
+                                                </StackPanel>
+                                            </Button>
+                                            <Button Style="{StaticResource Btn.Ghost}" Height="28" Padding="9,0" Command="{Binding ExportLogsCommand}"
+                                                    ToolTip="Gerçek günlük dosyasını seçtiğiniz konuma .txt olarak kaydeder">
+                                                <StackPanel Orientation="Horizontal">
+                                                    <TextBlock Text="&#xE74E;" Style="{StaticResource T.Icon}" FontSize="11" Margin="0,0,6,0" />
+                                                    <TextBlock Text="Dışa Aktar" FontSize="12" />
+                                                </StackPanel>
+                                            </Button>
+                                            <Button Style="{StaticResource Btn.Ghost}" Height="28" Padding="9,0" Command="{Binding OpenLogFolderCommand}"
+                                                    ToolTip="Günlük klasörünü açar">
+                                                <StackPanel Orientation="Horizontal">
+                                                    <TextBlock Text="&#xE838;" Style="{StaticResource T.Icon}" FontSize="11" Margin="0,0,6,0" />
+                                                    <TextBlock Text="Klasör" FontSize="12" />
+                                                </StackPanel>
+                                            </Button>
+                                            <Button Style="{StaticResource Btn.Ghost}" Height="28" Padding="9,0" Command="{Binding OpenLogCommand}"
+                                                    ToolTip="{Binding LogFilePath}">
+                                                <StackPanel Orientation="Horizontal">
+                                                    <TextBlock Text="&#xE8A5;" Style="{StaticResource T.Icon}" FontSize="11" Margin="0,0,6,0" />
+                                                    <TextBlock Text="Log dosyası" FontSize="12" />
+                                                </StackPanel>
+                                            </Button>
+                                            <Button Style="{StaticResource Btn.Ghost}" Height="28" Padding="9,0" Command="{Binding ShowRecentCommand}"
+                                                    ToolTip="Özet → Son İşlemler">
+                                                <StackPanel Orientation="Horizontal">
+                                                    <TextBlock Text="&#xE823;" Style="{StaticResource T.Icon}" FontSize="11" Margin="0,0,6,0" />
+                                                    <TextBlock Text="Son İşlemler" FontSize="12" />
+                                                </StackPanel>
+                                            </Button>
+                                        </WrapPanel>
+                                    </DockPanel>
+
+                                    <Border Grid.Row="1" Background="#FF060A14" CornerRadius="10" BorderBrush="#FF141F36" BorderThickness="1" Padding="12,8">
+                                        <ListBox x:Name="LogList" ItemsSource="{Binding LogsView}" Background="Transparent" BorderThickness="0"
+                                                 ItemContainerStyle="{StaticResource LogItem}"
+                                                 ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                                                 VirtualizingPanel.IsVirtualizing="True" VirtualizingPanel.VirtualizationMode="Recycling"
+                                                 FontFamily="{StaticResource F.Mono}" FontSize="12">
+                                            <ListBox.ItemTemplate>
+                                                <DataTemplate>
+                                                    <TextBlock TextWrapping="Wrap">
+                                                        <Run Text="{Binding TimeText, Mode=OneWay, StringFormat='[{0}]'}" Foreground="#FF3E5078" />
+                                                        <Run Text="{Binding LevelText, Mode=OneWay, StringFormat='[{0}]'}" Foreground="{Binding Level, Converter={StaticResource LogBrush}}" FontWeight="SemiBold" />
+                                                        <Run Text="{Binding Message, Mode=OneWay}" Foreground="{Binding Level, Converter={StaticResource LogBrush}}" />
+                                                    </TextBlock>
+                                                </DataTemplate>
+                                            </ListBox.ItemTemplate>
+                                        </ListBox>
+                                    </Border>
+                                </Grid>
+                            </Border>
+                        </Grid>
+
+                        <!-- ============ Son İşlemler (kalıcı işlem geçmişi) ============ -->
+                        <Grid Grid.Row="1" Margin="8,0,8,8"
+                              Visibility="{Binding CurrentSectionKey, Converter={StaticResource SectionVisible}, ConverterParameter=recent}">
+                            <Border Style="{StaticResource CardShadowLayer}" />
+                            <Border Style="{StaticResource Card.Flat}" Padding="20,16,20,14">
+                                <Grid>
+                                    <Grid.RowDefinitions>
+                                        <RowDefinition Height="Auto" />
+                                        <RowDefinition Height="*" />
+                                    </Grid.RowDefinitions>
+                                    <TextBlock Style="{StaticResource T.SettingDesc}" Margin="2,0,0,12"
+                                               Text="Tamamlanan kontrol ve güncelleme işlemleri (en yenisi üstte). Geçmiş, uygulama kapatılıp açıldığında da korunur." />
+                                    <DataGrid Grid.Row="1" ItemsSource="{Binding RecentOperations}">
                                         <DataGrid.Columns>
                                             <DataGridTextColumn Header="ZAMAN" Binding="{Binding TimeText}" Width="130" />
                                             <DataGridTemplateColumn Header="İŞLEM" Width="250">
@@ -1144,17 +1422,416 @@
                                             <DataGridTextColumn Header="SÜRE" Binding="{Binding DurationText}" Width="110" />
                                         </DataGrid.Columns>
                                     </DataGrid>
-                                </TabItem>
-                            </TabControl>
-                            <Button Style="{StaticResource Btn.Ghost}" HorizontalAlignment="Right" VerticalAlignment="Top" Margin="0,-4,0,0"
-                                    Command="{Binding OpenLogCommand}" ToolTip="{Binding LogFilePath}">
-                                <StackPanel Orientation="Horizontal">
-                                    <TextBlock Text="&#xE838;" Style="{StaticResource T.Icon}" FontSize="13" Margin="0,0,8,0" />
-                                    <TextBlock Text="Log dosyası" />
-                                </StackPanel>
-                            </Button>
+                                    <TextBlock Grid.Row="1" VerticalAlignment="Top" Margin="10,52,10,0" FontSize="12.5" TextWrapping="Wrap"
+                                               Foreground="{StaticResource B.Text3}" Visibility="{Binding RecentOperations.Count, Converter={StaticResource Hidden}}"
+                                               Text="Henüz tamamlanmış işlem yok." />
+                                </Grid>
+                            </Border>
                         </Grid>
-                    </Border>
+
+                        <!-- ============ Sağlık Özeti (kartların gerçek durumlarından) + Son İşlem ============ -->
+                        <ScrollViewer x:Name="SummaryScroll" Grid.Row="1" VerticalScrollBarVisibility="Auto" Padding="0,0,4,0"
+                                      Visibility="{Binding CurrentSectionKey, Converter={StaticResource SectionVisible}, ConverterParameter=health}">
+                            <Grid Margin="8,0,8,8">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" MaxWidth="1120" />
+                                </Grid.ColumnDefinitions>
+                                <StackPanel>
+                                    <Grid Margin="0,0,0,16">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="96" />
+                                            <ColumnDefinition Width="*" />
+                                        </Grid.ColumnDefinitions>
+                                        <Border Style="{StaticResource IconTile}">
+                                            <TextBlock Text="&#xE9D9;" Style="{StaticResource T.TileIcon}" />
+                                        </Border>
+                                        <Border Grid.Column="1" Style="{StaticResource Card}" Padding="22,16,22,12">
+                                            <StackPanel>
+                                                <TextBlock Text="Sistem Sağlık Özeti" Style="{StaticResource T.H2}" FontSize="16" />
+                                                <TextBlock Text="{Binding HealthCounts}" FontSize="11.5" Foreground="{StaticResource B.Text3}"
+                                                           Margin="0,3,0,0" TextWrapping="Wrap" />
+                                                <Border HorizontalAlignment="Left" Margin="0,12,0,0" Padding="12,6" CornerRadius="12"
+                                                        Background="{Binding HealthStatus, Converter={StaticResource StatusSoftBrush}}">
+                                                    <StackPanel Orientation="Horizontal">
+                                                        <Ellipse Width="9" Height="9" VerticalAlignment="Center" Margin="0,0,9,0"
+                                                                 Fill="{Binding HealthStatus, Converter={StaticResource StatusBrush}}" />
+                                                        <TextBlock Text="{Binding HealthHeadline}" FontSize="13" FontWeight="SemiBold" TextWrapping="Wrap"
+                                                                   Foreground="{Binding HealthStatus, Converter={StaticResource StatusBrush}}" />
+                                                    </StackPanel>
+                                                </Border>
+                                                <ItemsControl ItemsSource="{Binding Cards}" Margin="0,12,0,0" Focusable="False">
+                                                    <ItemsControl.ItemsPanel>
+                                                        <ItemsPanelTemplate>
+                                                            <UniformGrid Columns="3" />
+                                                        </ItemsPanelTemplate>
+                                                    </ItemsControl.ItemsPanel>
+                                                    <ItemsControl.ItemTemplate>
+                                                        <DataTemplate DataType="{x:Type vm:ComponentCardViewModel}">
+                                                            <Border Margin="0,0,8,8" Padding="10,7" CornerRadius="9" Background="#FF0A1222"
+                                                                    BorderBrush="#FF16223A" BorderThickness="1" ToolTip="{Binding Summary}">
+                                                                <Grid>
+                                                                    <Grid.ColumnDefinitions>
+                                                                        <ColumnDefinition Width="Auto" />
+                                                                        <ColumnDefinition Width="*" />
+                                                                    </Grid.ColumnDefinitions>
+                                                                    <Ellipse Width="8" Height="8" VerticalAlignment="Top" Margin="0,5,9,0"
+                                                                             Fill="{Binding Status, Converter={StaticResource StatusBrush}}" />
+                                                                    <StackPanel Grid.Column="1">
+                                                                        <TextBlock Text="{Binding ShortTitle}" FontSize="12" FontWeight="SemiBold"
+                                                                                   Foreground="{StaticResource B.Text}" TextTrimming="CharacterEllipsis" />
+                                                                        <TextBlock Text="{Binding HealthText}" FontSize="11.5" TextTrimming="CharacterEllipsis"
+                                                                                   Foreground="{Binding Status, Converter={StaticResource StatusBrush}}" />
+                                                                    </StackPanel>
+                                                                </Grid>
+                                                            </Border>
+                                                        </DataTemplate>
+                                                    </ItemsControl.ItemTemplate>
+                                                </ItemsControl>
+                                            </StackPanel>
+                                        </Border>
+                                    </Grid>
+
+                                    <!-- Son İşlem özeti (gerçek sonuçlardan) -->
+                                    <Grid Margin="0,0,0,16">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="96" />
+                                            <ColumnDefinition Width="*" />
+                                        </Grid.ColumnDefinitions>
+                                        <Border Style="{StaticResource IconTile}">
+                                            <TextBlock Text="&#xE823;" Style="{StaticResource T.TileIcon}" />
+                                        </Border>
+                                        <Border Grid.Column="1" Style="{StaticResource Card}" Padding="22,16,22,16">
+                                            <Grid>
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="*" />
+                                                    <ColumnDefinition Width="Auto" />
+                                                </Grid.ColumnDefinitions>
+                                                <StackPanel>
+                                                    <TextBlock Text="Son İşlem" Style="{StaticResource T.H2}" FontSize="16" />
+                                                    <StackPanel Margin="0,8,0,0" Visibility="{Binding HasLastOperation, Converter={StaticResource Visible}}">
+                                                        <StackPanel Orientation="Horizontal">
+                                                            <Ellipse Width="8" Height="8" VerticalAlignment="Center" Margin="0,0,8,0"
+                                                                     Fill="{Binding LastOperation.Status, Converter={StaticResource StatusBrush}}" />
+                                                            <TextBlock Text="{Binding LastOperation.Title}" FontSize="13" FontWeight="SemiBold"
+                                                                       Foreground="{StaticResource B.Text}" />
+                                                            <TextBlock Text="{Binding LastOperation.TimeText}" FontSize="11.5" Margin="10,1,0,0"
+                                                                       Foreground="{StaticResource B.Text3}" />
+                                                        </StackPanel>
+                                                        <TextBlock Text="{Binding LastOperation.SummaryText}" FontSize="12" Margin="16,3,0,0"
+                                                                   TextWrapping="Wrap" Foreground="{StaticResource B.Text2}" />
+                                                    </StackPanel>
+                                                    <TextBlock Text="Henüz işlem yapılmadı." FontSize="12" Margin="0,8,0,0" Foreground="{StaticResource B.Text3}"
+                                                               Visibility="{Binding HasLastOperation, Converter={StaticResource Hidden}}" />
+                                                </StackPanel>
+                                                <Button Grid.Column="1" Style="{StaticResource Btn.Secondary}" Height="36" Padding="14,0" Margin="14,0,0,0"
+                                                        VerticalAlignment="Top" Command="{Binding ShowRecentCommand}"
+                                                        Visibility="{Binding HasLastOperation, Converter={StaticResource Visible}}">
+                                                    <StackPanel Orientation="Horizontal">
+                                                        <TextBlock Text="&#xE81C;" Style="{StaticResource T.Icon}" FontSize="12" Margin="0,0,8,0"
+                                                                   Foreground="{StaticResource B.Neon}" />
+                                                        <TextBlock Text="Geçmiş" FontSize="13" />
+                                                    </StackPanel>
+                                                </Button>
+                                            </Grid>
+                                        </Border>
+                                    </Grid>
+                                </StackPanel>
+                            </Grid>
+                        </ScrollViewer>
+
+                        <!-- ============ Kolay Ayar (mevcut tercihler; yeni ayar sistemi yok) ============ -->
+                        <ScrollViewer x:Name="QuickScroll" Grid.Row="1" VerticalScrollBarVisibility="Auto" Padding="0,0,4,0"
+                                      Visibility="{Binding CurrentSectionKey, Converter={StaticResource SectionVisible}, ConverterParameter=quick}">
+                            <Grid Margin="8,0,8,8">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" MaxWidth="1120" />
+                                </Grid.ColumnDefinitions>
+                                <StackPanel>
+                                    <!-- Bildirimler -->
+                                    <Grid Margin="0,0,0,16">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="96" />
+                                            <ColumnDefinition Width="*" />
+                                        </Grid.ColumnDefinitions>
+                                        <Border Style="{StaticResource IconTile}">
+                                            <TextBlock Text="&#xEA8F;" Style="{StaticResource T.TileIcon}" />
+                                        </Border>
+                                        <Border Grid.Column="1" Style="{StaticResource Card}" Padding="22,16">
+                                            <Grid>
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="*" />
+                                                    <ColumnDefinition Width="Auto" />
+                                                </Grid.ColumnDefinitions>
+                                                <StackPanel>
+                                                    <TextBlock Text="Windows bildirimleri" Style="{StaticResource T.H2}" FontSize="16" />
+                                                    <TextBlock Style="{StaticResource T.SettingDesc}" Margin="0,6,0,0"
+                                                               Text="Uzun süren işlemler (SFC, MRT, toplu kontrol ve güncellemeler) tamamlandığında Windows bildirimi gönderilir. Windows Ayarları → Sistem → Bildirimler bölümünden de kapatılabilir." />
+                                                </StackPanel>
+                                                <CheckBox Grid.Column="1" Style="{StaticResource ToggleSwitch}" Margin="24,0,0,0"
+                                                          IsChecked="{Binding NotificationsEnabled}"
+                                                          AutomationProperties.Name="İşlem bitince Windows bildirimi göster" />
+                                            </Grid>
+                                        </Border>
+                                    </Grid>
+
+                                    <!-- Toplu güncelleme: Çöp Kutusu -->
+                                    <Grid Margin="0,0,0,16">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="96" />
+                                            <ColumnDefinition Width="*" />
+                                        </Grid.ColumnDefinitions>
+                                        <Border Style="{StaticResource IconTile}">
+                                            <TextBlock Text="&#xE74D;" Style="{StaticResource T.TileIcon}" />
+                                        </Border>
+                                        <Border Grid.Column="1" Style="{StaticResource Card}" Padding="22,16">
+                                            <Grid>
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="*" />
+                                                    <ColumnDefinition Width="Auto" />
+                                                </Grid.ColumnDefinitions>
+                                                <StackPanel>
+                                                    <TextBlock Text="Tümünü Güncelle ile Çöp Kutusu'nu boşalt" Style="{StaticResource T.H2}" FontSize="16" TextWrapping="Wrap" />
+                                                    <TextBlock Style="{StaticResource T.SettingDesc}" Margin="0,6,0,0"
+                                                               Text="Aynı tercih Temizleme → Çöp Kutusu kartında da bulunur. Çöp Kutusu yalnızca kontrol edildiyse ve onay penceresinde onayladıktan sonra boşaltılır." />
+                                                </StackPanel>
+                                                <CheckBox Grid.Column="1" Style="{StaticResource ToggleSwitch}" Margin="24,0,0,0"
+                                                          IsChecked="{Binding CleanRecycleBin}"
+                                                          AutomationProperties.Name="Tümünü Güncelle ile Çöp Kutusu'nu da boşalt" />
+                                            </Grid>
+                                        </Border>
+                                    </Grid>
+                                </StackPanel>
+                            </Grid>
+                        </ScrollViewer>
+
+                        <!-- ============ Yönetici Yetkisi ============ -->
+                        <ScrollViewer x:Name="AdminScroll" Grid.Row="1" VerticalScrollBarVisibility="Auto" Padding="0,0,4,0"
+                                      Visibility="{Binding CurrentSectionKey, Converter={StaticResource SectionVisible}, ConverterParameter=admin}">
+                            <Grid Margin="8,0,8,8">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" MaxWidth="1120" />
+                                </Grid.ColumnDefinitions>
+                                <Grid Margin="0,0,0,16">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="96" />
+                                        <ColumnDefinition Width="*" />
+                                    </Grid.ColumnDefinitions>
+                                    <Border Style="{StaticResource IconTile}">
+                                        <TextBlock Text="&#xE7EF;" Style="{StaticResource T.TileIcon}" />
+                                    </Border>
+                                    <Border Grid.Column="1" Style="{StaticResource Card}" Padding="22,16">
+                                        <Grid>
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="*" />
+                                                <ColumnDefinition Width="Auto" />
+                                            </Grid.ColumnDefinitions>
+                                            <StackPanel>
+                                                <TextBlock Text="Yönetici yetkisi" Style="{StaticResource T.H2}" FontSize="16" />
+                                                <StackPanel Orientation="Horizontal" Margin="0,8,0,0">
+                                                    <Ellipse Width="8" Height="8" VerticalAlignment="Center" Margin="0,0,8,0"
+                                                             Fill="{Binding AdminRow.State, Converter={StaticResource StatusBrush}}" />
+                                                    <TextBlock Text="{Binding AdminRow.Detail}" FontSize="13" Foreground="{StaticResource B.Text}" TextWrapping="Wrap" />
+                                                </StackPanel>
+                                                <TextBlock Style="{StaticResource T.SettingDesc}" Margin="0,8,0,0"
+                                                           Text="Kontrol ve güncelleme işlemleri yönetici yetkisi gerektirir; yetki yoksa tüm kartlar kullanım dışıdır. Yetki yalnızca Windows UAC onayıyla alınır; UAC hiçbir şekilde atlatılmaz." />
+                                            </StackPanel>
+                                            <Button Grid.Column="1" Style="{StaticResource Btn.Secondary}" Height="40" Margin="20,0,0,0" VerticalAlignment="Top"
+                                                    Command="{Binding ElevateCommand}" Visibility="{Binding ShowElevate, Converter={StaticResource Visible}}"
+                                                    ToolTip="Uygulama UAC onayıyla yönetici olarak yeniden açılır; onay vermezseniz hiçbir şey değişmez.">
+                                                <StackPanel Orientation="Horizontal">
+                                                    <TextBlock Text="&#xE7EF;" Style="{StaticResource T.Icon}" FontSize="14" Margin="0,0,8,0" />
+                                                    <TextBlock Text="Yönetici olarak yeniden başlat" FontSize="13" />
+                                                </StackPanel>
+                                            </Button>
+                                        </Grid>
+                                    </Border>
+                                </Grid>
+                            </Grid>
+                        </ScrollViewer>
+
+                        <!-- ============ Günlük Dosyaları ============ -->
+                        <ScrollViewer x:Name="LogFilesScroll" Grid.Row="1" VerticalScrollBarVisibility="Auto" Padding="0,0,4,0"
+                                      Visibility="{Binding CurrentSectionKey, Converter={StaticResource SectionVisible}, ConverterParameter=logfiles}">
+                            <Grid Margin="8,0,8,8">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" MaxWidth="1120" />
+                                </Grid.ColumnDefinitions>
+                                <StackPanel>
+                                    <!-- Oturum günlüğü -->
+                                    <Grid Margin="0,0,0,16">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="96" />
+                                            <ColumnDefinition Width="*" />
+                                        </Grid.ColumnDefinitions>
+                                        <Border Style="{StaticResource IconTile}">
+                                            <TextBlock Text="&#xE81C;" Style="{StaticResource T.TileIcon}" />
+                                        </Border>
+                                        <Border Grid.Column="1" Style="{StaticResource Card}" Padding="22,16,22,12">
+                                            <StackPanel>
+                                                <TextBlock Text="Oturum günlüğü" Style="{StaticResource T.H2}" FontSize="16" />
+                                                <TextBlock Text="{Binding LogFilePath}" FontFamily="{StaticResource F.Mono}" FontSize="11.5" Margin="0,8,0,0"
+                                                           Foreground="{StaticResource B.Text2}" TextWrapping="Wrap" ToolTip="Bu oturumun günlük dosyası" />
+                                                <WrapPanel Margin="0,12,0,0">
+                                                    <Button Style="{StaticResource Btn.Secondary}" Height="36" Margin="0,0,8,6" Command="{Binding OpenLogCommand}">
+                                                        <StackPanel Orientation="Horizontal">
+                                                            <TextBlock Text="&#xE8A5;" Style="{StaticResource T.Icon}" FontSize="13" Margin="0,0,8,0" />
+                                                            <TextBlock Text="Günlük dosyasını aç" FontSize="13" />
+                                                        </StackPanel>
+                                                    </Button>
+                                                    <Button Style="{StaticResource Btn.Secondary}" Height="36" Margin="0,0,8,6" Command="{Binding OpenLogFolderCommand}">
+                                                        <StackPanel Orientation="Horizontal">
+                                                            <TextBlock Text="&#xE838;" Style="{StaticResource T.Icon}" FontSize="13" Margin="0,0,8,0" />
+                                                            <TextBlock Text="Klasörü aç" FontSize="13" />
+                                                        </StackPanel>
+                                                    </Button>
+                                                    <Button Style="{StaticResource Btn.Secondary}" Height="36" Margin="0,0,8,6" Command="{Binding ExportLogsCommand}">
+                                                        <StackPanel Orientation="Horizontal">
+                                                            <TextBlock Text="&#xE74E;" Style="{StaticResource T.Icon}" FontSize="13" Margin="0,0,8,0" />
+                                                            <TextBlock Text="Dışa aktar" FontSize="13" />
+                                                        </StackPanel>
+                                                    </Button>
+                                                </WrapPanel>
+                                                <TextBlock Style="{StaticResource T.SettingDesc}" Margin="0,4,0,0"
+                                                           Text="Her oturum ayrı bir dosyaya yazılır. Ekrandaki günlük; Güncelleme, Temizleme, Cihaz Sağlık ve Özet kategorilerinin İşlem Günlüğü bölmesinde görüntülenir." />
+                                            </StackPanel>
+                                        </Border>
+                                    </Grid>
+
+                                    <!-- Uygulama verileri -->
+                                    <Grid Margin="0,0,0,16">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="96" />
+                                            <ColumnDefinition Width="*" />
+                                        </Grid.ColumnDefinitions>
+                                        <Border Style="{StaticResource IconTile}">
+                                            <TextBlock Text="&#xE838;" Style="{StaticResource T.TileIcon}" />
+                                        </Border>
+                                        <Border Grid.Column="1" Style="{StaticResource Card}" Padding="22,16">
+                                            <StackPanel>
+                                                <TextBlock Text="Uygulama verileri" Style="{StaticResource T.H2}" FontSize="16" />
+                                                <TextBlock Text="{x:Static core:AppInfo.DataDirectory}" FontFamily="{StaticResource F.Mono}" FontSize="11.5" Margin="0,8,0,0"
+                                                           Foreground="{StaticResource B.Text2}" TextWrapping="Wrap" />
+                                                <TextBlock Style="{StaticResource T.SettingDesc}" Margin="0,8,0,0"
+                                                           Text="İşlem geçmişi ve tercihler (state.json) ile oturum günlükleri (Logs klasörü) burada saklanır. Önceki sürümlerin veri klasörleri silinmez." />
+                                            </StackPanel>
+                                        </Border>
+                                    </Grid>
+                                </StackPanel>
+                            </Grid>
+                        </ScrollViewer>
+
+                        <!-- ============ Cihaz Bilgileri: donanım kartları (mevcut sistem bilgisi alanları) + uyumluluk (gereksinimler) ============ -->
+                        <ScrollViewer x:Name="DeviceScroll" Grid.Row="1" VerticalScrollBarVisibility="Auto" Padding="0,0,4,0"
+                                      Visibility="{Binding CurrentSectionKey, Converter={StaticResource SectionVisible}, ConverterParameter=device-info}">
+                            <Grid Margin="8,0,8,8">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" MaxWidth="1120" />
+                                </Grid.ColumnDefinitions>
+                                <StackPanel>
+                                    <Grid Margin="96,0,0,12">
+                                        <TextBlock Text="{Binding SystemInfoStatus}" FontSize="11.5" Foreground="{StaticResource B.Text3}" VerticalAlignment="Center" />
+                                        <Button Style="{StaticResource Btn.Ghost}" Height="30" Padding="10,0" HorizontalAlignment="Right"
+                                                Command="{Binding RefreshSystemInfoCommand}" ToolTip="Sistem bilgilerini yenile">
+                                            <StackPanel Orientation="Horizontal">
+                                                <TextBlock Text="&#xE72C;" Style="{StaticResource T.Icon}" FontSize="12" Margin="0,0,7,0" />
+                                                <TextBlock Text="Yenile" FontSize="12" />
+                                            </StackPanel>
+                                        </Button>
+                                    </Grid>
+                                    <ItemsControl ItemsSource="{Binding DeviceSections}" ItemTemplate="{StaticResource DeviceSectionTemplate}" Focusable="False" />
+                                    <Grid Margin="0,0,0,16">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="96" />
+                                            <ColumnDefinition Width="*" />
+                                        </Grid.ColumnDefinitions>
+                                        <Border Style="{StaticResource IconTile}">
+                                            <TextBlock Text="&#xEA86;" Style="{StaticResource T.TileIcon}" />
+                                        </Border>
+                                        <Border Grid.Column="1" Style="{StaticResource Card}" Padding="22,16,22,6">
+                                            <StackPanel>
+                                                <TextBlock Text="Uyumluluk" Style="{StaticResource T.H2}" FontSize="16" />
+                                                <ItemsControl Margin="0,12,0,0" ItemsSource="{Binding Requirements}" ItemTemplate="{StaticResource RequirementRowTemplate}" />
+                                            </StackPanel>
+                                        </Border>
+                                    </Grid>
+                                </StackPanel>
+                            </Grid>
+                        </ScrollViewer>
+
+                        <!-- ============ Cihaz Durumu: canlı ölçüm (yalnızca bu bölme açıkken, 2 saniyede bir) ============ -->
+                        <ScrollViewer x:Name="DeviceStatusScroll" Grid.Row="1" VerticalScrollBarVisibility="Auto" Padding="0,0,4,0"
+                                      Visibility="{Binding CurrentSectionKey, Converter={StaticResource SectionVisible}, ConverterParameter=device-status}">
+                            <StackPanel Margin="8,0,8,8" MaxWidth="1000" HorizontalAlignment="Left">
+                                <StackPanel Orientation="Horizontal" Margin="0,0,0,20">
+                                    <Ellipse Width="8" Height="8" Fill="{StaticResource B.Green}" VerticalAlignment="Center" Margin="0,0,9,0" />
+                                    <TextBlock Text="{Binding DeviceStatusTime}" FontSize="12" Foreground="{StaticResource B.Text3}" />
+                                </StackPanel>
+                                <Grid>
+                                    <Border Style="{StaticResource CardShadowLayer}" />
+                                    <Border Style="{StaticResource Card.Flat}" Padding="24,22,24,4">
+                                        <ItemsControl ItemsSource="{Binding DeviceStatusRows}" ItemTemplate="{StaticResource DeviceStatusRowTemplate}" Focusable="False" />
+                                    </Border>
+                                </Grid>
+                                <TextBlock Style="{StaticResource T.SettingDesc}" Margin="4,14,0,0" MaxWidth="820" HorizontalAlignment="Left"
+                                           Text="Değerler Windows'un ve NVIDIA sürücüsünün bildirdiği gerçek ölçümlerdir; okunamayan değer tahmin edilmez (&quot;okunamıyor&quot;, neden için göstergenin üzerine gelin). Termal bölge, Windows'un ACPI termal bölge sayacıdır ve işlemci çekirdek sıcaklığıyla aynı olmayabilir. Disk sıcaklığı yönetici yetkisi gerektirir ve 15 saniyede bir okunur. Ölçüm yalnızca bu bölme açıkken yapılır." />
+                            </StackPanel>
+                        </ScrollViewer>
+
+                        <!-- ============ Hakkında ============ -->
+                        <ScrollViewer x:Name="DeviceAboutScroll" Grid.Row="1" VerticalScrollBarVisibility="Auto" Padding="0,0,4,0"
+                                      Visibility="{Binding CurrentSectionKey, Converter={StaticResource SectionVisible}, ConverterParameter=device-about}">
+                            <StackPanel Margin="8,0,8,8" MaxWidth="780" HorizontalAlignment="Left">
+                                <Border Style="{StaticResource Card}" Padding="26,22">
+                                    <StackPanel>
+                                        <Grid>
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="Auto" />
+                                                <ColumnDefinition Width="*" />
+                                            </Grid.ColumnDefinitions>
+                                            <Rectangle Width="60" Height="60" RadiusX="15" RadiusY="15" Fill="{StaticResource LogoBrush}"
+                                                       Stroke="#FF24365C" StrokeThickness="1" />
+                                            <StackPanel Grid.Column="1" Margin="16,0,0,0" VerticalAlignment="Center">
+                                                <TextBlock Text="{x:Static core:AppInfo.Name}" Style="{StaticResource T.H1}" FontSize="22" />
+                                                <TextBlock FontSize="12.5" Foreground="{StaticResource B.Neon}" Margin="0,3,0,0">
+                                                    <Run Text="Kontrol Merkezi ·" />
+                                                    <Run Text="{Binding AppVersion, Mode=OneWay}" />
+                                                </TextBlock>
+                                            </StackPanel>
+                                        </Grid>
+                                        <TextBlock Style="{StaticResource T.SettingDesc}" FontSize="12.5" Margin="0,16,0,0"
+                                                   Text="Windows 11 için güncelleme ve bakım merkezi. Tüm durumlar Windows araçlarının, Windows API'lerinin ve NVIDIA sürücüsünün gerçek çıktılarından okunur; hiçbir sonuç tahmin edilmez. Sistemde değişiklik yapan her işlem yalnızca onayınızla çalışır." />
+                                        <Border Height="1" Background="{StaticResource B.Border}" Margin="0,18,0,14" />
+                                        <Grid>
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="140" />
+                                                <ColumnDefinition Width="*" />
+                                            </Grid.ColumnDefinitions>
+                                            <Grid.RowDefinitions>
+                                                <RowDefinition Height="Auto" />
+                                                <RowDefinition Height="Auto" />
+                                                <RowDefinition Height="Auto" />
+                                                <RowDefinition Height="Auto" />
+                                                <RowDefinition Height="Auto" />
+                                            </Grid.RowDefinitions>
+                                            <TextBlock Text="Sürüm" FontSize="12" Foreground="{StaticResource B.Text3}" Margin="0,0,10,9" />
+                                            <TextBlock Grid.Column="1" Text="{Binding AppVersion}" FontSize="12.5" Foreground="{StaticResource B.Text}" />
+                                            <TextBlock Grid.Row="1" Text="Dil" FontSize="12" Foreground="{StaticResource B.Text3}" Margin="0,0,10,9" />
+                                            <TextBlock Grid.Row="1" Grid.Column="1" Text="Türkçe" FontSize="12.5" Foreground="{StaticResource B.Text}" />
+                                            <TextBlock Grid.Row="2" Text="Veri klasörü" FontSize="12" Foreground="{StaticResource B.Text3}" Margin="0,0,10,9" />
+                                            <TextBlock Grid.Row="2" Grid.Column="1" Text="{x:Static core:AppInfo.DataDirectory}" FontSize="12.5"
+                                                       Foreground="{StaticResource B.Text}" TextWrapping="Wrap" />
+                                            <TextBlock Grid.Row="3" Text="Günlük dosyası" FontSize="12" Foreground="{StaticResource B.Text3}" Margin="0,0,10,9" />
+                                            <TextBlock Grid.Row="3" Grid.Column="1" Text="{Binding LogFilePath}" FontSize="12.5" Foreground="{StaticResource B.Text}"
+                                                       TextWrapping="Wrap" />
+                                            <TextBlock Grid.Row="4" Text="Kaynak kod" FontSize="12" Foreground="{StaticResource B.Text3}" Margin="0,0,10,0" />
+                                            <TextBlock Grid.Row="4" Grid.Column="1" Text="github.com/E-mre-Hub/E-mre-Control-Center (özel depo)" FontSize="12.5"
+                                                       Foreground="{StaticResource B.Text}" TextWrapping="Wrap" />
+                                        </Grid>
+                                    </StackPanel>
+                                </Border>
+                            </StackPanel>
+                        </ScrollViewer>
+                    </Grid>
                 </Grid>
             </Grid>
         </Grid>
