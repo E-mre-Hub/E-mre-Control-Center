@@ -40,8 +40,8 @@ kendi bakım araçlarını (SFC, DISM CheckHealth / onayla RestoreHealth, MRT h�
    "Windows kişisel bilgisayarınızı korudu" uyarısı çıkabilir. **Ek bilgi → Yine de çalıştır** seçin.
    (Bu, imzasız her uygulamada görülen normal bir uyarıdır; kaynak kodun tamamı bu depodadır.) Aynı nedenle UAC penceresinde
    "Yayıncı: Bilinmeyen" yazar; bkz. [Kod imzalama](#kod-imzalama-ve-bilinmeyen-yayıncı).
-5. Uygulama yönetici izni isteyecektir; UAC penceresinde **Evet** deyin. (İzin vermezseniz uygulama açılır ama tüm kartlar
-   kullanım dışı olur; hiçbir kontrol veya güncelleme yapılamaz.)
+5. Uygulama yönetici izni isteyecektir; UAC penceresinde **Evet** deyin. (İzin vermezseniz uygulama açılır ama 10 kartın tamamı
+   kullanım dışı olur; hiçbir kontrol veya güncelleme yapılamaz. Hız Testi, Cihaz Bilgileri ve arama yine kullanılabilir.)
 
 Gereksinimler: Windows 11 (derleme 22000+, zorunlu), internet bağlantısı, winget (Windows 11'de hazır gelir).
 NVIDIA GeForce RTX ekran kartı önerilir. Kart yoksa, başka marka bir kart ya da RTX serisi olmayan bir NVIDIA kartı varsa
@@ -445,6 +445,8 @@ bağlantısı bulunur.
   kartında iki neden birlikte yazar.
 - "Tümünü Kontrol Et", "Seçilenleri Kontrol Et", güncelleme butonları, kart butonları ve seçim kutuları kapalıdır; Sistem Sağlık Özeti
   "Yönetici yetkisi yok – tüm işlemler kullanım dışı" gösterir. Sistem Bilgileri, geçmiş sonuçlar (Detaylı Sonuç) ve günlük yine görüntülenebilir.
+- Yönetici yetkisi gerektirmeyenler normal çalışır: **Hız Testi**, **Cihaz Bilgileri** (Cihaz Durumu'nda disk sıcaklığı yönetici
+  yetkisi gerektirir; yetki yoksa "okunamıyor" ve nedeni yazar), ana sayfa araması ve Genel Ayarlar.
 - **"Yönetici olarak yeniden başlat"** (ana sayfa, kategori sol menüsü, Genel Ayarlar → Yönetici Yetkisi) uygulamayı UAC onayıyla
   yönetici olarak yeniden açar. Yetki yalnızca bu yolla alınır; UAC hiçbir şekilde atlatılmaz.
 
