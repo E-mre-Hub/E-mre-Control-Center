@@ -15,7 +15,7 @@
     <AssemblyTitle>E-mre Control Center</AssemblyTitle>
     <Company>E-mre Control Center</Company>
     <Copyright>© 2026 E-mre Control Center</Copyright>
-    <Version>1.7.0</Version>
+    <Version>1.7.1</Version>
     <!-- Dosya özelliklerinde "Ürün sürümü" yalın görünsün (varsayılan: 1.4.0+<git commit kimliği>) -->
     <IncludeSourceRevisionInInformationalVersion>false</IncludeSourceRevisionInInformationalVersion>
 

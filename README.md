@@ -183,21 +183,21 @@ tırnak içinde yazılır). Depo: https://github.com/E-mre-Hub/E-mre-Control-Cen
 
 ### Yeni sürüm yayınlama (depo sahibi)
 
-1. `src\RtxWindowsUpdater\RtxWindowsUpdater.csproj` içindeki `<Version>` değerini artırın (ör. `1.7.0`).
+1. `src\RtxWindowsUpdater\RtxWindowsUpdater.csproj` içindeki `<Version>` değerini artırın (ör. `1.7.1`).
 2. Değişiklikleri commit'leyip gönderin, ardından etiket oluşturun:
 
 ```bash
-git tag v1.7.0
+git tag v1.7.1
 ```
 
 ```bash
-git push origin v1.7.0
+git push origin v1.7.1
 ```
 
 3. GitHub Actions (`.github/workflows/release.yml`) EXE'yi Windows sunucusunda derler ve **Releases** sayfasına iki dosya ekler:
-   `E-mre-Control-Center-Setup-v1.7.0.exe` (kurulum) ve `E-mre-Control-Center-v1.7.0.zip` (taşınabilir). Davetli arkadaşlar oradan indirir.
-   Etiketteki sürüm (v1.7.0) EXE'nin sürümü olarak kullanılır; csproj'daki `<Version>` ile aynı olmalıdır. Sürüm notları README'deki
-   `### v1.7.0` bölümünden alınır (uygulamadaki güncelleme penceresinde de bu metin görünür).
+   `E-mre-Control-Center-Setup-v1.7.1.exe` (kurulum) ve `E-mre-Control-Center-v1.7.1.zip` (taşınabilir). Davetli arkadaşlar oradan indirir.
+   Etiketteki sürüm (v1.7.1) EXE'nin sürümü olarak kullanılır; csproj'daki `<Version>` ile aynı olmalıdır. Sürüm notları README'deki
+   `### v1.7.1` bölümünden alınır (uygulamadaki güncelleme penceresinde de bu metin görünür).
 4. Aynı dosyalar ve notlar herkese açık **sürüm deposuna** da yayınlanır (`E-mre-Hub/E-mre-Control-Center-Releases`); uygulamalar yeni
    sürümü buradan görür. Bunun için özel depoda `RELEASES_TOKEN` gizli anahtarı tanımlı olmalıdır (bkz. aşağıdaki tek seferlik kurulum).
    Tanımlı değilse derleme uyarı verir ve uygulamalar o sürümü güncelleme olarak göremez.
@@ -661,6 +661,20 @@ eski klasörlerde kalır (`%LOCALAPPDATA%\E-mre Hub\Logs\`, `%LOCALAPPDATA%\RTX 
   yöneticinin klasörü).
 
 ## Sürüm geçmişi
+
+### v1.7.1
+
+**İyileştirmeler**
+- Uygulama içi güncellemeden sonra yeni sürüm doğrudan Kontrol Merkezi'nde açılır (giriş ekranı yeniden sorulmaz; Windows 11
+  denetimi yine yapılır).
+- Hakkında → Güncelleme satırı sadeleşti: "Güncel (son yayın vX.Y.Z) · son denetim SS:DD".
+
+**Düzeltmeler**
+- "Güncelleme denetlenemedi" satırı işlem günlüğüne iki kez yazılıyordu; artık bir kez (uyarı olarak) yazılır.
+
+**Not**
+- Uygulama içi güncellemenin ilk gerçek sürümüdür: v1.7.0 yüklü bilgisayarlarda uygulama açılınca "Yeni sürüm yayınlandı" penceresi
+  gelir; Güncelle ile indirilir, doğrulanır, kurulur ve yeni sürüm kendiliğinden açılır.
 
 ### v1.7.0
 

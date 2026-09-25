@@ -108,11 +108,8 @@ public sealed class UpdateService(Uri latestReleaseUrl, Action<string> log)
             return Fail("GitHub yanıtı okunamadı: " + ex.Message);
         }
 
-        UpdateCheckResult Fail(string message)
-        {
-            log("Güncelleme denetlenemedi: " + message);
-            return new UpdateCheckResult(false, null, message);
-        }
+        // Denetlenemedi sonucunu çağıran taraf günlüğe uyarı olarak yazar (burada yazılırsa satır iki kez görünür).
+        static UpdateCheckResult Fail(string message) => new(false, null, message);
     }
 
     /// <summary>

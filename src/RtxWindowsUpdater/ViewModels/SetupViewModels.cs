@@ -344,12 +344,18 @@ public sealed class SetupViewModel : ObservableObject
         RequestClose?.Invoke();
     }
 
+    /// <summary>
+    /// Kurulan uygulamanın açılış argümanı: uygulama içi güncellemeden sonra yeni sürüm doğrudan Kontrol Merkezi'nde açılır
+    /// (gereksinim ekranı yeniden sorulmaz; Windows 11 denetimi yine yapılır). Yeni kurulumda ilk açılış gereksinim ekranıyla olur.
+    /// </summary>
+    internal string LaunchArguments => _autoFinish ? AdminPrivilegeManager.ArgAccepted : string.Empty;
+
     private string? LaunchInstalled(string exe)
     {
         try
         {
-            Process.Start(new ProcessStartInfo(exe) { UseShellExecute = true, WorkingDirectory = Path.GetDirectoryName(exe)! })?.Dispose();
-            _log.Info("Kurulan uygulama başlatıldı: " + exe);
+            Process.Start(new ProcessStartInfo(exe, LaunchArguments) { UseShellExecute = true, WorkingDirectory = Path.GetDirectoryName(exe)! })?.Dispose();
+            _log.Info($"Kurulan uygulama başlatıldı: {exe} {LaunchArguments}".TrimEnd());
             return null;
         }
         catch (Exception ex) when (ex is System.ComponentModel.Win32Exception or InvalidOperationException or IOException)

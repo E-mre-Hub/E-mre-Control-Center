@@ -107,7 +107,7 @@ public sealed class UpdateViewModel : ObservableObject
     {
         UpdateStage.Idle => "Henüz denetlenmedi",
         UpdateStage.Checking => "Denetleniyor…",
-        UpdateStage.UpToDate => $"Güncel · son denetim {_checkedAt:HH:mm} ({_checkMessage})",
+        UpdateStage.UpToDate => $"{_checkMessage} · son denetim {_checkedAt:HH:mm}",
         UpdateStage.CheckFailed => $"Denetlenemedi ({_checkedAt:HH:mm}): {_checkMessage}",
         _ => $"Yeni sürüm yayımlandı: {NewVersionText}"
     };
