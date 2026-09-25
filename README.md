@@ -183,22 +183,22 @@ tırnak içinde yazılır). Depo: https://github.com/E-mre-Hub/E-mre-Control-Cen
 
 ### Yeni sürüm yayınlama (depo sahibi)
 
-1. `src\RtxWindowsUpdater\RtxWindowsUpdater.csproj` içindeki `<Version>` değerini artırın (ör. `1.7.2`).
+1. `src\RtxWindowsUpdater\RtxWindowsUpdater.csproj` içindeki `<Version>` değerini artırın (ör. `1.7.3`).
 2. Değişiklikleri commit'leyip gönderin, ardından etiket oluşturun:
 
 ```bash
-git tag v1.7.2
+git tag v1.7.3
 ```
 
 ```bash
-git push origin v1.7.2
+git push origin v1.7.3
 ```
 
 3. GitHub Actions (`.github/workflows/release.yml`) EXE'yi Windows sunucusunda derler ve **Releases** sayfasına iki dosya ekler:
-   `E-mre-Control-Center-Setup-v1.7.2.exe` (kurulum) ve `E-mre-Control-Center-v1.7.2.zip` (taşınabilir). Arkadaşlar oradan indirir;
+   `E-mre-Control-Center-Setup-v1.7.3.exe` (kurulum) ve `E-mre-Control-Center-v1.7.3.zip` (taşınabilir). Arkadaşlar oradan indirir;
    yüklü uygulamalar bu yayını "Yeni sürüm yayınlandı" olarak görür (v1.7.2 ve sonrası).
-   Etiketteki sürüm (v1.7.2) EXE'nin sürümü olarak kullanılır; csproj'daki `<Version>` ile aynı olmalıdır. Yayının metni yalnızca
-   README'deki `### v1.7.2` bölümüdür (uygulamadaki güncelleme penceresinde de bu metin görünür); bu bölüm etiketten önce yazılmalıdır.
+   Etiketteki sürüm (v1.7.3) EXE'nin sürümü olarak kullanılır; csproj'daki `<Version>` ile aynı olmalıdır. Yayının metni yalnızca
+   README'deki `### v1.7.3` bölümüdür (uygulamadaki güncelleme penceresinde de bu metin görünür); bu bölüm etiketten önce yazılmalıdır.
 
 Not: Herkese açık depolarda GitHub Actions standart sunucularda ücretsizdir;
 bir derleme yaklaşık 3-5 dakika sürer.
@@ -651,6 +651,16 @@ eski klasörlerde kalır (`%LOCALAPPDATA%\E-mre Hub\Logs\`, `%LOCALAPPDATA%\RTX 
   yöneticinin klasörü).
 
 ## Sürüm geçmişi
+
+### v1.7.3
+
+**Yeni**
+- Uygulama içi güncellemeden sonra yeni sürüm ilk açıldığında "Güncelleme tamamlandı: vX → vY" bilgisi gösterilir (ayarlar,
+  geçmiş ve günlükler korunur). Bilgi yalnızca kurulumun ilettiği önceki sürüm geçerli ve daha eskiyse gösterilir.
+
+**Not**
+- Uygulama içi güncellemenin gerçek denemesi için yayınlanan sürümdür: v1.7.2 yüklü bilgisayarlarda uygulama açılınca
+  "Yeni sürüm yayınlandı · v1.7.3" penceresi gelir; Güncelle ile indirilir, doğrulanır, kurulur ve yeni sürüm kendiliğinden açılır.
 
 ### v1.7.2
 

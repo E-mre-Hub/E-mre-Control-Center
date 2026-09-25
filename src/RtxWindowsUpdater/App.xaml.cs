@@ -65,6 +65,8 @@ public partial class App : Application
         notifications.Register(ExtractNotificationIcon());
 
         _viewModel = new MainViewModel(_logger, accepted, startCheck, state, notifications);
+        var updatedFrom = Array.FindIndex(e.Args, a => a.Equals(LaunchModes.ArgUpdatedFrom, StringComparison.OrdinalIgnoreCase));
+        if (updatedFrom >= 0 && updatedFrom + 1 < e.Args.Length) _viewModel.UpdatedFrom = e.Args[updatedFrom + 1];
         var window = new MainWindow(_viewModel);
         MainWindow = window;
         window.Show();

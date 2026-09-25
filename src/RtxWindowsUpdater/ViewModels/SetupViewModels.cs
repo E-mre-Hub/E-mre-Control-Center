@@ -348,7 +348,12 @@ public sealed class SetupViewModel : ObservableObject
     /// Kurulan uygulamanın açılış argümanı: uygulama içi güncellemeden sonra yeni sürüm doğrudan Kontrol Merkezi'nde açılır
     /// (gereksinim ekranı yeniden sorulmaz; Windows 11 denetimi yine yapılır). Yeni kurulumda ilk açılış gereksinim ekranıyla olur.
     /// </summary>
-    internal string LaunchArguments => _autoFinish ? AdminPrivilegeManager.ArgAccepted : string.Empty;
+    internal string LaunchArguments => !_autoFinish
+        ? string.Empty
+        : Installed?.Version is { } old && System.Version.TryParse(old, out var previous)
+            // Önceki sürüm (Uninstall kaydından) yeni sürüme iletilir: açılışta "Güncelleme tamamlandı: vX → vY" gösterilir.
+            ? $"{AdminPrivilegeManager.ArgAccepted} {LaunchModes.ArgUpdatedFrom} {previous.ToString(3)}"
+            : AdminPrivilegeManager.ArgAccepted;
 
     private string? LaunchInstalled(string exe)
     {

@@ -324,6 +324,17 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
 
     public UpdateViewModel Update { get; }
 
+    /// <summary>Güncelleme kurulumunun ilettiği önceki sürüm (<see cref="LaunchModes.ArgUpdatedFrom"/>); App açılışta verir.</summary>
+    public string? UpdatedFrom { get; set; }
+
+    /// <summary>"E-mre Control Center v1.7.2 → v1.7.3 sürümüne güncellendi." – önceki sürüm geçerli ve şimdikinden eskiyse; yoksa null.</summary>
+    internal static string? DescribeUpdate(string? from)
+    {
+        if (!Version.TryParse(from, out var previous) || !Version.TryParse(AppInfo.Version, out var current)) return null;
+        previous = new Version(previous.Major, previous.Minor, Math.Max(0, previous.Build));
+        return previous < current ? $"{AppInfo.Name} v{previous.ToString(3)} → v{AppInfo.Version} sürümüne güncellendi." : null;
+    }
+
     /// <summary>
     /// "Yeni sürüm yayınlandı" penceresi: girişten sonra (Kontrol Merkezi), sistem işlemi veya hız testi sürmüyorken gösterilir
     /// (süren işlem yarıda bırakılmasın; bitince pencere gelir).
@@ -720,6 +731,13 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         {
             Accepted = true;
             GoToDashboard();
+            // Uygulama içi güncellemeden sonraki ilk açılış: güncellemenin gerçekten yapıldığı gösterilir (bir kez).
+            if (DescribeUpdate(UpdatedFrom) is { } updated)
+            {
+                _logger.Success(updated);
+                await Dialog.ShowAsync("Güncelleme tamamlandı", updated + " Ayarlarınız, geçmişiniz ve günlükleriniz korundu.",
+                    Icons.Check, DialogKind.Info, "Tamam");
+            }
             if (_argStartCheck && IsAdmin)
                 await StartCheckAsync();
             return;

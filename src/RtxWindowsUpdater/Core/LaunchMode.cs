@@ -29,6 +29,8 @@ public static class LaunchModes
     public const string ArgWaitPid = "--wait-pid";
     /// <summary>Uygulama içi güncellemeyle başlatılan kurulum: bitince yeni sürüm kendiliğinden açılır.</summary>
     public const string ArgUpdate = "--update";
+    /// <summary>Güncelleme kurulumunun yeni sürümü açarken verdiği önceki sürüm: yeni sürüm "Güncelleme tamamlandı: vX → vY" gösterir.</summary>
+    public const string ArgUpdatedFrom = "--updated-from";
 
     public static LaunchMode Detect(IReadOnlyList<string> args, string? processPath)
     {
