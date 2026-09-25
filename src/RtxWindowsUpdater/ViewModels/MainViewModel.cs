@@ -218,7 +218,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
             card.SelectionChangedCallback = (key, selected) => _selection.SetSelected(key, selected);
             card.ActionCommand = new AsyncCommand(
                 () => c.IsMaintenance ? RunMaintenanceAsync(c) : RunCardCheckAsync(c),
-                () => !IsBusy && IsSupported && !c.IsUnavailable, OnCommandError);
+                () => CanStartOperation && IsSupported && !c.IsUnavailable, OnCommandError);
             card.DetailsCommand = new RelayCommand(() => Detail.Show(c));
             if (_state.State.Cards.TryGetValue(card.Key, out var saved))
                 card.LoadHistory(saved);
@@ -230,7 +230,16 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         }
         _selection.SelectionChanged += OnSelectionChanged;
 
-        // Kontrol Merkezi: mevcut kartlar (aynı nesneler) 6 kategori altında gruplanır; yalnızca arayüz düzenidir.
+        // Hız Testi: sistem işlemi sürerken başlatılamaz; test sürerken de sistem işlemleri başlatılamaz (ölçümü bozar).
+        SpeedTest = new SpeedTestViewModel(_logger, _state, Dialog, () => IsBusy);
+        SpeedTest.Changed += (_, _) =>
+        {
+            RefreshCategories();
+            RaiseUpdateAvailabilityChanged();
+            OnPropertyChanged(nameof(AvailableSummary));
+        };
+
+        // Kontrol Merkezi: mevcut kartlar (aynı nesneler) 7 kategori altında gruplanır; yalnızca arayüz düzenidir.
         // Her kategori soldaki alt menüde bölmelere ayrılır (Monster düzeni); aynı bölme türü birden fazla kategoride bulunabilir.
         ComponentCardViewModel CardOf(string key) => Cards.First(c => c.Key == key);
         SectionViewModel Log() => new(SectionKeys.Log, "İşlem Günlüğü", "");
@@ -247,13 +256,17 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
             new CategoryViewModel(CategoryKeys.Health, "Cihaz Sağlık", "", "Windows sistem sağlık kontrolleri",
                 [CardOf(ComponentKeys.Sfc), CardOf(ComponentKeys.Dism), CardOf(ComponentKeys.Mrt)],
                 [new(SectionKeys.Cards, "Sağlık Araçları", ""), Log()]),
+            new CategoryViewModel(CategoryKeys.SpeedTest, "Hız Testi", "", "İnternet hızı, ping ve paket kaybı", [],
+                [new(SectionKeys.SpeedTest, "Hız Testi", ""), new(SectionKeys.SpeedServers, "Sunucu", ""),
+                 new(SectionKeys.SpeedHistory, "Sonuçlar", ""),
+                 new(SectionKeys.SpeedMethod, "Yöntem", "")]),
             new CategoryViewModel(CategoryKeys.Settings, "Genel Ayarlar", "", "Bildirimler, günlük ve uygulama tercihleri", [],
                 [new(SectionKeys.Quick, "Kolay Ayar", ""), new(SectionKeys.Admin, "Yönetici Yetkisi", ""),
                  new(SectionKeys.LogFiles, "Günlük Dosyaları", "")]),
             new CategoryViewModel(CategoryKeys.Summary, "Özet", "", "Sistem sağlığı, son işlem ve geçmiş", [],
                 [new(SectionKeys.Health, "Sağlık Özeti", ""), new(SectionKeys.Recent, "Son İşlemler", ""), Found(), Log()]),
             new CategoryViewModel(CategoryKeys.Device, "Cihaz Bilgileri", "", "Donanım, Windows ve sistem durumu", [],
-                [new(SectionKeys.DeviceInfo, "Cihaz Bilgileri", ""), new(SectionKeys.DeviceStatus, "Cihaz Durumu", ""),
+                [new(SectionKeys.DeviceInfo, "Cihaz Bilgileri", ""), new(SectionKeys.DeviceStatus, "Cihaz Durumu", ""),
                  new(SectionKeys.DeviceAbout, "Hakkında", "")])
         ];
         foreach (var category in Categories)
@@ -273,8 +286,8 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         ContinueWithoutGpuCommand = new RelayCommand(GoToDashboard, () => Accepted && IsSupported && !HasRtx);
         ElevateCommand = new AsyncCommand(() => PromptElevationAsync(false), () => !IsAdmin && IsSupported, OnCommandError);
         // Yönetici yetkisi yoksa tüm kartlar kullanım dışıdır; toplu kontrol butonları da kapalıdır (yalnızca yeniden başlatma sunulur).
-        StartCheckCommand = new AsyncCommand(StartCheckAsync, () => !IsBusy && IsSupported && IsAdmin, OnCommandError);
-        CheckSelectedCommand = new AsyncCommand(CheckSelectedAsync, () => !IsBusy && IsSupported && IsAdmin, OnCommandError);
+        StartCheckCommand = new AsyncCommand(StartCheckAsync, () => CanStartOperation && IsSupported && IsAdmin, OnCommandError);
+        CheckSelectedCommand = new AsyncCommand(CheckSelectedAsync, () => CanStartOperation && IsSupported && IsAdmin, OnCommandError);
         UpdateAllCommand = new AsyncCommand(UpdateAllAsync, () => CanUpdateAll, OnCommandError);
         UpdateSelectedCommand = new AsyncCommand(UpdateSelectedAsync, () => CanRunSelected, OnCommandError);
         ClearSelectionCommand = new RelayCommand(() => _selection.Clear(), () => _selection.HasSelection);
@@ -284,6 +297,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         ExportLogsCommand = new AsyncCommand(ExportLogsAsync, onError: OnCommandError);
         ClearLogsCommand = new RelayCommand(ClearLogs, () => Logs.Count > 0);
         ShowRecentCommand = new RelayCommand(() => OpenSection(CategoryKeys.Summary, SectionKeys.Recent));
+        ShowSpeedServersCommand = new RelayCommand(() => OpenSection(CategoryKeys.SpeedTest, SectionKeys.SpeedServers));
         RefreshSystemInfoCommand = new AsyncCommand(RefreshSystemInfoAsync, () => !IsSystemInfoLoading, OnCommandError);
 
         _logger.LogAdded += OnLogAdded;
@@ -292,6 +306,12 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
     // ------------------------------------------------------------------ state
 
     public DialogViewModel Dialog { get; } = new();
+
+    /// <summary>Hız Testi kategorisi (gerçek ölçüm; sonuç geçmişi state.json'da).</summary>
+    public SpeedTestViewModel SpeedTest { get; }
+
+    /// <summary>Yeni bir sistem işlemi (kontrol / güncelleme / kart işlemi) başlatılabilir mi? Hız testi sürerken hayır.</summary>
+    private bool CanStartOperation => !IsBusy && SpeedTest?.IsWorking != true;
     public ObservableCollection<RequirementRowViewModel> Requirements { get; }
     public RequirementRowViewModel WindowsRow { get; }
     public RequirementRowViewModel GpuRow { get; }
@@ -371,7 +391,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
 
     // --- Kontrol Merkezi (gezinme; yalnızca arayüz düzeni) ---
 
-    /// <summary>Ana sayfadaki 6 kategori (3x2): Güncelleme, Temizleme, Cihaz Sağlık, Genel Ayarlar, Özet, Cihaz Bilgileri.</summary>
+    /// <summary>Ana sayfadaki 7 kategori (üstte 4, altta 3): Güncelleme, Temizleme, Cihaz Sağlık, Hız Testi, Genel Ayarlar, Özet, Cihaz Bilgileri.</summary>
     public ObservableCollection<CategoryViewModel> Categories { get; }
 
     /// <summary>Açık kategori; null ise Kontrol Merkezi ana sayfası gösterilir. Kategori her açılışta ilk bölmesiyle açılır.</summary>
@@ -417,6 +437,9 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         OnPropertyChanged(nameof(CurrentSectionKey));
         // Cihaz Durumu canlı ölçümü yalnızca o bölme açıkken çalışır.
         UpdateDeviceMonitoring();
+        // Sunucu bölmesi (veya Ookla seçiliyken Hız Testi) açılınca Ookla aracı denetlenir; sistemde değişiklik yapmaz.
+        if (CurrentSectionKey == SectionKeys.SpeedServers || CurrentSectionKey == SectionKeys.SpeedTest && SpeedTest.IsOoklaProvider)
+            _ = SpeedTest.EnsureOoklaAsync();
     }
 
     /// <summary>Belirtilen kategoriyi açar ve bölmesini seçer (ör. "Geçmiş" → Özet / Son İşlemler).</summary>
@@ -454,6 +477,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
             {
                 CategoryKeys.Summary => (HealthStatus, HealthHeadline),
                 CategoryKeys.Device => (ComponentStatus.NotChecked, PlatformText),
+                CategoryKeys.SpeedTest => SpeedTest.Tile,
                 _ => (ComponentStatus.NotChecked, NotificationsEnabled ? "Bildirimler açık" : "Bildirimler kapalı")
             };
         }
@@ -481,7 +505,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         }
     }
 
-    /// <summary>Yönetici değil: gereksinim sayfasında ve ana ekranın İşlemler panelinde "yönetici olarak başlat" gösterilir.</summary>
+    /// <summary>Yönetici değil: gereksinim sayfasında, ana sayfada, kategori sol menüsünde ve Genel Ayarlar → Yönetici Yetkisi'nde "yönetici olarak yeniden başlat" gösterilir.</summary>
     public bool ShowElevate => RequirementsChecked && IsSupported && !IsAdmin;
     public bool Accepted { get => _accepted; set => Set(ref _accepted, value); }
     public string UnsupportedMessage { get => _unsupportedMessage; private set => Set(ref _unsupportedMessage, value); }
@@ -542,12 +566,12 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
     /// Kontrol edilmemiş, güncel/sağlıklı veya kontrolü başarısız kartlar güncelleme akışına girmez.
     /// </summary>
     public bool CanUpdateAll =>
-        !IsBusy && IsSupported &&
+        CanStartOperation && IsSupported &&
         _checks.Values.Any(c => c.HasActionableUpdates && (c.Key != ComponentKeys.RecycleBin || CleanRecycleBin));
 
     /// <summary>"Seçilenleri Güncelle / Çalıştır": seçili kartlardan en az biri kontrol edilmiş ve işlem gerektiriyorsa etkin.</summary>
     public bool CanRunSelected =>
-        !IsBusy && IsSupported &&
+        CanStartOperation && IsSupported &&
         _selection.SelectedKeys.Any(k => _checks.TryGetValue(k, out var c) && c.HasActionableUpdates);
 
     public bool IsUpdatePhase { get => _isUpdatePhase; private set => Set(ref _isUpdatePhase, value); }
@@ -571,6 +595,10 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         {
             if (RequirementsChecked && !IsAdmin)
                 return "Yönetici yetkisi yok: tüm kartlar kullanım dışı. Kontrol ve güncelleme için uygulamayı yönetici olarak yeniden başlatın.";
+            if (SpeedTest?.IsInstalling == true)
+                return "Ookla Speedtest aracı kuruluyor. Kontrol ve güncelleme işlemleri kurulum bitince başlatılabilir.";
+            if (SpeedTest?.IsRunning == true)
+                return "Hız testi sürüyor. Ölçümü etkilememesi için kontrol ve güncelleme işlemleri test bitince başlatılabilir.";
             if (_checks.Count == 0)
                 return _updatesApplied
                     ? "İşlemler uygulandı. Yeni durum için yeniden kontrol edin."
@@ -615,6 +643,9 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
     public ICommand ExportLogsCommand { get; }
     public ICommand ClearLogsCommand { get; }
     public ICommand ShowRecentCommand { get; }
+
+    /// <summary>Hız Testi → Sunucu bölmesi ("Değiştir" bağlantısı).</summary>
+    public ICommand ShowSpeedServersCommand { get; }
     public ICommand RefreshSystemInfoCommand { get; }
 
     // ------------------------------------------------------------------ startup
@@ -788,7 +819,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
 
     private async Task StartCheckAsync()
     {
-        if (IsBusy || !await EnsureElevatedAsync(startCheckAfter: true)) return;
+        if (!CanStartOperation || !await EnsureElevatedAsync(startCheckAfter: true)) return;
 
         foreach (var c in Cards) c.Reset();
         _checks.Clear();
@@ -832,7 +863,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
 
     private async Task CheckSelectedAsync()
     {
-        if (IsBusy) return;
+        if (!CanStartOperation) return;
         var keys = _selection.SelectedKeys;
         if (keys.Count == 0)
         {
@@ -924,7 +955,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
 
     private async Task UpdateSelectedAsync()
     {
-        if (IsBusy) return;
+        if (!CanStartOperation) return;
         var keys = _selection.SelectedKeys;
         if (keys.Count == 0)
         {
@@ -1001,7 +1032,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
     /// </summary>
     private async Task RunCardCheckAsync(ComponentCardViewModel card)
     {
-        if (IsBusy || !await EnsureElevatedAsync(startCheckAfter: false)) return;
+        if (!CanStartOperation || !await EnsureElevatedAsync(startCheckAfter: false)) return;
 
         card.Reset();
         _checks.Remove(card.Key);
@@ -1071,7 +1102,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
 
     private async Task RunMaintenanceAsync(ComponentCardViewModel card)
     {
-        if (IsBusy || !await EnsureElevatedAsync(startCheckAfter: false)) return;
+        if (!CanStartOperation || !await EnsureElevatedAsync(startCheckAfter: false)) return;
 
         if (card.Key == ComponentKeys.Sfc)
         {
@@ -1538,6 +1569,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         OnPropertyChanged(nameof(IsBusy));
         OnPropertyChanged(nameof(IsOperationRunning));
         if (busy) RaiseUpdateAvailabilityChanged();
+        SpeedTest.OnSystemBusyChanged();
     }
 
     private void StoreChecks(Dictionary<string, ModuleResult>? results)
@@ -1984,6 +2016,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
     {
         StopDeviceMonitoring();
         _monitorInstance?.Dispose();
+        SpeedTest.Dispose();
         _logger.LogAdded -= OnLogAdded;
         _selection.SelectionChanged -= OnSelectionChanged;
         _logTimer.Stop();

@@ -423,7 +423,7 @@
                 </Setter.Value>
             </Setter>
         </Style>
-        <!-- Kontrol Merkezi kategori kartı (ana sayfa 3x2). Sürekli animasyon yok: yalnızca üzerine gelince kısa büyüme, neon kenarlık,
+        <!-- Kontrol Merkezi kategori kartı (ana sayfa: üstte 4, altta 3). Sürekli animasyon yok: yalnızca üzerine gelince kısa büyüme, neon kenarlık,
              ikon parlaması ve hafif glow. Glow katmanı boştayken gizlidir (efekt hesaplanmaz); gölge ayrı statik katmandadır. -->
         <Style x:Key="Btn.CategoryTile" TargetType="Button">
             <Setter Property="Cursor" Value="Hand" />
@@ -460,7 +460,7 @@
                                         <Ellipse Width="7" Height="7" VerticalAlignment="Center" Margin="0,0,7,0"
                                                  Fill="{Binding Status, Converter={StaticResource StatusBrush}}" />
                                         <TextBlock Text="{Binding StatusText}" FontSize="11.5" Foreground="{StaticResource B.Text3}"
-                                                   TextTrimming="CharacterEllipsis" MaxWidth="250" ToolTip="{Binding StatusText}" />
+                                                   TextTrimming="CharacterEllipsis" MaxWidth="180" ToolTip="{Binding StatusText}" />
                                     </StackPanel>
                                 </StackPanel>
                             </Border>
@@ -699,6 +699,170 @@
 
         <!-- Seçili bölmenin içeriği: Visibility="{Binding CurrentSectionKey, Converter={StaticResource SectionVisible}, ConverterParameter=anahtar}" -->
         <views:EqualsToVisibilityConverter x:Key="SectionVisible" />
+
+        <!-- ================= Hız Testi ================= -->
+        <!-- Gösterge dolgu renkleri: indirme neon mavi, yükleme ikinci neon (tasarım paletinden) -->
+        <LinearGradientBrush x:Key="B.SpeedDown" StartPoint="0,1" EndPoint="1,0">
+            <GradientStop Color="#FF0E8FD6" Offset="0" />
+            <GradientStop Color="#FF1FB6FF" Offset="0.5" />
+            <GradientStop Color="#FF7FE0FF" Offset="1" />
+        </LinearGradientBrush>
+        <LinearGradientBrush x:Key="B.SpeedUp" StartPoint="0,1" EndPoint="1,0">
+            <GradientStop Color="#FF2A4FD6" Offset="0" />
+            <GradientStop Color="#FF3D6BFF" Offset="0.5" />
+            <GradientStop Color="#FF8FA8FF" Offset="1" />
+        </LinearGradientBrush>
+
+        <!-- BAŞLAT düğmesi (büyük neon halka). Sürekli animasyon yok; parlama statik katmandadır. -->
+        <Style x:Key="Btn.SpeedGo" TargetType="Button">
+            <Setter Property="Cursor" Value="Hand" />
+            <Setter Property="FocusVisualStyle" Value="{x:Null}" />
+            <Setter Property="HorizontalAlignment" Value="Center" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Grid x:Name="root" Width="196" Height="196" RenderTransformOrigin="0.5,0.5" Background="Transparent">
+                            <Grid.RenderTransform><ScaleTransform /></Grid.RenderTransform>
+                            <Ellipse x:Name="glow" Stroke="{StaticResource B.Neon}" StrokeThickness="3" Opacity="0.5" IsHitTestVisible="False"
+                                     Effect="{StaticResource Fx.NeonGlow}" />
+                            <Ellipse x:Name="ring" Stroke="{StaticResource B.Neon}" StrokeThickness="2.5">
+                                <Ellipse.Fill>
+                                    <RadialGradientBrush>
+                                        <GradientStop Color="#FF0E1C36" Offset="0" />
+                                        <GradientStop Color="#FF070C18" Offset="1" />
+                                    </RadialGradientBrush>
+                                </Ellipse.Fill>
+                            </Ellipse>
+                            <TextBlock x:Name="label" Text="BAŞLAT" FontFamily="{StaticResource F.Display}" FontSize="30" FontWeight="SemiBold"
+                                       Foreground="{StaticResource B.Text}" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                        </Grid>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="ring" Property="StrokeThickness" Value="4" />
+                                <Setter TargetName="glow" Property="Opacity" Value="0.95" />
+                                <Setter TargetName="label" Property="Foreground" Value="#FF8BDBFF" />
+                            </Trigger>
+                            <Trigger Property="IsKeyboardFocused" Value="True">
+                                <Setter TargetName="ring" Property="StrokeThickness" Value="4" />
+                            </Trigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter TargetName="root" Property="RenderTransform">
+                                    <Setter.Value><ScaleTransform ScaleX="0.97" ScaleY="0.97" /></Setter.Value>
+                                </Setter>
+                            </Trigger>
+                            <Trigger Property="IsEnabled" Value="False">
+                                <Setter TargetName="ring" Property="Stroke" Value="#FF24365C" />
+                                <Setter TargetName="glow" Property="Visibility" Value="Collapsed" />
+                                <Setter TargetName="label" Property="Foreground" Value="{StaticResource B.Text3}" />
+                                <Setter Property="Cursor" Value="Arrow" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- Sunucu listesi satırı ("Istanbul - Turkcell"): seçili sunucuda solda neon çizgi ve dolgu (Speedtest sunucu listesi düzeni) -->
+        <Style x:Key="Btn.ServerRow" TargetType="Button">
+            <Setter Property="Cursor" Value="Hand" />
+            <Setter Property="FocusVisualStyle" Value="{x:Null}" />
+            <Setter Property="Foreground" Value="{StaticResource B.Text2}" />
+            <Setter Property="FontSize" Value="14" />
+            <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Grid MinHeight="44" Background="Transparent">
+                            <Border x:Name="fill" CornerRadius="9" Background="Transparent" BorderThickness="1" BorderBrush="Transparent" />
+                            <Border x:Name="bar" Width="3" CornerRadius="2" Margin="0,11" HorizontalAlignment="Left"
+                                    Background="{StaticResource B.Neon}" Visibility="Hidden" />
+                            <ContentPresenter Margin="16,8,12,8" VerticalAlignment="Center" />
+                        </Grid>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="fill" Property="Background" Value="#FF0F1A2E" />
+                                <Setter Property="Foreground" Value="{StaticResource B.Text}" />
+                            </Trigger>
+                            <DataTrigger Binding="{Binding IsSelected}" Value="True">
+                                <Setter TargetName="fill" Property="Background" Value="#FF12203A" />
+                                <Setter TargetName="bar" Property="Visibility" Value="Visible" />
+                                <Setter Property="Foreground" Value="{StaticResource B.Text}" />
+                            </DataTrigger>
+                            <Trigger Property="IsKeyboardFocused" Value="True">
+                                <Setter TargetName="fill" Property="BorderBrush" Value="#FF245C9C" />
+                            </Trigger>
+                            <Trigger Property="IsEnabled" Value="False">
+                                <Setter Property="Opacity" Value="0.5" />
+                                <Setter Property="Cursor" Value="Arrow" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- Metin bağlantısı görünümlü düğme ("Otomatik Seç", "Sunucuyu değiştir", koşul bağlantıları) -->
+        <Style x:Key="Btn.Link" TargetType="Button">
+            <Setter Property="Cursor" Value="Hand" />
+            <Setter Property="FocusVisualStyle" Value="{x:Null}" />
+            <Setter Property="Foreground" Value="{StaticResource B.Neon}" />
+            <Setter Property="FontSize" Value="13" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="bg" Background="Transparent" CornerRadius="6" Padding="6,3">
+                            <ContentPresenter VerticalAlignment="Center" HorizontalAlignment="Center" />
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="bg" Property="Background" Value="#FF102038" />
+                                <Setter Property="Foreground" Value="#FF8BDBFF" />
+                            </Trigger>
+                            <Trigger Property="IsKeyboardFocused" Value="True">
+                                <Setter TargetName="bg" Property="Background" Value="#FF102038" />
+                            </Trigger>
+                            <Trigger Property="IsEnabled" Value="False">
+                                <Setter Property="Foreground" Value="{StaticResource B.Text3}" />
+                                <Setter Property="Cursor" Value="Arrow" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- Kullanım uygunluğu: ikon + 5 nokta + ad (puan ölçülen değerlerden; eşikler araç ipucunda) -->
+        <DataTemplate x:Key="UsageRatingTemplate" DataType="{x:Type vm:UsageRatingViewModel}">
+            <StackPanel Width="112" Margin="0,0,6,0" Background="Transparent" ToolTip="{Binding Detail}" ToolTipService.ShowDuration="30000">
+                <TextBlock Text="{Binding Glyph}" Style="{StaticResource T.Icon}" FontSize="24" Foreground="{StaticResource B.Text2}"
+                           HorizontalAlignment="Center" />
+                <ItemsControl ItemsSource="{Binding Dots}" HorizontalAlignment="Center" Margin="0,9,0,0" Focusable="False">
+                    <ItemsControl.ItemsPanel>
+                        <ItemsPanelTemplate>
+                            <StackPanel Orientation="Horizontal" />
+                        </ItemsPanelTemplate>
+                    </ItemsControl.ItemsPanel>
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate>
+                            <Ellipse Width="6" Height="6" Margin="2,0">
+                                <Ellipse.Style>
+                                    <Style TargetType="Ellipse">
+                                        <Setter Property="Fill" Value="#FF24365C" />
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding}" Value="True">
+                                                <Setter Property="Fill" Value="{StaticResource B.Text}" />
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </Ellipse.Style>
+                            </Ellipse>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+                <TextBlock Text="{Binding Title}" FontSize="11.5" Foreground="{StaticResource B.Text3}" HorizontalAlignment="Center"
+                           TextAlignment="Center" TextWrapping="Wrap" Margin="0,7,0,0" />
+            </StackPanel>
+        </DataTemplate>
     </Window.Resources>
 
     <Grid x:Name="RootGrid">
@@ -844,7 +1008,7 @@
             </Grid>
 
             <!-- ============ SAYFA 2: ANA EKRAN – KONTROL MERKEZİ ============
-                 Ana sayfa: 6 kategori (3x2). Kategori ekranı: solda Ana Sayfa + kategori başlığı + bölmeler (+ İlerleme),
+                 Ana sayfa: 7 kategori (üstte 4, altta 3). Kategori ekranı: solda Ana Sayfa + kategori başlığı + bölmeler (+ İlerleme),
                  sağda seçili bölmenin içeriği. Yalnızca düzen değişti: kartlar, komutlar ve veriler aynıdır. -->
             <Grid x:Name="DashboardPage" Visibility="{Binding IsDashboard, Converter={StaticResource Visible}}" Margin="28,6,28,24">
                 <Grid.RenderTransform><TranslateTransform /></Grid.RenderTransform>
@@ -892,11 +1056,11 @@
                                     </Grid>
                                 </Border>
 
-                                <!-- 6 kategori (3x2) -->
+                                <!-- 7 kategori: üstte 4, altta 3 (ortalı) -->
                                 <ItemsControl ItemsSource="{Binding Categories}" Margin="0,16,0,0" Focusable="False">
                                     <ItemsControl.ItemsPanel>
                                         <ItemsPanelTemplate>
-                                            <UniformGrid Columns="3" />
+                                            <views:CenteredWrapPanel ItemWidth="255" />
                                         </ItemsPanelTemplate>
                                     </ItemsControl.ItemsPanel>
                                     <ItemsControl.ItemTemplate>
@@ -1799,7 +1963,7 @@
                                             </StackPanel>
                                         </Grid>
                                         <TextBlock Style="{StaticResource T.SettingDesc}" FontSize="12.5" Margin="0,16,0,0"
-                                                   Text="Windows 11 için güncelleme ve bakım merkezi. Tüm durumlar Windows araçlarının, Windows API'lerinin ve NVIDIA sürücüsünün gerçek çıktılarından okunur; hiçbir sonuç tahmin edilmez. Sistemde değişiklik yapan her işlem yalnızca onayınızla çalışır." />
+                                                   Text="Windows 11 için güncelleme ve bakım merkezi. Tüm durumlar Windows araçlarının, Windows API'lerinin, NVIDIA sürücüsünün ve hız testi sunucularının (Cloudflare, Speedtest by Ookla) gerçek çıktılarından okunur; hiçbir sonuç tahmin edilmez. Sistemde değişiklik yapan her işlem yalnızca onayınızla çalışır." />
                                         <Border Height="1" Background="{StaticResource B.Border}" Margin="0,18,0,14" />
                                         <Grid>
                                             <Grid.ColumnDefinitions>
@@ -1830,6 +1994,637 @@
                                     </StackPanel>
                                 </Border>
                             </StackPanel>
+                        </ScrollViewer>
+
+                        <!-- ============ Hız Testi: BAŞLAT / canlı gösterge + gerçek sonuçlar + ISS ve sunucu ============ -->
+                        <ScrollViewer x:Name="SpeedTestScroll" Grid.Row="1" VerticalScrollBarVisibility="Auto" Padding="0,0,4,0"
+                                      Visibility="{Binding CurrentSectionKey, Converter={StaticResource SectionVisible}, ConverterParameter=speedtest}">
+                            <Grid Margin="8,0,8,8" DataContext="{Binding SpeedTest}">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" MaxWidth="1120" />
+                                </Grid.ColumnDefinitions>
+                                <StackPanel>
+                                    <!-- Ana panel (gösterge test sırasında her karede çizildiği için gölge ayrı statik katmanda) -->
+                                    <Grid Margin="0,0,0,16">
+                                        <Border Style="{StaticResource CardShadowLayer}" />
+                                        <Border Style="{StaticResource Card.Flat}" Padding="28,26,28,24">
+                                            <Grid>
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="326" />
+                                                    <ColumnDefinition Width="*" />
+                                                </Grid.ColumnDefinitions>
+
+                                                <!-- Sol: BAŞLAT + seçili sunucu (boşta) / canlı gösterge (test sürerken) -->
+                                                <Grid Width="306" Height="344" VerticalAlignment="Top" HorizontalAlignment="Left">
+                                                    <StackPanel VerticalAlignment="Top" Visibility="{Binding IsRunning, Converter={StaticResource Hidden}}">
+                                                        <Button x:Name="SpeedGoButton" Style="{StaticResource Btn.SpeedGo}" Command="{Binding StartCommand}" Margin="0,4,0,0"
+                                                                AutomationProperties.Name="Hız testini başlat"
+                                                                ToolTip="Gecikme, paket kaybı, indirme ve yükleme hızını seçili sunucuyla gerçek ölçümle test eder." />
+                                                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,16,0,0">
+                                                            <TextBlock Text="&#xE968;" Style="{StaticResource T.Icon}" FontSize="13" Foreground="{StaticResource B.Neon}" Margin="0,0,8,0" />
+                                                            <TextBlock Text="{Binding SelectionTitle}" FontSize="14" FontWeight="SemiBold" Foreground="{StaticResource B.Text}"
+                                                                       TextTrimming="CharacterEllipsis" MaxWidth="260" />
+                                                        </StackPanel>
+                                                        <TextBlock Text="{Binding SelectionSubtitle}" FontSize="12" Foreground="{StaticResource B.Text3}" HorizontalAlignment="Center"
+                                                                   TextTrimming="CharacterEllipsis" MaxWidth="300" Margin="0,3,0,0" ToolTip="{Binding SelectionSubtitle}" />
+                                                        <Button x:Name="ChangeServerLink" Style="{StaticResource Btn.Link}" HorizontalAlignment="Center" Margin="0,4,0,0"
+                                                                Command="{Binding DataContext.ShowSpeedServersCommand, RelativeSource={RelativeSource AncestorType=Window}}"
+                                                                IsEnabled="{Binding IsRunning, Converter={StaticResource InverseBool}}">
+                                                            <TextBlock Text="Sunucuyu değiştir" />
+                                                        </Button>
+                                                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,6,0,0"
+                                                                    Visibility="{Binding ShowConnectionChoice, Converter={StaticResource Visible}}">
+                                                            <RadioButton Style="{StaticResource Chip}" GroupName="SpeedConnections" Content="{Binding MultiLabel}"
+                                                                         ToolTip="6 paralel TCP bağlantısı: bağlantının toplam kapasitesini ölçer."
+                                                                         IsChecked="{Binding ConnectionMode, Converter={StaticResource EqualsParam}, ConverterParameter=multi}" />
+                                                            <RadioButton Style="{StaticResource Chip}" GroupName="SpeedConnections" Content="Tek bağlantı"
+                                                                         ToolTip="Tek TCP bağlantısı: tek bir indirmenin / yüklemenin ulaşabildiği hızı ölçer."
+                                                                         IsChecked="{Binding ConnectionMode, Converter={StaticResource EqualsParam}, ConverterParameter=single}" />
+                                                        </StackPanel>
+                                                    </StackPanel>
+                                                    <Grid Height="306" VerticalAlignment="Top" Visibility="{Binding IsRunning, Converter={StaticResource Visible}}">
+                                                        <views:SpeedGauge x:Name="SpeedGaugeControl" Value="{Binding GaugeValue}" Thickness="20" TrackBrush="#FF1A2742"
+                                                                          LabelBrush="{StaticResource B.Text3}" ActiveLabelBrush="{StaticResource B.Text}">
+                                                            <views:SpeedGauge.Style>
+                                                                <Style TargetType="views:SpeedGauge">
+                                                                    <Setter Property="FillBrush" Value="{StaticResource B.SpeedDown}" />
+                                                                    <Style.Triggers>
+                                                                        <DataTrigger Binding="{Binding GaugeIsUpload}" Value="True">
+                                                                            <Setter Property="FillBrush" Value="{StaticResource B.SpeedUp}" />
+                                                                        </DataTrigger>
+                                                                    </Style.Triggers>
+                                                                </Style>
+                                                            </views:SpeedGauge.Style>
+                                                        </views:SpeedGauge>
+                                                        <StackPanel VerticalAlignment="Bottom" HorizontalAlignment="Center" Margin="0,0,0,2">
+                                                            <TextBlock Text="{Binding GaugeValueText}" FontFamily="{StaticResource F.Display}" FontSize="38" FontWeight="Light"
+                                                                       Foreground="{StaticResource B.Text}" HorizontalAlignment="Center" />
+                                                            <TextBlock HorizontalAlignment="Center" FontSize="12.5" Foreground="{StaticResource B.Text2}">
+                                                                <Run Text="{Binding GaugeCaption, Mode=OneWay}" /><Run Text=" · " /><Run Text="{Binding GaugeUnit, Mode=OneWay}" />
+                                                            </TextBlock>
+                                                        </StackPanel>
+                                                    </Grid>
+                                                </Grid>
+
+                                                <!-- Sağ: gerçek sonuçlar -->
+                                                <StackPanel Grid.Column="1" Margin="10,6,0,0">
+                                                    <Grid>
+                                                        <Grid.ColumnDefinitions>
+                                                            <ColumnDefinition Width="*" />
+                                                            <ColumnDefinition Width="*" />
+                                                        </Grid.ColumnDefinitions>
+                                                        <StackPanel>
+                                                            <StackPanel Orientation="Horizontal">
+                                                                <TextBlock Text="&#xE896;" Style="{StaticResource T.Icon}" FontSize="14" Foreground="{StaticResource B.Neon}" Margin="0,0,8,0" />
+                                                                <TextBlock FontSize="12.5" Foreground="{StaticResource B.Text2}"><Run Text="İNDİRME" FontWeight="SemiBold" Foreground="{StaticResource B.Text}" /><Run Text=" Mbps" /></TextBlock>
+                                                            </StackPanel>
+                                                            <TextBlock Text="{Binding DownloadText}" FontFamily="{StaticResource F.Display}" FontSize="46" FontWeight="Light"
+                                                                       Foreground="{StaticResource B.Text}" Margin="0,2,0,0" />
+                                                        </StackPanel>
+                                                        <StackPanel Grid.Column="1">
+                                                            <StackPanel Orientation="Horizontal">
+                                                                <TextBlock Text="&#xE898;" Style="{StaticResource T.Icon}" FontSize="14" Foreground="{StaticResource B.Neon2}" Margin="0,0,8,0" />
+                                                                <TextBlock FontSize="12.5" Foreground="{StaticResource B.Text2}"><Run Text="YÜKLEME" FontWeight="SemiBold" Foreground="{StaticResource B.Text}" /><Run Text=" Mbps" /></TextBlock>
+                                                            </StackPanel>
+                                                            <TextBlock Text="{Binding UploadText}" FontFamily="{StaticResource F.Display}" FontSize="46" FontWeight="Light"
+                                                                       Foreground="{StaticResource B.Text}" Margin="0,2,0,0" />
+                                                        </StackPanel>
+                                                    </Grid>
+
+                                                    <!-- Ping: boşta · indirme sırasında · yükleme sırasında -->
+                                                    <WrapPanel Margin="0,16,0,0">
+                                                        <TextBlock Text="Ping ms" FontSize="12.5" Foreground="{StaticResource B.Text2}" VerticalAlignment="Center" Margin="0,0,16,6" />
+                                                        <StackPanel Orientation="Horizontal" Margin="0,0,18,6" Background="Transparent"
+                                                                    ToolTip="Boşta gecikme: TCP bağlantı süresi, 20 ölçümün medyanı.">
+                                                            <TextBlock Text="&#xE916;" Style="{StaticResource T.Icon}" FontSize="14" Foreground="{StaticResource B.Orange}" Margin="0,0,7,0" />
+                                                            <TextBlock Text="{Binding PingText}" FontSize="16" FontWeight="SemiBold" Foreground="{StaticResource B.Text}" />
+                                                        </StackPanel>
+                                                        <StackPanel Orientation="Horizontal" Margin="0,0,18,6" Background="Transparent"
+                                                                    ToolTip="İndirme sırasında (yük altında) gecikme: 0,5 saniyede bir ölçümün medyanı.">
+                                                            <TextBlock Text="&#xE896;" Style="{StaticResource T.Icon}" FontSize="14" Foreground="{StaticResource B.Neon}" Margin="0,0,7,0" />
+                                                            <TextBlock Text="{Binding DownloadPingText}" FontSize="16" FontWeight="SemiBold" Foreground="{StaticResource B.Text}" />
+                                                        </StackPanel>
+                                                        <StackPanel Orientation="Horizontal" Margin="0,0,18,6" Background="Transparent"
+                                                                    ToolTip="Yükleme sırasında (yük altında) gecikme: 0,5 saniyede bir ölçümün medyanı.">
+                                                            <TextBlock Text="&#xE898;" Style="{StaticResource T.Icon}" FontSize="14" Foreground="{StaticResource B.Neon2}" Margin="0,0,7,0" />
+                                                            <TextBlock Text="{Binding UploadPingText}" FontSize="16" FontWeight="SemiBold" Foreground="{StaticResource B.Text}" />
+                                                        </StackPanel>
+                                                    </WrapPanel>
+                                                    <WrapPanel Margin="0,4,0,0">
+                                                        <StackPanel Orientation="Horizontal" Margin="0,0,24,6" Background="Transparent"
+                                                                    ToolTip="Titreşim (jitter): ardışık gecikme ölçümleri arasındaki farkların ortalaması.">
+                                                            <TextBlock Text="Titreşim" FontSize="12.5" Foreground="{StaticResource B.Text2}" Margin="0,0,8,0" VerticalAlignment="Center" />
+                                                            <TextBlock FontSize="14" FontWeight="SemiBold" Foreground="{StaticResource B.Text}">
+                                                                <Run Text="{Binding JitterText, Mode=OneWay}" /><Run Text=" ms" FontWeight="Normal" Foreground="{StaticResource B.Text3}" />
+                                                            </TextBlock>
+                                                        </StackPanel>
+                                                        <StackPanel Orientation="Horizontal" Margin="0,0,24,6" Background="Transparent" ToolTip="{Binding PacketLossToolTip}">
+                                                            <TextBlock Text="Paket kaybı" FontSize="12.5" Foreground="{StaticResource B.Text2}" Margin="0,0,8,0" VerticalAlignment="Center" />
+                                                            <TextBlock Text="{Binding PacketLossText}" FontSize="14" FontWeight="SemiBold" Foreground="{StaticResource B.Text}" />
+                                                        </StackPanel>
+                                                    </WrapPanel>
+
+                                                    <!-- Kullanım uygunluğu -->
+                                                    <ItemsControl ItemsSource="{Binding Ratings}" ItemTemplate="{StaticResource UsageRatingTemplate}" Margin="0,16,0,0" Focusable="False">
+                                                        <ItemsControl.ItemsPanel>
+                                                            <ItemsPanelTemplate>
+                                                                <WrapPanel />
+                                                            </ItemsPanelTemplate>
+                                                        </ItemsControl.ItemsPanel>
+                                                    </ItemsControl>
+
+                                                    <!-- Test sürerken: gerçek aşama + süre ilerlemesi (parıltısız: sürekli animasyon yok) + İptal; bittiğinde: gerçek sonuç durumu -->
+                                                    <Grid Margin="0,18,0,0" Visibility="{Binding IsRunning, Converter={StaticResource Visible}}">
+                                                        <Grid.ColumnDefinitions>
+                                                            <ColumnDefinition Width="*" />
+                                                            <ColumnDefinition Width="Auto" />
+                                                        </Grid.ColumnDefinitions>
+                                                        <StackPanel VerticalAlignment="Center">
+                                                            <TextBlock Text="{Binding PhaseText}" FontSize="13" FontWeight="SemiBold" Foreground="{StaticResource B.Neon}" />
+                                                            <ProgressBar Style="{StaticResource Progress.Neon}" Margin="0,8,0,0" Minimum="0" Maximum="100"
+                                                                         Value="{Binding PhaseProgress, Mode=OneWay}" />
+                                                        </StackPanel>
+                                                        <Button Grid.Column="1" Style="{StaticResource Btn.Ghost}" Height="36" Margin="16,0,0,0" Command="{Binding CancelCommand}">
+                                                            <StackPanel Orientation="Horizontal">
+                                                                <TextBlock Text="&#xE711;" Style="{StaticResource T.Icon}" FontSize="11" Margin="0,0,7,0" />
+                                                                <TextBlock Text="İptal" FontSize="13" />
+                                                            </StackPanel>
+                                                        </Button>
+                                                    </Grid>
+                                                    <StackPanel Orientation="Horizontal" Margin="0,18,0,0" Visibility="{Binding IsRunning, Converter={StaticResource Hidden}}">
+                                                        <Ellipse Width="8" Height="8" VerticalAlignment="Top" Margin="0,5,9,0"
+                                                                 Fill="{Binding StatusKind, Converter={StaticResource StatusBrush}}" />
+                                                        <TextBlock Text="{Binding StatusText}" FontSize="12.5" LineHeight="18" TextWrapping="Wrap" MaxWidth="560"
+                                                                   Foreground="{Binding StatusKind, Converter={StaticResource StatusBrush}}" />
+                                                    </StackPanel>
+                                                    <Button x:Name="SpeedResultLink" Style="{StaticResource Btn.Link}" HorizontalAlignment="Left" Margin="10,6,0,0"
+                                                            Command="{Binding OpenResultCommand}" ToolTip="{Binding ResultUrl}"
+                                                            Visibility="{Binding ResultUrl, Converter={StaticResource Visible}}">
+                                                        <StackPanel Orientation="Horizontal">
+                                                            <TextBlock Text="&#xE8A7;" Style="{StaticResource T.Icon}" FontSize="12" Margin="0,0,8,0" />
+                                                            <TextBlock Text="Sonuç sayfasını aç (speedtest.net)" />
+                                                        </StackPanel>
+                                                    </Button>
+                                                    <TextBlock Text="{Binding BlockedReason}" FontSize="12" LineHeight="17" TextWrapping="Wrap" Margin="0,10,0,0"
+                                                               Foreground="{StaticResource B.Orange}" Visibility="{Binding BlockedReason, Converter={StaticResource Visible}}" />
+                                                </StackPanel>
+                                            </Grid>
+                                        </Border>
+                                    </Grid>
+
+                                    <!-- İnternet servis sağlayıcısı -->
+                                    <Grid Margin="0,0,0,16">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="96" />
+                                            <ColumnDefinition Width="*" />
+                                        </Grid.ColumnDefinitions>
+                                        <Border Style="{StaticResource IconTile}">
+                                            <TextBlock Text="&#xE77B;" Style="{StaticResource T.TileIcon}" />
+                                        </Border>
+                                        <Border Grid.Column="1" Style="{StaticResource Card}" Padding="22,16">
+                                            <StackPanel>
+                                                <TextBlock Text="İnternet servis sağlayıcısı" Style="{StaticResource T.H2}" FontSize="16" />
+                                                <TextBlock Text="{Binding IspText}" FontSize="14" FontWeight="SemiBold" Foreground="{StaticResource B.Text}" Margin="0,8,0,0"
+                                                           TextWrapping="Wrap" />
+                                                <TextBlock Text="{Binding ClientText}" FontSize="12.5" Foreground="{StaticResource B.Text2}" Margin="0,4,0,0" TextWrapping="Wrap"
+                                                           Visibility="{Binding ClientText, Converter={StaticResource Visible}}" />
+                                            </StackPanel>
+                                        </Border>
+                                    </Grid>
+
+                                    <!-- Test sunucusu -->
+                                    <Grid Margin="0,0,0,16">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="96" />
+                                            <ColumnDefinition Width="*" />
+                                        </Grid.ColumnDefinitions>
+                                        <Border Style="{StaticResource IconTile}">
+                                            <TextBlock Text="&#xE968;" Style="{StaticResource T.TileIcon}" />
+                                        </Border>
+                                        <Border Grid.Column="1" Style="{StaticResource Card}" Padding="22,16">
+                                            <Grid>
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="*" />
+                                                    <ColumnDefinition Width="Auto" />
+                                                </Grid.ColumnDefinitions>
+                                                <StackPanel>
+                                                    <TextBlock Text="Test sunucusu (son test)" Style="{StaticResource T.H2}" FontSize="16" />
+                                                    <TextBlock Text="{Binding ServerText}" FontSize="14" FontWeight="SemiBold" Foreground="{StaticResource B.Text}" Margin="0,8,0,0"
+                                                               TextWrapping="Wrap" />
+                                                    <TextBlock Text="{Binding ServerDetailText}" FontSize="12.5" Foreground="{StaticResource B.Text2}" Margin="0,4,0,0" TextWrapping="Wrap"
+                                                               Visibility="{Binding ServerDetailText, Converter={StaticResource Visible}}" />
+                                                    <TextBlock Style="{StaticResource T.SettingDesc}" Margin="0,8,0,0" Text="{Binding ServerNote}" />
+                                                </StackPanel>
+                                                <Button Grid.Column="1" Style="{StaticResource Btn.Secondary}" Height="36" Padding="14,0" Margin="16,0,0,0" VerticalAlignment="Top"
+                                                        Command="{Binding DataContext.ShowSpeedServersCommand, RelativeSource={RelativeSource AncestorType=Window}}"
+                                                        IsEnabled="{Binding IsRunning, Converter={StaticResource InverseBool}}">
+                                                    <StackPanel Orientation="Horizontal">
+                                                        <TextBlock Text="&#xE968;" Style="{StaticResource T.Icon}" FontSize="12" Margin="0,0,8,0" Foreground="{StaticResource B.Neon}" />
+                                                        <TextBlock Text="Sunucuyu değiştir" FontSize="13" />
+                                                    </StackPanel>
+                                                </Button>
+                                            </Grid>
+                                        </Border>
+                                    </Grid>
+                                </StackPanel>
+                            </Grid>
+                        </ScrollViewer>
+
+                        <!-- ============ Sunucu: altyapı (Speedtest by Ookla / Cloudflare) + Ookla sunucu listesi ============ -->
+                        <ScrollViewer x:Name="SpeedServerScroll" Grid.Row="1" VerticalScrollBarVisibility="Auto" Padding="0,0,4,0"
+                                      Visibility="{Binding CurrentSectionKey, Converter={StaticResource SectionVisible}, ConverterParameter=speed-servers}">
+                            <Grid Margin="8,0,8,8" DataContext="{Binding SpeedTest}">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" MaxWidth="1120" />
+                                </Grid.ColumnDefinitions>
+                                <StackPanel>
+                                    <!-- Ölçüm altyapısı -->
+                                    <Grid Margin="0,0,0,16">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="96" />
+                                            <ColumnDefinition Width="*" />
+                                        </Grid.ColumnDefinitions>
+                                        <Border Style="{StaticResource IconTile}">
+                                            <TextBlock Text="&#xEC4A;" Style="{StaticResource T.TileIcon}" />
+                                        </Border>
+                                        <Border Grid.Column="1" Style="{StaticResource Card}" Padding="22,16">
+                                            <StackPanel>
+                                                <TextBlock Text="Ölçüm altyapısı" Style="{StaticResource T.H2}" FontSize="16" />
+                                                <StackPanel Orientation="Horizontal" Margin="0,10,0,0" IsEnabled="{Binding IsWorking, Converter={StaticResource InverseBool}}">
+                                                    <RadioButton Style="{StaticResource Chip}" GroupName="SpeedProvider" Content="Speedtest by Ookla"
+                                                                 IsChecked="{Binding ProviderMode, Converter={StaticResource EqualsParam}, ConverterParameter=ookla}" />
+                                                    <RadioButton Style="{StaticResource Chip}" GroupName="SpeedProvider" Content="Cloudflare"
+                                                                 IsChecked="{Binding ProviderMode, Converter={StaticResource EqualsParam}, ConverterParameter=cloudflare}" />
+                                                </StackPanel>
+                                                <TextBlock Style="{StaticResource T.SettingDesc}" Margin="0,10,0,0"
+                                                           Visibility="{Binding IsOoklaProvider, Converter={StaticResource Visible}}"
+                                                           Text="Ookla'nın Speedtest sunucu ağı: İnternet servis sağlayıcılarının ve veri merkezlerinin kendi sunucuları (ör. İstanbul'daki Turkcell, Turknet, Türksat). Sunucuyu aşağıdaki listeden siz seçersiniz. Ookla'nın resmi aracı gerekir; her testin sonucu Ookla'ya kaydedilir." />
+                                                <TextBlock Style="{StaticResource T.SettingDesc}" Margin="0,10,0,0"
+                                                           Visibility="{Binding IsOoklaProvider, Converter={StaticResource Hidden}}"
+                                                           Text="Cloudflare hız testi altyapısı: kurulum gerektirmez ve sonuçlar hiçbir yere gönderilmez. Sunucu seçilemez; bağlantınız otomatik olarak en yakın Cloudflare veri merkezine yönlendirilir (hangisi olduğunu ISS'niz belirler)." />
+                                            </StackPanel>
+                                        </Border>
+                                    </Grid>
+
+                                    <!-- Speedtest by Ookla: kurulum / koşullar / sunucu listesi -->
+                                    <Grid Margin="0,0,0,16" Visibility="{Binding IsOoklaProvider, Converter={StaticResource Visible}}">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="96" />
+                                            <ColumnDefinition Width="*" />
+                                        </Grid.ColumnDefinitions>
+                                        <Border Style="{StaticResource IconTile}">
+                                            <TextBlock Text="&#xE968;" Style="{StaticResource T.TileIcon}" />
+                                        </Border>
+                                        <Border Grid.Column="1" Style="{StaticResource Card}" Padding="22,18">
+                                            <StackPanel>
+                                                <!-- Denetleniyor -->
+                                                <TextBlock Text="{Binding OoklaMessage}" FontSize="13" Foreground="{StaticResource B.Text2}" TextWrapping="Wrap"
+                                                           Visibility="{Binding ShowOoklaChecking, Converter={StaticResource Visible}}" />
+
+                                                <!-- Kurulu değil -->
+                                                <StackPanel Visibility="{Binding ShowOoklaInstall, Converter={StaticResource Visible}}">
+                                                    <TextBlock Text="Ookla Speedtest aracı kurulu değil" Style="{StaticResource T.H2}" FontSize="16" />
+                                                    <TextBlock Style="{StaticResource T.SettingDesc}" FontSize="12.5" Margin="0,8,0,0"
+                                                               Text="Speedtest sunucularından test için Ookla'nın resmi komut satırı aracı (Speedtest CLI) gerekir. Araç yalnızca onayınızla winget ile kurulur (Ookla.Speedtest.CLI, yaklaşık 1 MB, yönetici yetkisi gerekmez). Kurmak istemezseniz Cloudflare ile test yapabilirsiniz." />
+                                                    <Button x:Name="InstallOoklaButton" Style="{StaticResource Btn.Secondary}" Height="40" HorizontalAlignment="Left" Margin="0,14,0,0"
+                                                            Command="{Binding InstallOoklaCommand}">
+                                                        <StackPanel Orientation="Horizontal">
+                                                            <TextBlock Text="&#xE896;" Style="{StaticResource T.Icon}" FontSize="13" Margin="0,0,9,0" Foreground="{StaticResource B.Neon}" />
+                                                            <TextBlock Text="Ookla aracını kur" FontSize="13.5" />
+                                                        </StackPanel>
+                                                    </Button>
+                                                </StackPanel>
+
+                                                <!-- Kuruluyor (sürekli animasyon yok: yalnızca metin) -->
+                                                <StackPanel Visibility="{Binding ShowOoklaInstalling, Converter={StaticResource Visible}}">
+                                                    <TextBlock Text="Ookla aracı kuruluyor..." Style="{StaticResource T.H2}" FontSize="16" Foreground="{StaticResource B.Neon}" />
+                                                    <TextBlock Text="{Binding OoklaMessage}" FontSize="12.5" Foreground="{StaticResource B.Text2}" Margin="0,6,0,0" TextWrapping="Wrap" />
+                                                </StackPanel>
+
+                                                <!-- Hata -->
+                                                <StackPanel Visibility="{Binding ShowOoklaError, Converter={StaticResource Visible}}">
+                                                    <TextBlock Text="Ookla aracı kullanılamıyor" Style="{StaticResource T.H2}" FontSize="16" Foreground="{StaticResource B.Red}" />
+                                                    <TextBlock Text="{Binding OoklaMessage}" FontSize="12.5" LineHeight="18" Foreground="{StaticResource B.Text2}" Margin="0,6,0,0" TextWrapping="Wrap" />
+                                                    <WrapPanel Margin="0,12,0,0">
+                                                        <Button Style="{StaticResource Btn.Secondary}" Height="38" Margin="0,0,8,0" Command="{Binding RetryOoklaCommand}">
+                                                            <StackPanel Orientation="Horizontal">
+                                                                <TextBlock Text="&#xE72C;" Style="{StaticResource T.Icon}" FontSize="12" Margin="0,0,8,0" />
+                                                                <TextBlock Text="Yeniden denetle" FontSize="13" />
+                                                            </StackPanel>
+                                                        </Button>
+                                                        <Button Style="{StaticResource Btn.Secondary}" Height="38" Command="{Binding InstallOoklaCommand}">
+                                                            <StackPanel Orientation="Horizontal">
+                                                                <TextBlock Text="&#xE896;" Style="{StaticResource T.Icon}" FontSize="12" Margin="0,0,8,0" />
+                                                                <TextBlock Text="Yeniden kur" FontSize="13" />
+                                                            </StackPanel>
+                                                        </Button>
+                                                    </WrapPanel>
+                                                </StackPanel>
+
+                                                <!-- Koşullar (araç kurulu, kabul edilmedi) -->
+                                                <StackPanel Visibility="{Binding ShowOoklaLicense, Converter={StaticResource Visible}}">
+                                                    <TextBlock Text="Ookla'nın koşullarını kabul edin" Style="{StaticResource T.H2}" FontSize="16" />
+                                                    <TextBlock Style="{StaticResource T.SettingDesc}" FontSize="12.5" Margin="0,8,0,0"
+                                                               Text="Ookla aracı yalnızca Ookla'nın lisans, kullanım ve gizlilik koşulları kabul edilerek çalışır. Araç ve ürettiği bilgiler yalnızca kişisel, ticari olmayan kullanım içindir. Her testte sonuç, IP adresiniz ve bağlantı bilgileri Ookla'ya gönderilir ve Ookla bir sonuç sayfası oluşturur (speedtest.net'teki gibi). Kabul etmezseniz araç çalıştırılmaz; Cloudflare ile test yapabilirsiniz." />
+                                                    <Border Margin="0,12,0,0" Padding="14,10" CornerRadius="10" Background="#FF0A1222" BorderBrush="{StaticResource B.Border}" BorderThickness="1">
+                                                        <TextBlock Text="{Binding OoklaLicenseNotice}" FontFamily="{StaticResource F.Mono}" FontSize="11.5" LineHeight="17"
+                                                                   Foreground="{StaticResource B.Text2}" TextWrapping="Wrap" />
+                                                    </Border>
+                                                    <ItemsControl ItemsSource="{Binding OoklaLinks}" Margin="0,8,0,0" Focusable="False">
+                                                        <ItemsControl.ItemsPanel>
+                                                            <ItemsPanelTemplate>
+                                                                <WrapPanel />
+                                                            </ItemsPanelTemplate>
+                                                        </ItemsControl.ItemsPanel>
+                                                        <ItemsControl.ItemTemplate>
+                                                            <DataTemplate DataType="{x:Type vm:LinkItem}">
+                                                                <Button Style="{StaticResource Btn.Link}" Margin="0,0,6,0" FontSize="12.5" ToolTip="{Binding Url}"
+                                                                        Command="{Binding DataContext.OpenLinkCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
+                                                                        CommandParameter="{Binding Url}">
+                                                                    <StackPanel Orientation="Horizontal">
+                                                                        <TextBlock Text="&#xE8A7;" Style="{StaticResource T.Icon}" FontSize="11" Margin="0,0,6,0" />
+                                                                        <TextBlock Text="{Binding Title}" />
+                                                                    </StackPanel>
+                                                                </Button>
+                                                            </DataTemplate>
+                                                        </ItemsControl.ItemTemplate>
+                                                    </ItemsControl>
+                                                    <Button x:Name="AcceptOoklaButton" Style="{StaticResource Btn.Secondary}" Height="40" HorizontalAlignment="Left" Margin="0,12,0,0"
+                                                            Command="{Binding AcceptOoklaLicenseCommand}">
+                                                        <StackPanel Orientation="Horizontal">
+                                                            <TextBlock Text="&#xE73E;" Style="{StaticResource T.Icon}" FontSize="13" Margin="0,0,9,0" Foreground="{StaticResource B.Green}" />
+                                                            <TextBlock Text="Okudum, kabul ediyorum" FontSize="13.5" />
+                                                        </StackPanel>
+                                                    </Button>
+                                                </StackPanel>
+
+                                                <!-- Hazır: seçili sunucu + Otomatik Seç + arama + yakın sunucular -->
+                                                <StackPanel Visibility="{Binding ShowOoklaReady, Converter={StaticResource Visible}}">
+                                                    <Grid>
+                                                        <Grid.ColumnDefinitions>
+                                                            <ColumnDefinition Width="Auto" />
+                                                            <ColumnDefinition Width="*" />
+                                                            <ColumnDefinition Width="Auto" />
+                                                        </Grid.ColumnDefinitions>
+                                                        <Border Width="38" Height="38" CornerRadius="19" BorderBrush="{StaticResource B.BorderHi}" BorderThickness="1" VerticalAlignment="Center">
+                                                            <TextBlock Text="&#xE774;" Style="{StaticResource T.Icon}" FontSize="16" Foreground="{StaticResource B.Text}" />
+                                                        </Border>
+                                                        <StackPanel Grid.Column="1" Margin="14,0,0,0" VerticalAlignment="Center">
+                                                            <TextBlock Text="{Binding SelectionTitleUpper}" FontSize="15" Foreground="{StaticResource B.Text}" TextTrimming="CharacterEllipsis" />
+                                                            <TextBlock Text="{Binding SelectionSubtitle}" FontSize="12.5" Foreground="{StaticResource B.Text2}" Margin="0,2,0,0"
+                                                                       TextTrimming="CharacterEllipsis" />
+                                                        </StackPanel>
+                                                        <Button Grid.Column="2" Style="{StaticResource Btn.Ghost}" Height="32" Padding="10,0" VerticalAlignment="Center"
+                                                                Command="{Binding RefreshServersCommand}" ToolTip="Yakın sunucu listesini Ookla'dan yeniden al">
+                                                            <StackPanel Orientation="Horizontal">
+                                                                <TextBlock Text="&#xE72C;" Style="{StaticResource T.Icon}" FontSize="12" Margin="0,0,7,0" />
+                                                                <TextBlock Text="Yenile" FontSize="12.5" />
+                                                            </StackPanel>
+                                                        </Button>
+                                                    </Grid>
+
+                                                    <Button x:Name="AutoSelectServerButton" HorizontalAlignment="Center" Margin="0,14,0,0" FontSize="14"
+                                                            Command="{Binding AutoSelectServerCommand}" ToolTip="Sunucuyu her testte Ookla seçer">
+                                                        <Button.Style>
+                                                            <Style TargetType="Button" BasedOn="{StaticResource Btn.Link}">
+                                                                <Style.Triggers>
+                                                                    <!-- Otomatik zaten seçiliyse yeşil onay işaretiyle belirtilir (tekrar tıklamak bir şey değiştirmez) -->
+                                                                    <DataTrigger Binding="{Binding IsAutoSelected}" Value="True">
+                                                                        <Setter Property="Foreground" Value="{StaticResource B.Green}" />
+                                                                    </DataTrigger>
+                                                                </Style.Triggers>
+                                                            </Style>
+                                                        </Button.Style>
+                                                        <StackPanel Orientation="Horizontal">
+                                                            <TextBlock FontSize="13" Margin="0,0,8,0">
+                                                                <TextBlock.Style>
+                                                                    <Style TargetType="TextBlock" BasedOn="{StaticResource T.Icon}">
+                                                                        <Setter Property="Text" Value="&#xE707;" />
+                                                                        <Style.Triggers>
+                                                                            <DataTrigger Binding="{Binding IsAutoSelected}" Value="True">
+                                                                                <Setter Property="Text" Value="&#xE73E;" />
+                                                                            </DataTrigger>
+                                                                        </Style.Triggers>
+                                                                    </Style>
+                                                                </TextBlock.Style>
+                                                            </TextBlock>
+                                                            <TextBlock Text="{Binding AutoSelectText}" />
+                                                        </StackPanel>
+                                                    </Button>
+
+                                                    <Grid Margin="0,14,0,0" Height="40">
+                                                        <Border CornerRadius="20" Background="#FF0A1222" BorderBrush="{StaticResource B.Border}" BorderThickness="1" />
+                                                        <TextBox x:Name="SpeedServerSearch" Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}" Margin="16,0"
+                                                                 Background="Transparent" BorderThickness="0" Foreground="{StaticResource B.Text}" CaretBrush="{StaticResource B.Neon}"
+                                                                 FontSize="13.5" VerticalContentAlignment="Center" AutomationProperties.Name="Sunucu ara" />
+                                                        <TextBlock Text="Ara (şehir, sağlayıcı veya sunucu no)" FontSize="13.5" Foreground="{StaticResource B.Text3}" Margin="19,0"
+                                                                   VerticalAlignment="Center" IsHitTestVisible="False"
+                                                                   Visibility="{Binding SearchText, Converter={StaticResource Hidden}}" />
+                                                    </Grid>
+
+                                                    <TextBlock Text="Size en yakın sunucular:" FontSize="12.5" Foreground="{StaticResource B.Text3}" Margin="2,16,0,6" />
+                                                    <ItemsControl x:Name="SpeedServerList" ItemsSource="{Binding Servers}" Focusable="False">
+                                                        <ItemsControl.ItemTemplate>
+                                                            <DataTemplate DataType="{x:Type vm:OoklaServerViewModel}">
+                                                                <Button Style="{StaticResource Btn.ServerRow}" ToolTip="{Binding ToolTip}" Margin="0,0,0,2"
+                                                                        AutomationProperties.Name="{Binding Sponsor}"
+                                                                        Command="{Binding DataContext.SelectServerCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
+                                                                        CommandParameter="{Binding}">
+                                                                    <TextBlock TextTrimming="CharacterEllipsis">
+                                                                        <Run Text="{Binding City, Mode=OneWay}" FontWeight="Bold" Foreground="{StaticResource B.Text}" />
+                                                                        <Run Text=" - " />
+                                                                        <Run Text="{Binding Sponsor, Mode=OneWay}" />
+                                                                    </TextBlock>
+                                                                </Button>
+                                                            </DataTemplate>
+                                                        </ItemsControl.ItemTemplate>
+                                                    </ItemsControl>
+                                                    <TextBlock Text="Aramayla eşleşen sunucu yok." FontSize="12.5" Foreground="{StaticResource B.Text3}" Margin="16,6,0,0"
+                                                               Visibility="{Binding HasServers, Converter={StaticResource Hidden}}" />
+                                                    <TextBlock Text="{Binding ServersStatusText}" FontSize="11.5" Foreground="{StaticResource B.Text3}" Margin="2,12,0,0" TextWrapping="Wrap" />
+                                                    <Border Height="1" Background="{StaticResource B.Border}" Margin="0,14,0,10" />
+                                                    <Grid>
+                                                        <Grid.ColumnDefinitions>
+                                                            <ColumnDefinition Width="*" />
+                                                            <ColumnDefinition Width="Auto" />
+                                                        </Grid.ColumnDefinitions>
+                                                        <TextBlock Text="{Binding OoklaToolText}" FontSize="11.5" Foreground="{StaticResource B.Text3}" TextWrapping="Wrap" VerticalAlignment="Center" />
+                                                        <Button Grid.Column="1" Style="{StaticResource Btn.Link}" FontSize="12" Margin="12,0,0,0" Command="{Binding RevokeOoklaLicenseCommand}"
+                                                                ToolTip="Ookla aracı, koşullar yeniden kabul edilene kadar çalıştırılmaz">
+                                                            <TextBlock Text="Koşulların kabulünü geri al" />
+                                                        </Button>
+                                                    </Grid>
+                                                </StackPanel>
+                                            </StackPanel>
+                                        </Border>
+                                    </Grid>
+                                </StackPanel>
+                            </Grid>
+                        </ScrollViewer>
+
+                        <!-- ============ Sonuçlar (hız testi geçmişi; IP adresi kaydedilmez) ============ -->
+                        <Grid Grid.Row="1" Margin="8,0,8,8" DataContext="{Binding SpeedTest}"
+                              Visibility="{Binding DataContext.CurrentSectionKey, RelativeSource={RelativeSource AncestorType=Window}, Converter={StaticResource SectionVisible}, ConverterParameter=speed-history}">
+                            <Border Style="{StaticResource CardShadowLayer}" />
+                            <Border Style="{StaticResource Card.Flat}" Padding="20,16,20,14">
+                                <Grid>
+                                    <Grid.RowDefinitions>
+                                        <RowDefinition Height="Auto" />
+                                        <RowDefinition Height="*" />
+                                    </Grid.RowDefinitions>
+                                    <TextBlock Style="{StaticResource T.SettingDesc}" Margin="2,0,0,12"
+                                               Text="Bu bilgisayarda yapılan hız testleri (en yenisi üstte, en fazla 50). Hızlar Mbps, ping ms cinsindendir; yük altında = indirme / yükleme sırasında. Ayrıntılar için satırın üzerine gelin. Sonuçlar yalnızca bu bilgisayarda saklanır; IP adresi kaydedilmez." />
+                                    <DataGrid x:Name="SpeedHistoryGrid" Grid.Row="1" ItemsSource="{Binding History}">
+                                        <DataGrid.RowStyle>
+                                            <Style TargetType="DataGridRow" BasedOn="{StaticResource {x:Type DataGridRow}}">
+                                                <Setter Property="ToolTip" Value="{Binding SummaryText}" />
+                                            </Style>
+                                        </DataGrid.RowStyle>
+                                        <DataGrid.Columns>
+                                            <DataGridTextColumn Header="TARİH" Binding="{Binding TimeText}" Width="130" />
+                                            <DataGridTextColumn Header="İNDİRME" Binding="{Binding DownloadText}" Width="88" />
+                                            <DataGridTextColumn Header="YÜKLEME" Binding="{Binding UploadText}" Width="88" />
+                                            <DataGridTextColumn Header="PİNG" Binding="{Binding PingText}" Width="60" />
+                                            <DataGridTextColumn Header="YÜK ALTINDA" Binding="{Binding LoadedPingText}" Width="104" />
+                                            <DataGridTextColumn Header="KAYIP" Binding="{Binding PacketLossText}" Width="62" />
+                                            <DataGridTextColumn Header="ALTYAPI" Binding="{Binding ConnectionsText}" Width="108" />
+                                            <DataGridTemplateColumn Header="SUNUCU" Width="*" MinWidth="110">
+                                                <DataGridTemplateColumn.CellTemplate>
+                                                    <DataTemplate>
+                                                        <TextBlock Text="{Binding ServerShort}" TextTrimming="CharacterEllipsis" Foreground="{StaticResource B.Text2}" />
+                                                    </DataTemplate>
+                                                </DataGridTemplateColumn.CellTemplate>
+                                            </DataGridTemplateColumn>
+                                            <DataGridTextColumn Header="VERİ" Binding="{Binding DataText}" Width="68" />
+                                            <DataGridTemplateColumn Header="SONUÇ" Width="120">
+                                                <DataGridTemplateColumn.CellTemplate>
+                                                    <DataTemplate>
+                                                        <StackPanel Orientation="Horizontal">
+                                                            <Ellipse Width="8" Height="8" Margin="0,0,8,0" VerticalAlignment="Center"
+                                                                     Fill="{Binding Status, Converter={StaticResource StatusBrush}}" />
+                                                            <TextBlock Text="{Binding ResultText}" TextTrimming="CharacterEllipsis" MaxWidth="92"
+                                                                       Foreground="{Binding Status, Converter={StaticResource StatusBrush}}" />
+                                                        </StackPanel>
+                                                    </DataTemplate>
+                                                </DataGridTemplateColumn.CellTemplate>
+                                            </DataGridTemplateColumn>
+                                        </DataGrid.Columns>
+                                    </DataGrid>
+                                    <TextBlock Grid.Row="1" VerticalAlignment="Top" Margin="10,52,10,0" FontSize="12.5" TextWrapping="Wrap"
+                                               Foreground="{StaticResource B.Text3}" Visibility="{Binding HasHistory, Converter={StaticResource Hidden}}"
+                                               Text="Henüz hız testi yapılmadı. Hız Testi bölmesindeki BAŞLAT düğmesiyle ilk testi yapabilirsiniz." />
+                                </Grid>
+                            </Border>
+                        </Grid>
+
+                        <!-- ============ Yöntem (nasıl ölçülür) ============ -->
+                        <ScrollViewer x:Name="SpeedMethodScroll" Grid.Row="1" VerticalScrollBarVisibility="Auto" Padding="0,0,4,0"
+                                      Visibility="{Binding CurrentSectionKey, Converter={StaticResource SectionVisible}, ConverterParameter=speed-method}">
+                            <Grid Margin="8,0,8,8">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" MaxWidth="1120" />
+                                </Grid.ColumnDefinitions>
+                                <StackPanel>
+                                    <Grid Margin="0,0,0,16">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="96" />
+                                            <ColumnDefinition Width="*" />
+                                        </Grid.ColumnDefinitions>
+                                        <Border Style="{StaticResource IconTile}">
+                                            <TextBlock Text="&#xE968;" Style="{StaticResource T.TileIcon}" />
+                                        </Border>
+                                        <Border Grid.Column="1" Style="{StaticResource Card}" Padding="22,16">
+                                            <StackPanel>
+                                                <TextBlock Text="Sunucu ve altyapı" Style="{StaticResource T.H2}" FontSize="16" />
+                                                <TextBlock Style="{StaticResource T.SettingDesc}" FontSize="12.5" Margin="0,8,0,0"
+                                                           Text="Speedtest by Ookla: ölçümü Ookla'nın resmi aracı (Speedtest CLI) seçtiğiniz sunucuyla (veya Otomatik'te Ookla'nın seçtiği sunucuyla) yapar; ping, titreşim, paket kaybı ve hızlar Ookla'nın yöntemiyle ölçülür, yük altındaki gecikme çeyrekler arası ortalamadır (IQM). Uygulama aracın JSON çıktısındaki değerleri olduğu gibi gösterir; sonuç Ookla'ya kaydedilir ve bir sonuç sayfası oluşur. Aşağıdaki gecikme, hız ve paket kaybı açıklamaları Cloudflare içindir." />
+                                                <TextBlock Style="{StaticResource T.SettingDesc}" FontSize="12.5" Margin="0,8,0,0"
+                                                           Text="Cloudflare: ölçüm herkese açık hız testi altyapısıyla (speed.cloudflare.com, HTTPS) yapılır. Bağlantınız otomatik olarak bir Cloudflare veri merkezine yönlendirilir (anycast); hangisi olduğunu ISS'nizin yönlendirmesi belirler ve test ekranında gösterilir. Sonuçlar hiçbir yere gönderilmez." />
+                                            </StackPanel>
+                                        </Border>
+                                    </Grid>
+                                    <Grid Margin="0,0,0,16">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="96" />
+                                            <ColumnDefinition Width="*" />
+                                        </Grid.ColumnDefinitions>
+                                        <Border Style="{StaticResource IconTile}">
+                                            <TextBlock Text="&#xE916;" Style="{StaticResource T.TileIcon}" />
+                                        </Border>
+                                        <Border Grid.Column="1" Style="{StaticResource Card}" Padding="22,16">
+                                            <StackPanel>
+                                                <TextBlock Text="Ping (gecikme) ve titreşim" Style="{StaticResource T.H2}" FontSize="16" />
+                                                <TextBlock Style="{StaticResource T.SettingDesc}" FontSize="12.5" Margin="0,8,0,0"
+                                                           Text="Gecikme, sunucuya TCP bağlantısı kurma süresidir (SYN → SYN-ACK, 443 numaralı bağlantı noktası); sunucunun işlem süresini içermez. Boşta 20 ölçümün medyanı gösterilir; titreşim, ardışık ölçümler arasındaki farkların ortalamasıdır. İndirme ve yükleme sırasında 0,5 saniyede bir ölçülen değerler yük altındaki gecikmeyi gösterir (hat doluyken artan gecikme)." />
+                                            </StackPanel>
+                                        </Border>
+                                    </Grid>
+                                    <Grid Margin="0,0,0,16">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="96" />
+                                            <ColumnDefinition Width="*" />
+                                        </Grid.ColumnDefinitions>
+                                        <Border Style="{StaticResource IconTile}">
+                                            <TextBlock Text="&#xEC4A;" Style="{StaticResource T.TileIcon}" />
+                                        </Border>
+                                        <Border Grid.Column="1" Style="{StaticResource Card}" Padding="22,16">
+                                            <StackPanel>
+                                                <TextBlock Text="İndirme ve yükleme hızı" Style="{StaticResource T.H2}" FontSize="16" />
+                                                <TextBlock Style="{StaticResource T.SettingDesc}" FontSize="12.5" Margin="0,8,0,0"
+                                                           Text="Her aşama 10 saniye sürer. Çoklu seçenekte 6, Tek seçenekte 1 TCP bağlantısı kullanılır. Bağlantının hızlanma süresi olan ilk 2 saniye hesaba katılmaz; sonuç, kalan 8 saniyede gerçekten aktarılan bayt ÷ süredir (Mbps = milyon bit/saniye). Gösterge son 1 saniyenin gerçek hızını gösterir. Yükleme rastgele veriyle yapılır; sıkıştırılarak şişirilemez." />
+                                            </StackPanel>
+                                        </Border>
+                                    </Grid>
+                                    <Grid Margin="0,0,0,16">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="96" />
+                                            <ColumnDefinition Width="*" />
+                                        </Grid.ColumnDefinitions>
+                                        <Border Style="{StaticResource IconTile}">
+                                            <TextBlock Text="&#xE704;" Style="{StaticResource T.TileIcon}" />
+                                        </Border>
+                                        <Border Grid.Column="1" Style="{StaticResource Card}" Padding="22,16">
+                                            <StackPanel>
+                                                <TextBlock Text="Paket kaybı" Style="{StaticResource T.H2}" FontSize="16" />
+                                                <TextBlock Style="{StaticResource T.SettingDesc}" FontSize="12.5" Margin="0,8,0,0"
+                                                           Text="Gecikme ölçümüyle aynı anda sunucuya 50 ICMP yankı isteği (ping) gönderilir; 1 saniye içinde yanıt gelmeyenlerin oranı paket kaybıdır. Hiç yanıt gelmezse (ağ veya sunucu ICMP'yi engelliyor olabilir) oran hesaplanmaz, &quot;Ölçülemedi&quot; yazılır." />
+                                            </StackPanel>
+                                        </Border>
+                                    </Grid>
+                                    <Grid Margin="0,0,0,16">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="96" />
+                                            <ColumnDefinition Width="*" />
+                                        </Grid.ColumnDefinitions>
+                                        <Border Style="{StaticResource IconTile}">
+                                            <TextBlock Text="&#xE774;" Style="{StaticResource T.TileIcon}" />
+                                        </Border>
+                                        <Border Grid.Column="1" Style="{StaticResource Card}" Padding="22,16">
+                                            <StackPanel>
+                                                <TextBlock Text="Kullanım uygunluğu" Style="{StaticResource T.H2}" FontSize="16" />
+                                                <TextBlock Style="{StaticResource T.SettingDesc}" FontSize="12.5" Margin="0,8,0,0"
+                                                           Text="Web, oyun, video ve görüntülü görüşme puanları (5 nokta) ölçülen değerlerden sabit eşiklerle hesaplanır; tahmin değildir. Web ve video: indirme hızı; oyun: ping, titreşim ve paket kaybı; görüntülü görüşme: indirme ve yüklemenin düşüğü ile ping. Eşikler her simgenin üzerine gelindiğinde gösterilir. Gerekli değer ölçülemediyse puan verilmez." />
+                                            </StackPanel>
+                                        </Border>
+                                    </Grid>
+                                    <Grid Margin="0,0,0,16">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="96" />
+                                            <ColumnDefinition Width="*" />
+                                        </Grid.ColumnDefinitions>
+                                        <Border Style="{StaticResource IconTile}">
+                                            <TextBlock Text="&#xE72E;" Style="{StaticResource T.TileIcon}" />
+                                        </Border>
+                                        <Border Grid.Column="1" Style="{StaticResource Card}" Padding="22,16">
+                                            <StackPanel>
+                                                <TextBlock Text="Veri kullanımı ve gizlilik" Style="{StaticResource T.H2}" FontSize="16" />
+                                                <TextBlock Style="{StaticResource T.SettingDesc}" FontSize="12.5" Margin="0,8,0,0"
+                                                           Text="Test, bağlantı hızına göre onlarca ile yüzlerce MB veri kullanır; gerçek miktar sonuçta yazar. Windows bağlantıyı tarifeli bildiriyorsa test öncesinde onay istenir. Uygulama IP adresini ve konumu yalnızca ekranda gösterir; sonuç geçmişi yalnızca bu bilgisayarda (state.json) saklanır ve IP adresi içermez. Cloudflare seçiliyken sonuçlar hiçbir yere gönderilmez; Speedtest by Ookla seçiliyse Ookla her testin sonucunu, IP adresinizi ve bağlantı bilgilerini kendi koşullarına göre saklar (koşulların kabulü Sunucu bölmesinden geri alınabilir). Kontrol veya güncelleme işlemi sürerken test başlatılamaz; test sürerken de bu işlemler başlatılamaz (ölçümü etkiler)." />
+                                            </StackPanel>
+                                        </Border>
+                                    </Grid>
+                                </StackPanel>
+                            </Grid>
                         </ScrollViewer>
                     </Grid>
                 </Grid>

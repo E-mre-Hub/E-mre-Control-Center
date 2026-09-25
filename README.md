@@ -11,10 +11,12 @@ kendi bakım araçlarını (SFC, DISM CheckHealth / onayla RestoreHealth, MRT h�
 - **İki çalışma şekli:** "Tümünü Kontrol Et / Tümünü Güncelle" veya kartları seçerek "Seçilenleri Kontrol Et /
   Seçilenleri Güncelle-Çalıştır". Seçilmeyen karta hiçbir şekilde dokunulmaz. Güncelleme butonları ancak gerçek bir
   kontrol işlem gerektiren bir sonuç bulduğunda etkinleşir.
-- **Kontrol Merkezi:** ana sayfada 6 kategori (3x2): **Güncelleme**, **Temizleme**, **Cihaz Sağlık**, **Genel Ayarlar**, **Özet**,
-  **Cihaz Bilgileri**. Her kategori ekranında solda bölmeler (alt menü), sağda seçili bölmenin içeriği bulunur. 10 kartın tamamı
+- **Kontrol Merkezi:** ana sayfada 7 kategori (üstte 4, altta 3): **Güncelleme**, **Temizleme**, **Cihaz Sağlık**, **Hız Testi**,
+  **Genel Ayarlar**, **Özet**, **Cihaz Bilgileri**. Her kategori ekranında solda bölmeler (alt menü), sağda seçili bölmenin içeriği bulunur. 10 kartın tamamı
   aynı yapıda (solda büyük ikon, sağda geniş kart): açıklama, gerçek durum, "?" bilgi kutusu, seçim kutusu ve kartın kendi
   işlem butonu ("Kontrol Et", "Tarama Başlat", "Kontrolü Başlat", "Hızlı Taramayı Başlat").
+- **Hız Testi:** gerçek ölçümle indirme / yükleme hızı, ping (boşta ve yük altında), titreşim, paket kaybı, ISS ve test sunucusu;
+  canlı gösterge, kullanım uygunluğu ve sonuç geçmişi (bkz. Hız Testi).
 - **Şeffaflık:** Sistem Sağlık Özeti, Sistem Bilgileri, her kartta son çalıştırılma zamanı, Detaylı Sonuç paneli
   (gerçek komut, çıkış kodu, stdout/stderr, süre), Son İşlem özeti, işlem geçmişi, Windows bildirimleri ve Log Yönetimi.
 
@@ -93,12 +95,14 @@ Desktop\E-mre Control Center\        ← Proje klasörü (önceki adları: E-mre
     │   ├── SelectedOperationsManager.cs ← Kart seçimlerinin merkezi yönetimi
     │   ├── SystemInfoService.cs     ← Cihaz Bilgileri (WMI, kayıt defteri, nvidia-smi, DriveInfo; gruplu alanlar)
     │   ├── DeviceMonitorService.cs  ← Cihaz Durumu canlı ölçüm (GetSystemTimes, bellek, ACPI termal bölge, NVML, disk sıcaklığı)
-    │   ├── AppStateStore.cs         ← İşlem geçmişi / son sonuçlar / ayarlar (%LOCALAPPDATA%\…\state.json)
+    │   ├── SpeedTestService.cs      ← Hız Testi (Cloudflare; TCP gecikme, ICMP paket kaybı, çoklu/tek bağlantı indirme-yükleme)
+    │   ├── OoklaSpeedtestService.cs ← Speedtest by Ookla (resmi araç: bul / winget ile kur / yakın sunucular / JSON olaylarıyla test)
+    │   ├── AppStateStore.cs         ← İşlem geçmişi / son sonuçlar / ayarlar / hız testi geçmişi (%LOCALAPPDATA%\…\state.json)
     │   ├── NotificationService.cs   ← Windows 11 bildirimleri (toast)
     │   └── UpdateOrchestrator.cs    ← Güvenli sıra, Tümü / Seçilenler akışları, modül izolasyonu, iptal
-    ├── ViewModels\                  ← MainViewModel (bölme gezinmesi; + MainViewModel.Device: Cihaz bölmeleri, canlı ölçüm), DeviceViewModels, CategoryViewModel (6 kategori + bölmeler; yalnızca
+    ├── ViewModels\                  ← MainViewModel (bölme gezinmesi; + MainViewModel.Device: Cihaz bölmeleri, canlı ölçüm), SpeedTestViewModel, DeviceViewModels, CategoryViewModel (7 kategori + bölmeler; yalnızca
     │                                  arayüz düzeni), DialogViewModel, DetailViewModel, ThrottledProgress, kart/satır modelleri, komutlar
-    ├── Views\                       ← MainWindow.xaml(.cs): giriş sayfası, Kontrol Merkezi ana sayfası, kategori ekranları; RingGauge.cs; Converters.cs
+    ├── Views\                       ← MainWindow.xaml(.cs): giriş sayfası, Kontrol Merkezi ana sayfası, kategori ekranları; RingGauge.cs, SpeedGauge.cs (hız göstergesi), CenteredWrapPanel.cs; Converters.cs
     └── Themes\Theme.xaml            ← Renkler, butonlar, kartlar, animasyonlar, ilerleme çubuğu
 ```
 
@@ -158,20 +162,20 @@ tırnak içinde yazılır). Depo: https://github.com/E-mre-Hub/E-mre-Control-Cen
 
 ### Yeni sürüm yayınlama (depo sahibi)
 
-1. `src\RtxWindowsUpdater\RtxWindowsUpdater.csproj` içindeki `<Version>` değerini artırın (ör. `1.4.0`).
+1. `src\RtxWindowsUpdater\RtxWindowsUpdater.csproj` içindeki `<Version>` değerini artırın (ör. `1.5.0`).
 2. Değişiklikleri commit'leyip gönderin, ardından etiket oluşturun:
 
 ```bash
-git tag v1.4.0
+git tag v1.5.0
 ```
 
 ```bash
-git push origin v1.4.0
+git push origin v1.5.0
 ```
 
 3. GitHub Actions (`.github/workflows/release.yml`) EXE'yi Windows sunucusunda derler ve
-   `E-mre-Control-Center-v1.4.0.zip` olarak **Releases** sayfasına ekler. Davetli arkadaşlar oradan indirir.
-   Etiketteki sürüm (v1.4.0) EXE'nin sürümü olarak kullanılır; csproj'daki `<Version>` ile aynı olmalıdır.
+   `E-mre-Control-Center-v1.5.0.zip` olarak **Releases** sayfasına ekler. Davetli arkadaşlar oradan indirir.
+   Etiketteki sürüm (v1.5.0) EXE'nin sürümü olarak kullanılır; csproj'daki `<Version>` ile aynı olmalıdır.
 
 Not: Özel depolarda GitHub Actions ücretsiz planda aylık 2.000 dakika ile sınırlıdır (Windows dakikaları 2 kat sayılır);
 bir derleme yaklaşık 3-5 dakika sürer.
@@ -285,6 +289,8 @@ zaman; "Tümünü Güncelle" / "Seçilenleri Güncelle" sonunda ve (otomatik gü
 | **SFC** | `sfc /verifyonly` – yalnızca tarar, **onarım yapmaz**. Çıktı (UTF-16), `sfc.exe`'nin kendi mesaj tablosundan Windows dilinde yüklenen gerçek mesajlarla eşleştirilir; ilerleme yüzdesi canlı gösterilir. | Kartın "Tarama Başlat" butonu: `sfc /scannow` (onaydan sonra). Toplu güncellemede `sfc /scannow` yalnızca doğrulama bozuk dosya bulduysa çalışır. Onarım yarıda kesilmez. |
 | **DISM** | `DISM /Online /Cleanup-Image /CheckHealth` (çıktının dilden bağımsız okunması için DISM'in `/English` görüntüleme seçeneğiyle). Sonuç: Sağlıklı / **Dikkat: Onarılabilir durumda** (başarılı sayılmaz, işlem gerektirir) / Onarılamaz / Hata. | Yalnızca kontrol "onarılabilir" dediyse ve kullanıcı onay verdiyse ("Tümünü Güncelle", "Seçilenleri Çalıştır" veya kartın "Onar" onayı): `DISM /Online /Cleanup-Image /RestoreHealth`. DISM'in "başarılı" mesajı doğrudan kabul edilmez; ardından `/CheckHealth` yeniden çalıştırılır ve bileşen deposu gerçekten sağlıklıysa "Onarıldı (doğrulandı)" gösterilir. Hata kodları (ör. 0x800F081F kaynak bulunamadı, 0x800F0906 indirilemedi) açıklamasıyla gösterilir. Onarım başladıktan sonra yarıda kesilmez. |
 | **MRT** | `MRT.exe /Q /N` – sessiz **hızlı tarama, yalnızca tespit** (dosyalara dokunulmaz). Sonuç, `%windir%\debug\mrt.log` dosyasına bu tarama için eklenen "Results Summary" ve "Return code" satırlarından okunur (KB891716 dönüş kodları). Tam tarama asla başlatılmaz. | Tehdit tespit edildiyse ve kullanıcı onaylarsa `MRT.exe /Q` (hızlı tarama + temizleme). |
+| **Hız Testi – Cloudflare** | `speed.cloudflare.com`: `/meta` (ISS, IP, konum, veri merkezi), TCP bağlantı süresi (ping), 50 ICMP yankı isteği (paket kaybı), `__down` / `__up` ile 10'ar sn indirme / yükleme (çoklu = 6, tek = 1 HTTP/1.1 bağlantısı). | Sistemde değişiklik yok; sonuç yalnızca yerel geçmişe (IP'siz) yazılır. |
+| **Hız Testi – Speedtest by Ookla** | Ookla'nın resmi aracı (Speedtest CLI 1.2): `speedtest --servers --format=json` (yakın sunucular), `speedtest [--server-id=N] --format=jsonl --progress=yes` (canlı olaylar + sonuç). Araç bulunamazsa / koşullar kabul edilmemişse çalıştırılmaz. | Araç yoksa yalnızca onayla: `winget install --id Ookla.Speedtest.CLI --exact --source winget --scope user`; başarı winget listesi + `speedtest --version` ile doğrulanır. |
 
 Güvenli işlem sırası: Winget → Windows Update → Microsoft Store → NVIDIA → Defender → DISM → SFC → MRT →
 Geçici Dosyalar → Çöp Kutusu. (DISM, SFC'den önce çalışır: Microsoft'un önerdiği gibi önce bileşen deposu, sonra sistem dosyaları.)
@@ -339,7 +345,7 @@ Hiçbir hata başarılı gibi gösterilmez; nedeni kartta, sonuç ekranında ve 
 
 ### Kontrol Merkezi (ana sayfa ve kategoriler)
 
-Ana ekran bir **Kontrol Merkezi**'dir: ortada logo ve ad, altında 3x2 düzende 6 kategori. Her kategori kartında büyük ikon,
+Ana ekran bir **Kontrol Merkezi**'dir: ortada logo ve ad, altında 7 kategori (üstte 4, altta ortalı 3). Her kategori kartında büyük ikon,
 başlık, kısa açıklama ve mevcut gerçek durumdan bir durum satırı bulunur (ör. "3 işlem · kontrol edilmedi", "1 işlemde hata var",
 "Kullanım dışı"). Karta tıklamak ilgili ekranı açar; sol üstteki **Ana Sayfa** butonu veya **Esc** ile geri dönülür.
 
@@ -352,6 +358,7 @@ Kategori her açılışta ilk bölmesiyle açılır.
 | **Güncelleme** | **Güncellemeler** (Windows Update, Winget, Microsoft Store, NVIDIA Driver, Microsoft Defender kartları + işlem çubuğu) · **Bulunan Güncellemeler** · **İşlem Günlüğü** |
 | **Temizleme** | **Temizlik** (Windows Geçici Dosyalar, Çöp Kutusu kartları + işlem çubuğu) · **İşlem Günlüğü** |
 | **Cihaz Sağlık** | **Sağlık Araçları** (SFC, DISM, MRT kartları + işlem çubuğu) · **İşlem Günlüğü** |
+| **Hız Testi** | **Hız Testi** (BAŞLAT, seçili sunucu, canlı gösterge, indirme / yükleme, ping, titreşim, paket kaybı, kullanım uygunluğu, ISS ve sunucu, Ookla sonuç sayfası) · **Sunucu** (Speedtest by Ookla sunucu listesi: Otomatik Seç, arama, en yakın sunucular; veya Cloudflare) · **Sonuçlar** (geçmiş) · **Yöntem** (nasıl ölçüldüğü) |
 | **Genel Ayarlar** | **Kolay Ayar** (açık / kapalı anahtarları: Windows bildirimleri, "Tümünü Güncelle ile Çöp Kutusu'nu boşalt") · **Yönetici Yetkisi** (gerçek durum + yeniden başlatma) · **Günlük Dosyaları** (oturum günlüğü: aç / klasör / dışa aktar; uygulama veri klasörü) |
 | **Özet** | **Sağlık Özeti** (10 kartın durumu + Son İşlem) · **Son İşlemler** · **Bulunan Güncellemeler** · **İşlem Günlüğü** |
 | **Cihaz Bilgileri** | **Cihaz Bilgileri** (İşlemci / Ekran Kartı / Bellek / Depolama / İşletim Sistemi kartları + Uyumluluk) · **Cihaz Durumu** (canlı kullanım ve sıcaklık göstergeleri) · **Hakkında** |
@@ -364,6 +371,51 @@ Kategori her açılışta ilk bölmesiyle açılır.
 - İşlem Günlüğü, Bulunan Güncellemeler ve Son İşlemler tam boy bölmelerdir (eski alt panel ve sekmeler bölmelere taşındı; içerik aynı).
   Günlükteki ve Son İşlem kartındaki "Son İşlemler" / "Geçmiş" butonu Özet → Son İşlemler bölmesini açar.
 - Animasyonlar kısa ve tek seferliktir (ekran geçişi, kart üzerine gelme); sürekli animasyon yalnızca bir işlem gerçekten sürerken çalışır.
+
+### Hız Testi
+
+**BAŞLAT** düğmesi internet bağlantısını gerçek ölçümle test eder. Test sürerken gösterge (0 · 5 · 10 · 50 · 100 · 250 · 500 · 750 ·
+1000 Mbps) gerçek anlık hızı gösterir; biten aşamanın sonucu hemen yazılır. BAŞLAT'ın altında seçili sunucu ve **Sunucuyu değiştir**
+bağlantısı bulunur.
+
+**Sunucu bölmesi** – iki ölçüm altyapısından biri seçilir:
+
+| | Speedtest by Ookla | Cloudflare (varsayılan) |
+|---|---|---|
+| Sunucu | Ookla'nın Speedtest ağı: ISS ve veri merkezlerinin kendi sunucuları. **Size en yakın sunucular** listesinden seçilir (ör. Beyoğlu - Turkcell, İstanbul - Turknet, İstanbul - Türksat Kablonet); **Otomatik Seç** ile Ookla seçer. Liste içinde şehir / sağlayıcı / sunucu no ile arama yapılabilir (Türkçe harf ve büyük/küçük harf duyarsız) | Cloudflare'in herkese açık hız testi altyapısı (speed.cloudflare.com). Seçilemez: bağlantı otomatik olarak bir Cloudflare veri merkezine gider (bu bağlantıda Amsterdam, AMS) |
+| Gereken | Ookla'nın resmi komut satırı aracı (**Speedtest CLI**, winget paketi `Ookla.Speedtest.CLI`). Uygulama yalnızca onayınızla kurar; ardından Ookla'nın lisans / kullanım / gizlilik koşullarını uygulamada kabul etmeniz gerekir | Kurulum yok |
+| Ölçüm | Aracın kendi yöntemi; uygulama aracın JSON çıktısındaki ping, titreşim, paket kaybı, indirme / yükleme ve yük altındaki gecikmeyi (IQM) olduğu gibi gösterir | Aşağıdaki tablo |
+| Veri paylaşımı | Ookla her testin sonucunu, IP adresini ve bağlantı bilgilerini kendi koşullarına göre saklar ve bir **sonuç sayfası** üretir (ekranda "Sonuç sayfasını aç") | Sonuçlar hiçbir yere gönderilmez |
+| Süre / veri | ≈ 30-40 sn, 60 Mbps'lik bağlantıda ≈ 105-120 MB | ≈ 25 sn, ≈ 55-95 MB |
+
+- **Ookla aracının kurulumu:** `winget install --id Ookla.Speedtest.CLI --exact --source winget --scope user` (yaklaşık 1 MB, yönetici yetkisi
+  gerekmez, `%LOCALAPPDATA%\Microsoft\WinGet\Packages`). Başarı yalnızca paket winget'in kurulu paketler listesinde görünür **ve**
+  `speedtest.exe --version` "Speedtest by Ookla" döndürürse kabul edilir (aynı adlı başka araçlar kabul edilmez). Ookla'nın Windows aracı
+  **dijital olarak imzalı değildir**; güven, winget'in paket bildirimindeki SHA256 özet doğrulamasına dayanır (indirme adresi
+  install.speedtest.net). Kaldırmak için: `winget uninstall Ookla.Speedtest.CLI`.
+- **Lisans:** araç ve ürettiği bilgiler Ookla'nın koşullarına göre **yalnızca kişisel, ticari olmayan kullanım** içindir. Koşullar kabul
+  edilmeden araç çalıştırılmaz; kabul, Sunucu bölmesinden **geri alınabilir** (bu durumda Cloudflare ile test yapılabilir).
+- Aracın çıktısındaki yerel IP ve MAC adresi okunmaz, gösterilmez ve günlüğe yazılmaz.
+
+**Cloudflare ölçüm yöntemi:**
+
+| Değer | Nasıl ölçülür |
+|---|---|
+| ISS, IP, konum | Sunucunun bağlantı bilgisi yanıtı (`/meta`): ISS (AS numarasıyla), genel IP, şehir / ülke |
+| Ping, titreşim | TCP bağlantı süresi (SYN → SYN-ACK, 443); boşta 20 ölçümün medyanı. Titreşim: ardışık ölçümler arasındaki farkların ortalaması. İndirme ve yükleme sırasında 0,5 sn'de bir ölçülen değerler **yük altındaki gecikme**dir |
+| Paket kaybı | 50 ICMP yankı isteği (ping), 1 sn içinde yanıt gelmeyenlerin oranı. Hiç yanıt yoksa (ICMP engellenmiş olabilir) oran hesaplanmaz, "Ölçülemedi" yazılır |
+| İndirme / yükleme | Her aşama 10 sn; **Çoklu** = 6, **Tek bağlantı** = 1 TCP bağlantısı. İlk 2 sn (bağlantının hızlanması) hesaba katılmaz; sonuç kalan 8 sn'de gerçekten aktarılan bayt ÷ süre. Yükleme rastgele veriyle yapılır |
+
+- **Kullanım uygunluğu** (her iki altyapıda): web, oyun, video, görüntülü görüşme için 1-5 puan; ölçülen değerlerden sabit eşiklerle
+  (eşikler simgenin araç ipucunda).
+- Sunucu uzaktaysa ping yükselir: bu bağlantıda Cloudflare Amsterdam ≈ 43 ms, Ookla Turkcell Beyoğlu ≈ 3-4 ms.
+- Ölçülemeyen değer uydurulmaz: "—" / "Ölçülemedi" ve gerçek neden gösterilir; sunucuya ulaşılamazsa veya araç hata bildirirse test
+  "başarısız" + gerçek hata mesajıyla biter (ör. "Configuration - No servers defined").
+- Windows bağlantıyı tarifeli bildiriyorsa test öncesinde onay istenir. Sonuç geçmişi (Sonuçlar bölmesi, en fazla 50; altyapı, sunucu ve
+  varsa Ookla sonuç sayfasıyla) yalnızca bu bilgisayarda `state.json` içinde saklanır ve IP adresi içermez.
+- Kontrol veya güncelleme işlemi sürerken test veya Ookla kurulumu başlatılamaz; bunlar sürerken de sistem işlemleri başlatılamaz.
+  Hız testi yönetici yetkisi gerektirmez. İptal edilen test geçmişe yazılmaz (Ookla aracı iptalde sonlandırılır).
+
 ### Kartsız mod (NVIDIA RTX yoksa)
 
 - **Windows 11 zorunludur.** Windows 11 değilse gereksinim sayfasında "Bu uygulama bu sistem için desteklenmiyor" uyarısı
@@ -454,6 +506,11 @@ eski klasörlerde kalır (`%LOCALAPPDATA%\E-mre Hub\Logs\`, `%LOCALAPPDATA%\RTX 
   sıcaklığını (bildiriliyorsa) gösterir, fan hızını bildirilmiyorsa "okunamıyor" olarak açıklar.
 - Cihaz Durumu açıkken NVIDIA ekran kartı değerleri okunduğu için Optimus dizüstülerde NVIDIA kartı uyanık kalır; bölme kapanınca
   NVML serbest bırakılır ve kart yeniden uyku durumuna geçebilir. Kart uykudan yeni uyanırken ilk ölçümde kullanım okunamayabilir.
+- **Hız Testi:** Cloudflare'de sunucu seçilemez (veri merkezini ISS'nin yönlendirmesi belirler). Ookla aracı yalnızca en yakın ~12
+  sunucuyu listeler; speedtest.net'teki daha uzun listede görünen bazı sunucular (ör. başka şehirlerdeki ISS sunucuları) bu listede
+  olmayabilir ve arama yalnızca bu liste içinde yapılır. Ookla şehir adlarını Türkçe harfsiz verir (Beyoglu, Istanbul); olduğu gibi
+  gösterilir. Ookla aracı ve ürettiği bilgiler Ookla'nın koşullarına göre yalnızca kişisel, ticari olmayan kullanım içindir; Ookla'nın
+  Windows aracı dijital olarak imzalı değildir (winget özet doğrulamasıyla kurulur).
 
 - **NVIDIA App'in herkese açık bir API/komut satırı arayüzü yoktur.** Bu nedenle kontrol NVIDIA'nın resmi sürücü
   servisiyle yapılır; NVIDIA App yalnızca "kurulu / bulunamadı" olarak raporlanır.
@@ -490,6 +547,25 @@ eski klasörlerde kalır (`%LOCALAPPDATA%\E-mre Hub\Logs\`, `%LOCALAPPDATA%\RTX 
   kullanılırsa o yönetici hesabının çöp kutusu olur).
 
 ## Sürüm geçmişi
+
+### v1.5.0
+
+**Yeni**
+- **Hız Testi kategorisi** (ana sayfada 4. kutucuk; ana sayfa artık 7 kategori: üstte 4, altta ortalı 3). Gerçek ölçümle indirme /
+  yükleme, ping (boşta + indirme / yükleme sırasında), titreşim, paket kaybı, ISS / IP / konum, test sunucusu, canlı gösterge
+  (0-1000 Mbps), kullanım uygunluğu (web, oyun, video, görüntülü görüşme), sonuç geçmişi (Sonuçlar bölmesi; IP'siz, en fazla 50) ve
+  Yöntem bölmesi. Tarifeli bağlantıda test öncesinde onay istenir. Yönetici yetkisi gerektirmez.
+- **Sunucu seçimi (Sunucu bölmesi):** Speedtest by Ookla sunucu listesi – seçili sunucu, **Otomatik Seç**, arama, **Size en yakın
+  sunucular** (ör. Beyoğlu - Turkcell, İstanbul - Turknet). Ookla'nın resmi aracı (Speedtest CLI) yalnızca onayla winget'ten kurulur;
+  Ookla'nın koşulları uygulamada kabul edilir ve geri alınabilir; test sonrası Ookla sonuç sayfası açılabilir. Alternatif olarak
+  kurulum gerektirmeyen ve sonuç göndermeyen **Cloudflare** altyapısı (çoklu / tek bağlantı; varsayılan).
+- Hız testi sürerken (veya Ookla aracı kurulurken) kontrol / güncelleme işlemleri başlatılamaz; sistem işlemi sürerken de test
+  başlatılamaz (ölçümü etkilememesi için).
+
+**İyileştirmeler**
+- Cihaz Durumu bölmesinin simgesi grafik simgesi oldu (hız göstergesi simgesi artık Hız Testi'nde).
+- Hız göstergesi sürekli animasyon kullanmaz (değer saniyede 10 kez gerçek ölçümden çizilir); test sürerken arayüz CPU'su ~%12-13
+  (tek çekirdek; bunun ~%5'i ağ aktarımı).
 
 ### v1.4.0
 

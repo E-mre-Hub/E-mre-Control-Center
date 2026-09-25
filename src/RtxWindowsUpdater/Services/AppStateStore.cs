@@ -134,11 +134,79 @@ public sealed class OperationRecord
         : ComponentStatus.NotChecked;
 }
 
+/// <summary>Tamamlanan (veya başarısız) bir hız testinin gerçek sonuçları. IP adresi kaydedilmez.</summary>
+public sealed class SpeedTestRecord
+{
+    public DateTime CompletedAt { get; set; }
+    public double? DownloadMbps { get; set; }
+    public double? UploadMbps { get; set; }
+    public double? PingMs { get; set; }
+    public double? JitterMs { get; set; }
+    public double? DownloadPingMs { get; set; }
+    public double? UploadPingMs { get; set; }
+    public double? PacketLossPercent { get; set; }
+    public string Isp { get; set; } = string.Empty;
+    public string Server { get; set; } = string.Empty;
+    public bool MultipleConnections { get; set; }
+    public int Streams { get; set; }
+
+    /// <summary>"Cloudflare" / "Speedtest by Ookla" (eski kayıtlarda boş = Cloudflare).</summary>
+    public string Provider { get; set; } = string.Empty;
+
+    /// <summary>Ookla sonuç sayfası (yalnızca https://www.speedtest.net/ adresleri).</summary>
+    public string? ResultUrl { get; set; }
+    public long DataUsedBytes { get; set; }
+    public long DurationMs { get; set; }
+    public string? Error { get; set; }
+
+    [JsonIgnore] public string TimeText => CompletedAt.ToString("dd.MM.yyyy HH:mm");
+    [JsonIgnore] public string DownloadText => FormatMbps(DownloadMbps);
+    [JsonIgnore] public string UploadText => FormatMbps(UploadMbps);
+    [JsonIgnore] public string PingText => PingMs is { } p ? $"{p:0}" : "—";
+    [JsonIgnore] public string LoadedPingText => $"{(DownloadPingMs is { } d ? $"{d:0}" : "—")} / {(UploadPingMs is { } u ? $"{u:0}" : "—")}";
+    [JsonIgnore] public string JitterText => JitterMs is { } j ? $"{j:0.0}" : "—";
+    [JsonIgnore] public string PacketLossText => PacketLossPercent is { } l ? $"%{l:0.#}" : "—";
+    [JsonIgnore] public bool IsOokla => Provider == "Speedtest by Ookla";
+    [JsonIgnore] public string ConnectionsText => IsOokla ? "Ookla" : MultipleConnections ? $"Cloudflare · {Streams}" : "Cloudflare · tek";
+    [JsonIgnore] public string DataText => $"{DataUsedBytes / 1_000_000.0:0} MB";
+    [JsonIgnore] public string ServerShort => Server.StartsWith("Cloudflare · ") ? Server["Cloudflare · ".Length..] : Server;
+    [JsonIgnore] public string ResultText => Error ?? (DownloadMbps is null || UploadMbps is null ? "Kısmen ölçüldü" : "Tamamlandı");
+
+    [JsonIgnore]
+    public string SummaryText =>
+        $"İndirme {DownloadText} Mbps · Yükleme {UploadText} Mbps · Ping {PingText} ms (yük altında ↓/↑ {LoadedPingText} ms) · " +
+        $"Titreşim {JitterText} ms · Paket kaybı {PacketLossText}\n" +
+        $"ISS: {(Isp.Length > 0 ? Isp : "—")} · Sunucu: {(Server.Length > 0 ? Server : "—")} · Altyapı: {ConnectionsText} · Veri: {DataText} · " +
+        $"Süre: {DurationMs / 1000.0:0} sn" + (ResultUrl is null ? "" : "\nSonuç sayfası: " + ResultUrl) + (Error is null ? "" : "\n" + Error);
+
+    [JsonIgnore]
+    public ComponentStatus Status =>
+        DownloadMbps is null && UploadMbps is null ? ComponentStatus.Failed
+        : DownloadMbps is null || UploadMbps is null || Error is not null ? ComponentStatus.Attention
+        : ComponentStatus.UpToDate;
+
+    public static string FormatMbps(double? mbps) => mbps is { } v ? v.ToString(v >= 100 ? "0.0" : "0.00") : "—";
+}
+
 public sealed class AppState
 {
     public bool NotificationsEnabled { get; set; } = true;
     public Dictionary<string, CardSnapshot> Cards { get; set; } = new();
     public List<OperationRecord> Recent { get; set; } = [];
+
+    /// <summary>Hız testi geçmişi (en yeni önce, en fazla 50) ve bağlantı tercihi.</summary>
+    public List<SpeedTestRecord> SpeedTests { get; set; } = [];
+    public bool SpeedTestSingleConnection { get; set; }
+
+    /// <summary>Hız testi altyapısı: "cloudflare" (varsayılan) veya "ookla".</summary>
+    public string SpeedTestProvider { get; set; } = "cloudflare";
+
+    /// <summary>Seçili Ookla sunucusu (null = Otomatik; Ookla seçer).</summary>
+    public int? SpeedTestServerId { get; set; }
+    public string SpeedTestServerName { get; set; } = string.Empty;
+
+    /// <summary>Kullanıcının Ookla lisans / kullanım / gizlilik koşullarını uygulamada kabul ettiği an (yoksa araç çalıştırılmaz).</summary>
+    public DateTime? OoklaLicenseAcceptedAt { get; set; }
 
     /// <summary>Winget'in 0x8A15008E döndürdüğü paketler ("kaynak|Id" → hedef sürüm); yeniden denemeyi önlemek için.</summary>
     public Dictionary<string, string> WingetTechnologyMismatch { get; set; } = new(StringComparer.OrdinalIgnoreCase);
@@ -204,6 +272,7 @@ public sealed class AppStateStore
             var state = JsonSerializer.Deserialize<AppState>(File.ReadAllText(_path), JsonOptions) ?? new AppState();
             state.Cards ??= new();
             state.Recent ??= [];
+            state.SpeedTests ??= [];
             state.WingetTechnologyMismatch ??= new(StringComparer.OrdinalIgnoreCase);
             return state;
         }
@@ -247,6 +316,53 @@ public sealed class AppStateStore
     public void SetNotificationsEnabled(bool enabled)
     {
         lock (_lock) State.NotificationsEnabled = enabled;
+        SaveInBackground();
+    }
+
+    public void AddSpeedTest(SpeedTestRecord record)
+    {
+        lock (_lock)
+        {
+            State.SpeedTests.Insert(0, record);
+            if (State.SpeedTests.Count > MaxRecent) State.SpeedTests.RemoveRange(MaxRecent, State.SpeedTests.Count - MaxRecent);
+        }
+        SaveInBackground();
+    }
+
+    public void SetSpeedTestSingleConnection(bool single)
+    {
+        lock (_lock)
+        {
+            if (State.SpeedTestSingleConnection == single) return;
+            State.SpeedTestSingleConnection = single;
+        }
+        SaveInBackground();
+    }
+
+    public void SetSpeedTestProvider(string provider)
+    {
+        lock (_lock)
+        {
+            if (State.SpeedTestProvider == provider) return;
+            State.SpeedTestProvider = provider;
+        }
+        SaveInBackground();
+    }
+
+    public void SetSpeedTestServer(int? id, string name)
+    {
+        lock (_lock)
+        {
+            if (State.SpeedTestServerId == id && State.SpeedTestServerName == name) return;
+            State.SpeedTestServerId = id;
+            State.SpeedTestServerName = name;
+        }
+        SaveInBackground();
+    }
+
+    public void SetOoklaLicenseAccepted(DateTime? acceptedAt)
+    {
+        lock (_lock) State.OoklaLicenseAcceptedAt = acceptedAt;
         SaveInBackground();
     }
 

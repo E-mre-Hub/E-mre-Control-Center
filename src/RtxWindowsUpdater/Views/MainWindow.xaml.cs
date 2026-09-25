@@ -102,6 +102,9 @@ public partial class MainWindow : Window
         DeviceScroll.ScrollToTop();
         DeviceStatusScroll.ScrollToTop();
         DeviceAboutScroll.ScrollToTop();
+        SpeedTestScroll.ScrollToTop();
+        SpeedMethodScroll.ScrollToTop();
+        SpeedServerScroll.ScrollToTop();
     }
 
     private void OnDialogChanged(object? sender, PropertyChangedEventArgs e)

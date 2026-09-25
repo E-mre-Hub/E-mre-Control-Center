@@ -18,6 +18,10 @@ public static class SectionKeys
     public const string DeviceInfo = "device-info";
     public const string DeviceStatus = "device-status";
     public const string DeviceAbout = "device-about";
+    public const string SpeedTest = "speedtest";
+    public const string SpeedServers = "speed-servers";
+    public const string SpeedHistory = "speed-history";
+    public const string SpeedMethod = "speed-method";
 }
 
 /// <summary>
@@ -40,10 +44,11 @@ public static class CategoryKeys
     public const string Settings = "settings";
     public const string Summary = "summary";
     public const string Device = "device";
+    public const string SpeedTest = "speedtest";
 }
 
 /// <summary>
-/// Kontrol Merkezi ana sayfasındaki bir kategori (Güncelleme, Temizleme, Cihaz Sağlık, Genel Ayarlar, Özet, Cihaz Bilgileri).
+/// Kontrol Merkezi ana sayfasındaki bir kategori (Güncelleme, Temizleme, Cihaz Sağlık, Hız Testi, Genel Ayarlar, Özet, Cihaz Bilgileri).
 /// Yalnızca arayüz düzenidir: mevcut kartları (aynı nesneler) gruplar; iş mantığı veya yeni veri içermez.
 /// </summary>
 public sealed class CategoryViewModel(string key, string title, string glyph, string description,

@@ -736,7 +736,8 @@ public sealed class WingetManager(Logger logger, string source, string key, stri
     /// Başarısız bir winget çağrısını açıklar: resmi koda karşılık gelen Türkçe açıklama, kurulum programının
     /// gerçek çıkış kodu (winget çıktısında varsa) ve winget'in kendi son mesajı birlikte verilir.
     /// </summary>
-    private static string DescribeFailure(ProcessResult r)
+    /// <summary>Başarısız winget çağrısının gerçek açıklaması (resmi kod sözlüğü + winget mesajı); başka servisler de kullanır.</summary>
+    internal static string DescribeFailure(ProcessResult r)
     {
         if (!r.Started || r.TimedOut || r.Cancelled)
             return ProcessRunner.Describe(r, "winget");
