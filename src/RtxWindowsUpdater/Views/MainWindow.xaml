@@ -912,6 +912,15 @@
                                 </Setter.Value>
                             </Setter>
                         </DataTrigger>
+                        <!-- Zorunlu güncelleme penceresi açıkken arkadaki içerik bulanık ve devre dışı (klavyeyle de ulaşılamaz) -->
+                        <DataTrigger Binding="{Binding ShowUpdateOverlay}" Value="True">
+                            <Setter Property="IsEnabled" Value="False" />
+                            <Setter Property="Effect">
+                                <Setter.Value>
+                                    <BlurEffect Radius="8" />
+                                </Setter.Value>
+                            </Setter>
+                        </DataTrigger>
                     </Style.Triggers>
                 </Style>
             </Grid.Style>
@@ -2056,19 +2065,32 @@
                                                 <RowDefinition Height="Auto" />
                                                 <RowDefinition Height="Auto" />
                                                 <RowDefinition Height="Auto" />
+                                                <RowDefinition Height="Auto" />
+                                                <RowDefinition Height="Auto" />
                                             </Grid.RowDefinitions>
                                             <TextBlock Text="Sürüm" FontSize="12" Foreground="{StaticResource B.Text3}" Margin="0,0,10,9" />
                                             <TextBlock Grid.Column="1" Text="{Binding AppVersion}" FontSize="12.5" Foreground="{StaticResource B.Text}" />
-                                            <TextBlock Grid.Row="1" Text="Dil" FontSize="12" Foreground="{StaticResource B.Text3}" Margin="0,0,10,9" />
-                                            <TextBlock Grid.Row="1" Grid.Column="1" Text="Türkçe" FontSize="12.5" Foreground="{StaticResource B.Text}" />
-                                            <TextBlock Grid.Row="2" Text="Veri klasörü" FontSize="12" Foreground="{StaticResource B.Text3}" Margin="0,0,10,9" />
-                                            <TextBlock Grid.Row="2" Grid.Column="1" Text="{x:Static core:AppInfo.DataDirectory}" FontSize="12.5"
+                                            <TextBlock Grid.Row="1" Text="Kurulum" FontSize="12" Foreground="{StaticResource B.Text3}" Margin="0,0,10,9" />
+                                            <TextBlock x:Name="InstallStatusText" Grid.Row="1" Grid.Column="1" Text="{Binding InstallStatusText}" FontSize="12.5"
+                                                       Foreground="{StaticResource B.Text}" TextWrapping="Wrap" Margin="0,0,0,9" />
+                                            <TextBlock Grid.Row="2" Text="Güncelleme" FontSize="12" Foreground="{StaticResource B.Text3}" Margin="0,0,10,9" />
+                                            <StackPanel Grid.Row="2" Grid.Column="1" Margin="0,0,0,9">
+                                                <TextBlock x:Name="UpdateAboutText" Text="{Binding Update.AboutText}" FontSize="12.5" Foreground="{StaticResource B.Text}"
+                                                           TextWrapping="Wrap" />
+                                                <Button x:Name="UpdateCheckLink" Style="{StaticResource Btn.Link}" Content="Şimdi denetle" HorizontalAlignment="Left"
+                                                        Margin="0,2,0,0" Command="{Binding Update.CheckCommand}"
+                                                        ToolTip="Sürüm deposunda (GitHub) yeni sürüm olup olmadığını denetler." />
+                                            </StackPanel>
+                                            <TextBlock Grid.Row="3" Text="Dil" FontSize="12" Foreground="{StaticResource B.Text3}" Margin="0,0,10,9" />
+                                            <TextBlock Grid.Row="3" Grid.Column="1" Text="Türkçe" FontSize="12.5" Foreground="{StaticResource B.Text}" />
+                                            <TextBlock Grid.Row="4" Text="Veri klasörü" FontSize="12" Foreground="{StaticResource B.Text3}" Margin="0,0,10,9" />
+                                            <TextBlock Grid.Row="4" Grid.Column="1" Text="{x:Static core:AppInfo.DataDirectory}" FontSize="12.5"
                                                        Foreground="{StaticResource B.Text}" TextWrapping="Wrap" />
-                                            <TextBlock Grid.Row="3" Text="Günlük dosyası" FontSize="12" Foreground="{StaticResource B.Text3}" Margin="0,0,10,9" />
-                                            <TextBlock Grid.Row="3" Grid.Column="1" Text="{Binding LogFilePath}" FontSize="12.5" Foreground="{StaticResource B.Text}"
+                                            <TextBlock Grid.Row="5" Text="Günlük dosyası" FontSize="12" Foreground="{StaticResource B.Text3}" Margin="0,0,10,9" />
+                                            <TextBlock Grid.Row="5" Grid.Column="1" Text="{Binding LogFilePath}" FontSize="12.5" Foreground="{StaticResource B.Text}"
                                                        TextWrapping="Wrap" />
-                                            <TextBlock Grid.Row="4" Text="Kaynak kod" FontSize="12" Foreground="{StaticResource B.Text3}" Margin="0,0,10,0" />
-                                            <TextBlock Grid.Row="4" Grid.Column="1" Text="github.com/E-mre-Hub/E-mre-Control-Center (özel depo)" FontSize="12.5"
+                                            <TextBlock Grid.Row="6" Text="Kaynak kod" FontSize="12" Foreground="{StaticResource B.Text3}" Margin="0,0,10,0" />
+                                            <TextBlock Grid.Row="6" Grid.Column="1" Text="github.com/E-mre-Hub/E-mre-Control-Center (özel depo)" FontSize="12.5"
                                                        Foreground="{StaticResource B.Text}" TextWrapping="Wrap" />
                                         </Grid>
                                     </StackPanel>
@@ -2966,6 +2988,80 @@
                     </ScrollViewer>
                 </Grid>
             </Border>
+        </Grid>
+
+        <!-- ================= Zorunlu güncelleme: "Yeni sürüm yayınlandı" ================= -->
+        <Grid x:Name="UpdateOverlay" Grid.Row="1" Background="#D9020409" Visibility="{Binding ShowUpdateOverlay, Converter={StaticResource Visible}}">
+            <Grid DataContext="{Binding Update}" Width="620" HorizontalAlignment="Center" VerticalAlignment="Center" Margin="0,0,0,20">
+                <Border Style="{StaticResource CardShadowLayer}" />
+                <Border Style="{StaticResource Card.Flat}" Padding="36,30,36,26">
+                    <StackPanel>
+                        <!-- parlayan logo (statik) -->
+                        <Grid Width="170" Height="104" HorizontalAlignment="Center">
+                            <Ellipse IsHitTestVisible="False">
+                                <Ellipse.Fill>
+                                    <RadialGradientBrush>
+                                        <GradientStop Color="#591FB6FF" Offset="0" />
+                                        <GradientStop Color="#1A1FB6FF" Offset="0.5" />
+                                        <GradientStop Color="#001FB6FF" Offset="1" />
+                                    </RadialGradientBrush>
+                                </Ellipse.Fill>
+                            </Ellipse>
+                            <Border Width="72" Height="72" CornerRadius="19" BorderThickness="1.5" BorderBrush="{StaticResource B.NeonBright}"
+                                    Effect="{StaticResource Fx.IconGlow}">
+                                <Rectangle RadiusX="17" RadiusY="17" Fill="{StaticResource LogoBrush}" />
+                            </Border>
+                        </Grid>
+                        <TextBlock Text="Yeni sürüm yayınlandı" FontFamily="{StaticResource F.Display}" FontSize="25" FontWeight="SemiBold"
+                                   Foreground="White" HorizontalAlignment="Center" Margin="0,4,0,0" />
+                        <TextBlock x:Name="UpdateNewVersion" Text="{Binding NewVersionText}" FontFamily="{StaticResource F.Display}" FontSize="34"
+                                   FontWeight="Bold" Foreground="{StaticResource B.NeonBright}" HorizontalAlignment="Center" Margin="0,2,0,0" />
+                        <TextBlock Text="{Binding DetailText}" FontSize="12.5" Foreground="{StaticResource B.Text2}" HorizontalAlignment="Center"
+                                   TextAlignment="Center" TextWrapping="Wrap" Margin="0,4,0,0" />
+
+                        <!-- sürüm notları (GitHub yayınındaki gerçek metin) -->
+                        <Border Margin="0,18,0,0" CornerRadius="12" Background="#FF08101E" BorderBrush="#FF1E3050" BorderThickness="1"
+                                Visibility="{Binding HasNotes, Converter={StaticResource Visible}}">
+                            <ScrollViewer MaxHeight="170" VerticalScrollBarVisibility="Auto" Padding="16,12,10,12" Focusable="False">
+                                <StackPanel>
+                                    <TextBlock Text="YENİLİKLER" Style="{StaticResource T.Label}" Foreground="{StaticResource B.NeonBright}" Margin="0,0,0,6" />
+                                    <TextBlock Text="{Binding NotesText}" FontSize="12.5" LineHeight="18" Foreground="{StaticResource B.Text}" TextWrapping="Wrap" />
+                                </StackPanel>
+                            </ScrollViewer>
+                        </Border>
+
+                        <TextBlock Text="{Binding PortableNote}" FontSize="12" Foreground="{StaticResource B.Text3}" TextWrapping="Wrap" TextAlignment="Center"
+                                   Margin="0,12,0,0" Visibility="{Binding PortableNote, Converter={StaticResource Visible}}" />
+
+                        <!-- indirme (gerçek bayt ilerlemesi) -->
+                        <StackPanel Margin="0,18,0,0" Visibility="{Binding IsWorking, Converter={StaticResource Visible}}">
+                            <Grid>
+                                <TextBlock Text="{Binding StatusText}" FontSize="12.5" Foreground="{StaticResource B.Text}" />
+                                <TextBlock Text="{Binding ProgressText}" FontSize="12" Foreground="{StaticResource B.Text2}" HorizontalAlignment="Right" />
+                            </Grid>
+                            <ProgressBar x:Name="UpdateProgress" Style="{StaticResource Progress.Neon}" Minimum="0" Maximum="1"
+                                         Value="{Binding Progress, Mode=OneWay}" Margin="0,8,0,0" />
+                        </StackPanel>
+
+                        <TextBlock x:Name="UpdateError" Text="{Binding ErrorText}" FontSize="12.5" Foreground="{StaticResource B.Orange}" TextWrapping="Wrap"
+                                   TextAlignment="Center" Margin="0,14,0,0" Visibility="{Binding ErrorText, Converter={StaticResource Visible}}" />
+
+                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,22,0,0">
+                            <Button Style="{StaticResource Btn.Secondary}" Content="Uygulamayı kapat" Width="170" Height="48"
+                                    Command="{Binding CloseAppCommand}" Margin="0,0,12,0" />
+                            <Button x:Name="UpdateButton" Style="{StaticResource Btn.Primary}" Width="230" Height="48" Command="{Binding UpdateCommand}"
+                                    AutomationProperties.Name="{Binding ButtonText}">
+                                <StackPanel Orientation="Horizontal">
+                                    <TextBlock Text="&#xE896;" Style="{StaticResource T.Icon}" FontSize="15" Margin="0,0,10,0" VerticalAlignment="Center" />
+                                    <TextBlock Text="{Binding ButtonText}" VerticalAlignment="Center" />
+                                </StackPanel>
+                            </Button>
+                        </StackPanel>
+                        <TextBlock FontSize="11" Foreground="{StaticResource B.Text3}" TextWrapping="Wrap" TextAlignment="Center" Margin="0,16,0,0"
+                                   Text="Bu güncelleme zorunludur; yeni sürüm kurulana kadar uygulama kullanılamaz. İndirilen dosya GitHub'ın bildirdiği SHA-256 özeti, boyutu ve sürümüyle doğrulanır; kurulum bitince yeni sürüm kendiliğinden açılır." />
+                    </StackPanel>
+                </Border>
+            </Grid>
         </Grid>
 
         <!-- ================= İletişim kutusu katmanı ================= -->

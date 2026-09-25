@@ -349,7 +349,7 @@ public sealed class SpeedTestService(Logger logger, SpeedTestOptions? options = 
         };
         http.DefaultRequestHeaders.UserAgent.ParseAdd($"E-mreControlCenter/{AppInfo.Version}");
         // /meta yanıtı yalnızca Referer başlığı varsa dolu döner; uygulama kendi adresini gönderir (başka siteyi taklit etmez).
-        http.DefaultRequestHeaders.Referrer = new Uri("https://github.com/E-mre-Hub/E-mre-Control-Center");
+        http.DefaultRequestHeaders.Referrer = new Uri(AppInfo.RepositoryUrl);
         return http;
     }
 

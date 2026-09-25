@@ -1,0 +1,250 @@
+<Window x:Class="RtxWindowsUpdater.Views.UninstallWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="clr-namespace:RtxWindowsUpdater.ViewModels"
+        xmlns:views="clr-namespace:RtxWindowsUpdater.Views"
+        Title="E-mre Control Center Kaldırma"
+        Icon="pack://application:,,,/Assets/E-mreLogo.ico"
+        Width="920" Height="620"
+        WindowStartupLocation="CenterScreen"
+        ResizeMode="CanMinimize"
+        Background="{StaticResource B.Bg0}"
+        FontFamily="{StaticResource F.Text}"
+        Foreground="{StaticResource B.Text}"
+        TextOptions.TextFormattingMode="Display"
+        UseLayoutRounding="True">
+
+    <WindowChrome.WindowChrome>
+        <WindowChrome CaptionHeight="40" ResizeBorderThickness="0" GlassFrameThickness="0" CornerRadius="0" UseAeroCaptionButtons="False" />
+    </WindowChrome.WindowChrome>
+
+    <Window.Resources>
+        <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <ResourceDictionary Source="SetupResources.xaml" />
+            </ResourceDictionary.MergedDictionaries>
+
+            <!-- "Kaldırılacaklar" satırı -->
+            <Style x:Key="RemoveItemIcon" TargetType="TextBlock" BasedOn="{StaticResource T.Icon}">
+                <Setter Property="FontSize" Value="15" />
+                <Setter Property="Foreground" Value="{StaticResource B.NeonBright}" />
+                <Setter Property="VerticalAlignment" Value="Top" />
+                <Setter Property="Margin" Value="0,2,12,0" />
+            </Style>
+        </ResourceDictionary>
+    </Window.Resources>
+
+    <Grid x:Name="RootGrid" Background="{StaticResource B.WindowBg}">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="40" />
+            <RowDefinition Height="*" />
+        </Grid.RowDefinitions>
+
+        <views:WaveBackdrop Grid.RowSpan="2" LineBrush="#FF2E4468" LineCount="30" IsHitTestVisible="False">
+            <views:WaveBackdrop.CacheMode>
+                <BitmapCache />
+            </views:WaveBackdrop.CacheMode>
+        </views:WaveBackdrop>
+
+        <!-- Başlık çubuğu -->
+        <DockPanel>
+            <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" VerticalAlignment="Top">
+                <Button Style="{StaticResource Btn.Caption}" Content="&#xE921;" Click="Minimize_Click" ToolTip="Simge durumuna küçült" />
+                <Button Style="{StaticResource Btn.CaptionClose}" Content="&#xE8BB;" Command="{Binding CloseCommand}" ToolTip="Kapat"
+                        AutomationProperties.Name="Kaldırmayı kapat" />
+            </StackPanel>
+            <StackPanel Orientation="Horizontal" Margin="14,0,0,0" VerticalAlignment="Center">
+                <Rectangle Width="18" Height="18" RadiusX="4" RadiusY="4" Fill="{StaticResource LogoBrush}" />
+                <TextBlock Text="E-mre Control Center Kaldırma" FontSize="12.5" Foreground="{StaticResource B.Text2}" Margin="10,0,0,0"
+                           VerticalAlignment="Center" />
+            </StackPanel>
+        </DockPanel>
+
+        <!-- ============ Form: solda veda, sağda "Neden kaldırıyorsunuz?" ============ -->
+        <Grid x:Name="FormPage" Grid.Row="1" Margin="44,4,40,30" Visibility="{Binding IsForm, Converter={StaticResource Visible}}">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="36" />
+                <ColumnDefinition Width="430" />
+            </Grid.ColumnDefinitions>
+
+            <!-- Sol: veda mesajı + kaldırılacaklar + veri seçeneği -->
+            <StackPanel VerticalAlignment="Center">
+                <ContentControl Template="{StaticResource LogoGlow}" Focusable="False" HorizontalAlignment="Left" Margin="-52,0,0,0" />
+                <TextBlock Text="Bir dahaki sefere görüşmek üzere!" FontFamily="{StaticResource F.Display}" FontSize="29" FontWeight="SemiBold"
+                           Foreground="White" TextWrapping="Wrap" LineHeight="36" Margin="0,4,0,0" />
+                <TextBlock Text="E-mre Control Center bilgisayarınızdan kaldırılacak." FontSize="14" Foreground="{StaticResource B.Text2}"
+                           TextWrapping="Wrap" Margin="0,10,0,0" />
+
+                <TextBlock Text="KALDIRILACAKLAR" Style="{StaticResource T.Label}" Foreground="{StaticResource B.NeonBright}" Margin="0,24,0,10" />
+                <Grid Margin="0,0,0,10">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="*" />
+                    </Grid.ColumnDefinitions>
+                    <TextBlock Text="&#xE8B7;" Style="{StaticResource RemoveItemIcon}" />
+                    <StackPanel Grid.Column="1">
+                        <TextBlock Text="Program dosyaları" FontSize="13" FontWeight="SemiBold" Foreground="{StaticResource B.Text}" />
+                        <TextBlock Text="{Binding InstallDir}" FontSize="11.5" Foreground="{StaticResource B.Text3}" TextWrapping="Wrap" />
+                    </StackPanel>
+                </Grid>
+                <Grid Margin="0,0,0,10">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="*" />
+                    </Grid.ColumnDefinitions>
+                    <TextBlock Text="&#xE71B;" Style="{StaticResource RemoveItemIcon}" />
+                    <TextBlock Grid.Column="1" Text="Başlat menüsü ve masaüstü kısayolları" FontSize="13" FontWeight="SemiBold"
+                               Foreground="{StaticResource B.Text}" />
+                </Grid>
+                <Grid Margin="0,0,0,10">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="*" />
+                    </Grid.ColumnDefinitions>
+                    <TextBlock Text="&#xE71D;" Style="{StaticResource RemoveItemIcon}" />
+                    <TextBlock Grid.Column="1" Text="Windows Ayarlar → Uygulamalar kaydı ve geçici dosyalar" FontSize="13" FontWeight="SemiBold"
+                               Foreground="{StaticResource B.Text}" TextWrapping="Wrap" />
+                </Grid>
+
+                <CheckBox x:Name="DeleteDataCheck" IsChecked="{Binding DeleteUserData}" Margin="0,16,0,0">
+                    <TextBlock Text="Ayarlarımı, geçmişimi ve günlüklerimi de sil" FontSize="13.5" />
+                </CheckBox>
+                <TextBlock FontSize="11.5" Foreground="{StaticResource B.Text3}" TextWrapping="Wrap" Margin="30,4,0,0">
+                    <Run Text="{Binding UserDataText, Mode=OneWay}" />
+                    <LineBreak />
+                    <Run Text="İşaretlemezseniz yeniden kurduğunuzda kaldığınız yerden devam edersiniz." />
+                </TextBlock>
+            </StackPanel>
+
+            <!-- Sağ: geri bildirim -->
+            <Grid Grid.Column="2" VerticalAlignment="Center">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                </Grid.RowDefinitions>
+                <Border CornerRadius="18" Padding="26,22,26,20" BorderBrush="#FF1E3050" BorderThickness="1" Background="{StaticResource B.CardBg}">
+                    <StackPanel>
+                        <TextBlock Text="Neden kaldırıyorsunuz?" FontFamily="{StaticResource F.Display}" FontSize="20" FontWeight="SemiBold" Foreground="White" />
+
+                        <!-- Gönderim ayarlıysa: nedenler + mesaj -->
+                        <StackPanel Visibility="{Binding FeedbackEnabled, Converter={StaticResource Visible}}">
+                            <TextBlock Text="İsteğe bağlı · Uygulamayı geliştirmemize yardım eder." FontSize="12" Foreground="{StaticResource B.Text3}"
+                                       Margin="0,4,0,16" />
+                            <ItemsControl x:Name="ReasonList" ItemsSource="{Binding Reasons}" Focusable="False">
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate DataType="{x:Type vm:FeedbackReasonViewModel}">
+                                        <CheckBox Content="{Binding Text}" IsChecked="{Binding IsChecked}" Margin="0,0,0,12"
+                                                  AutomationProperties.Name="{Binding Text}" />
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                            <Grid Margin="0,6,0,6">
+                                <TextBlock Text="Mesajınız (isteğe bağlı)" FontSize="12" FontWeight="SemiBold" Foreground="{StaticResource B.Text2}" />
+                                <TextBlock Text="{Binding MessageCounter}" FontSize="11" Foreground="{StaticResource B.Text3}" HorizontalAlignment="Right" />
+                            </Grid>
+                            <Grid>
+                                <TextBox x:Name="FeedbackMessage" Style="{StaticResource Setup.Input}" Height="92" AcceptsReturn="True" TextWrapping="Wrap"
+                                         MaxLength="{x:Static vm:UninstallViewModel.MaxMessageLength}" AutomationProperties.Name="Mesajınız"
+                                         Text="{Binding Message, UpdateSourceTrigger=PropertyChanged}" />
+                                <TextBlock Text="Neyi beğenmediniz, neyi düzeltelim?" FontSize="13" Foreground="{StaticResource B.Text3}" Margin="13,9,0,0"
+                                           IsHitTestVisible="False" Visibility="{Binding Message, Converter={StaticResource Hidden}}" />
+                            </Grid>
+                            <TextBlock FontSize="11" Foreground="{StaticResource B.Text3}" TextWrapping="Wrap" Margin="0,10,0,0"
+                                       Text="Gönderilenler: seçtikleriniz, mesajınız, uygulama ve Windows sürümü (Google Formlar). Ad, e-posta veya bilgisayar adı gönderilmez." />
+                        </StackPanel>
+
+                        <!-- Gönderim ayarlı değilse: sahte "gönder" sunulmaz -->
+                        <TextBlock Visibility="{Binding FeedbackEnabled, Converter={StaticResource Hidden}}" FontSize="12.5" Foreground="{StaticResource B.Text2}"
+                                   TextWrapping="Wrap" Margin="0,8,0,0"
+                                   Text="Bu sürümde geri bildirim gönderimi ayarlanmadı; uygulama yalnızca kaldırılacak." />
+                    </StackPanel>
+                </Border>
+
+                <StackPanel Grid.Row="1" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,18,0,0">
+                    <Button x:Name="CancelButton" Style="{StaticResource Btn.Secondary}" Content="İptal" Width="130" Height="48"
+                            Command="{Binding CloseCommand}" Margin="0,0,12,0" />
+                    <Button x:Name="UninstallButton" Style="{StaticResource Btn.Primary}" Width="220" Height="48" Command="{Binding UninstallCommand}"
+                            AutomationProperties.Name="{Binding PrimaryText}">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="&#xE74D;" Style="{StaticResource T.Icon}" FontSize="15" Margin="0,0,10,0" VerticalAlignment="Center" />
+                            <TextBlock Text="{Binding PrimaryText}" VerticalAlignment="Center" />
+                        </StackPanel>
+                    </Button>
+                </StackPanel>
+            </Grid>
+        </Grid>
+
+        <!-- ============ Kaldırılıyor ============ -->
+        <ScrollViewer x:Name="WorkingPage" Grid.Row="1" VerticalScrollBarVisibility="Auto" Focusable="False"
+                      Visibility="{Binding IsWorking, Converter={StaticResource Visible}}">
+            <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center" Width="560" Margin="0,8,0,24">
+                <TextBlock Text="{Binding StatusText}" FontFamily="{StaticResource F.Display}" FontSize="23" Foreground="White" Margin="0,0,0,22" />
+                <ItemsControl ItemsSource="{Binding Steps}" ItemTemplate="{StaticResource SetupStepTemplate}" Focusable="False" />
+            </StackPanel>
+        </ScrollViewer>
+
+        <!-- ============ Bitti (uzun notlar kayar, Kapat hep görünür) ============ -->
+        <Grid x:Name="DonePage" Grid.Row="1" Margin="0,0,0,24" Visibility="{Binding IsDone, Converter={StaticResource Visible}}">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="*" />
+                <RowDefinition Height="Auto" />
+            </Grid.RowDefinitions>
+            <ScrollViewer VerticalScrollBarVisibility="Auto" Focusable="False">
+                <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center" Width="620" Margin="0,8,0,8">
+                    <ContentControl Template="{StaticResource LogoGlow}" Focusable="False" />
+                    <TextBlock Text="{Binding ResultTitle}" FontFamily="{StaticResource F.Display}" FontSize="26" FontWeight="SemiBold" Foreground="White"
+                               HorizontalAlignment="Center" TextAlignment="Center" TextWrapping="Wrap" Margin="0,6,0,0" />
+                    <TextBlock Text="Bir dahaki sefere görüşmek üzere!" FontSize="19" FontWeight="SemiBold" Foreground="{StaticResource B.NeonBright}"
+                               HorizontalAlignment="Center" Margin="0,8,0,0" />
+    
+                    <!-- Geri bildirim sonucu (gerçek HTTP sonucu) -->
+                    <Border Margin="0,20,0,0" Padding="14,10" CornerRadius="10" Background="#B30A1426" BorderBrush="#FF1E3050" BorderThickness="1"
+                            HorizontalAlignment="Center" Visibility="{Binding FeedbackResult, Converter={StaticResource Visible}}">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock x:Name="FeedbackIcon" FontSize="14" VerticalAlignment="Center" Margin="0,0,10,0">
+                                <TextBlock.Style>
+                                    <Style TargetType="TextBlock" BasedOn="{StaticResource T.Icon}">
+                                        <Setter Property="Text" Value="&#xE73E;" />
+                                        <Setter Property="Foreground" Value="{StaticResource B.Green}" />
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding FeedbackFailed}" Value="True">
+                                                <Setter Property="Text" Value="&#xE7BA;" />
+                                                <Setter Property="Foreground" Value="{StaticResource B.Orange}" />
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </TextBlock.Style>
+                            </TextBlock>
+                            <TextBlock Text="{Binding FeedbackResult}" FontSize="12.5" Foreground="{StaticResource B.Text}" TextWrapping="Wrap" MaxWidth="440"
+                                       VerticalAlignment="Center" />
+                            <Button Style="{StaticResource Btn.Ghost}" Content="Tekrar gönder" Command="{Binding RetryFeedbackCommand}" Margin="12,0,0,0"
+                                    Visibility="{Binding FeedbackFailed, Converter={StaticResource Visible}}" />
+                        </StackPanel>
+                    </Border>
+    
+                    <TextBlock Text="{Binding NotesText}" FontSize="12" LineHeight="18" Foreground="{StaticResource B.Text2}" TextWrapping="Wrap"
+                               TextAlignment="Center" Margin="0,16,0,0" Visibility="{Binding NotesText, Converter={StaticResource Visible}}" />
+                </StackPanel>
+            </ScrollViewer>
+            <Button x:Name="CloseButton" Grid.Row="1" Style="{StaticResource Btn.Primary}" Content="Kapat" Width="200" Height="48" Command="{Binding CloseCommand}"
+                    HorizontalAlignment="Center" Margin="0,16,0,0" />
+        </Grid>
+
+        <!-- ============ Yüklü değil ============ -->
+        <Grid x:Name="NotInstalledPage" Grid.Row="1" Visibility="{Binding IsNotInstalled, Converter={StaticResource Visible}}">
+            <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center" Width="560" Margin="0,0,0,24">
+                <ContentControl Template="{StaticResource LogoGlow}" Focusable="False" />
+                <TextBlock Text="E-mre Control Center bu bilgisayarda yüklü değil" FontFamily="{StaticResource F.Display}" FontSize="22" Foreground="White"
+                           HorizontalAlignment="Center" TextAlignment="Center" TextWrapping="Wrap" Margin="0,6,0,0" />
+                <TextBlock FontSize="13" Foreground="{StaticResource B.Text2}" TextWrapping="Wrap" TextAlignment="Center" Margin="0,10,0,0"
+                           Text="Windows Uygulamalar kaydı ve program dosyası bulunamadı; kaldırılacak bir şey yok." />
+                <Button Style="{StaticResource Btn.Primary}" Content="Kapat" Width="200" Height="48" Command="{Binding CloseCommand}"
+                        HorizontalAlignment="Center" Margin="0,24,0,0" />
+            </StackPanel>
+        </Grid>
+
+        <ContentControl Grid.RowSpan="2" Content="{Binding RunningPrompt}" ContentTemplate="{StaticResource RunningPromptTemplate}" Focusable="False"
+                        Visibility="{Binding RunningPrompt.IsOpen, Converter={StaticResource Visible}}" />
+    </Grid>
+</Window>

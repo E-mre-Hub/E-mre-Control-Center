@@ -1,7 +1,5 @@
 using System.ComponentModel;
-using System.Runtime.InteropServices;
 using System.Windows;
-using System.Windows.Interop;
 using System.Windows.Media;
 using System.Windows.Media.Animation;
 using RtxWindowsUpdater.Core;
@@ -31,7 +29,7 @@ public partial class MainWindow : Window
         vm.Detail.PropertyChanged += OnDetailChanged;
         PreviewKeyDown += OnPreviewKeyDown;
 
-        SourceInitialized += (_, _) => ApplyWindowFrame();
+        SourceInitialized += (_, _) => WindowFrame.Apply(this);
         StateChanged += (_, _) => UpdateMaximizeState();
         Loaded += OnLoaded;
         Closing += OnClosing;
@@ -133,6 +131,8 @@ public partial class MainWindow : Window
 
     private void OnPreviewKeyDown(object sender, System.Windows.Input.KeyEventArgs e)
     {
+        // Zorunlu güncelleme penceresi açıkken kısayollar arkadaki sayfada çalışmaz.
+        if (_vm.ShowUpdateOverlay) return;
         var onHome = _vm.IsDashboard && _vm.IsHome && !_vm.Dialog.IsOpen && !_vm.Detail.IsOpen;
         // Ctrl+F: ana sayfada arama kutusuna odaklan
         if (onHome && e.Key == System.Windows.Input.Key.F && System.Windows.Input.Keyboard.Modifiers == System.Windows.Input.ModifierKeys.Control)
@@ -245,32 +245,5 @@ public partial class MainWindow : Window
         RootGrid.Margin = WindowState == WindowState.Maximized ? new Thickness(7) : new Thickness(0);
         MaxButton.Content = WindowState == WindowState.Maximized ? "" : "";
         MaxButton.ToolTip = WindowState == WindowState.Maximized ? "Önceki boyut" : "Büyüt";
-    }
-
-    // ----------------------------------------------------------- DWM (Windows 11 yuvarlak köşe + koyu çerçeve)
-
-    [DllImport("dwmapi.dll")]
-    private static extern int DwmSetWindowAttribute(IntPtr hwnd, int attr, ref int value, int size);
-
-    private const int DwmwaUseImmersiveDarkMode = 20;
-    private const int DwmwaWindowCornerPreference = 33;
-    private const int DwmwaBorderColor = 34;
-
-    private void ApplyWindowFrame()
-    {
-        try
-        {
-            var hwnd = new WindowInteropHelper(this).Handle;
-            var dark = 1;
-            DwmSetWindowAttribute(hwnd, DwmwaUseImmersiveDarkMode, ref dark, sizeof(int));
-            var round = 2; // DWMWCP_ROUND
-            DwmSetWindowAttribute(hwnd, DwmwaWindowCornerPreference, ref round, sizeof(int));
-            var border = 0x00422A1A; // COLORREF (0x00BBGGRR) → #1A2A42
-            DwmSetWindowAttribute(hwnd, DwmwaBorderColor, ref border, sizeof(int));
-        }
-        catch
-        {
-            // Görsel iyileştirme; başarısız olursa varsayılan çerçeve kullanılır.
-        }
     }
 }

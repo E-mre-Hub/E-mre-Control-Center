@@ -367,7 +367,8 @@ public static class RunningAppManager
     [DllImport("kernel32.dll", SetLastError = true)]
     private static extern bool CloseHandle(IntPtr hObject);
 
-    private static string? QueryImagePath(int pid)
+    /// <summary>İşlemin tam EXE yolu (sınırlı sorgu hakkıyla; yükseltilmiş işlemlerde de çalışır). Okunamazsa null.</summary>
+    internal static string? QueryImagePath(int pid)
     {
         var h = OpenProcess(ProcessQueryLimitedInformation, false, pid);
         if (h == IntPtr.Zero) return null;

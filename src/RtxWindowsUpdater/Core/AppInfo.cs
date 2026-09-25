@@ -11,6 +11,15 @@ public static class AppInfo
 {
     public const string Name = "E-mre Control Center";
 
+    /// <summary>Kaynak kod deposu (özel). Windows Uygulamalar kaydında "Destek bağlantısı" ve hız testi Referer başlığı.</summary>
+    public const string RepositoryUrl = "https://github.com/E-mre-Hub/E-mre-Control-Center";
+
+    /// <summary>
+    /// Herkese açık sürüm deposu (yalnızca kurulum dosyaları ve sürüm notları; kaynak kod özel depoda kalır). GitHub Actions her etiketle
+    /// kurulum dosyasını buraya da yayınlar; uygulama içi güncelleme buradan denetler.
+    /// </summary>
+    public const string ReleasesRepository = "E-mre-Hub/E-mre-Control-Center-Releases";
+
     /// <summary>Önceki adlar, en yeniden en eskiye; yalnızca eski veri klasörlerini bulmak için kullanılır.</summary>
     public static IReadOnlyList<string> LegacyNames { get; } = ["E-mre Hub", "RTX Windows Updater"];
 

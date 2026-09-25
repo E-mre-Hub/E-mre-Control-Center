@@ -13,6 +13,9 @@ permissions:
 jobs:
   build:
     runs-on: windows-latest
+    env:
+      # Açık sürüm deposuna (uygulama içi güncelleme) yazma anahtarı tanımlı mı? Anahtarın kendisi günlüğe yazılmaz.
+      HAS_RELEASES_TOKEN: ${{ secrets.RELEASES_TOKEN != '' }}
     steps:
       - name: Kodu al
         uses: actions/checkout@v4
@@ -29,22 +32,67 @@ jobs:
           if ($env:GITHUB_REF_TYPE -eq 'tag') { $v = $env:GITHUB_REF_NAME }
           .\tools\Build-Exe.ps1 -Version $v
 
-      - name: ZIP paketi hazırla
+      # Kurulum dosyası = aynı EXE, adında "Setup" geçtiği için kurulum ekranıyla açılır (Program Files + Başlat menüsü + Windows
+      # Uygulamalar kaydı). ZIP taşınabilir kullanım içindir (kurulum gerektirmez).
+      - name: Kurulum dosyası ve ZIP paketi hazırla
         shell: powershell
         run: |
-          $name = if ($env:GITHUB_REF_TYPE -eq 'tag') { "E-mre-Control-Center-$($env:GITHUB_REF_NAME).zip" } else { 'E-mre-Control-Center.zip' }
-          Compress-Archive -Path 'E-mre Control Center.exe' -DestinationPath $name -Force
-          "ZIP_NAME=$name" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
+          $suffix = if ($env:GITHUB_REF_TYPE -eq 'tag') { "-$($env:GITHUB_REF_NAME)" } else { '' }
+          $zip = "E-mre-Control-Center$suffix.zip"
+          $setup = "E-mre-Control-Center-Setup$suffix.exe"
+          Compress-Archive -Path 'E-mre Control Center.exe' -DestinationPath $zip -Force
+          Copy-Item 'E-mre Control Center.exe' $setup -Force
+          "ZIP_NAME=$zip" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
+          "SETUP_NAME=$setup" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
 
       - name: Artifact yükle
         uses: actions/upload-artifact@v4
         with:
           name: E-mre-Control-Center
-          path: ${{ env.ZIP_NAME }}
+          path: |
+            ${{ env.SETUP_NAME }}
+            ${{ env.ZIP_NAME }}
+
+      # Sürüm notları: README "Sürüm geçmişi" bölümündeki "### vX.Y.Z" başlığının altı (uygulamadaki güncelleme penceresinde gösterilir).
+      - name: Sürüm notlarını hazırla
+        if: startsWith(github.ref, 'refs/tags/v')
+        shell: powershell
+        run: |
+          $tag = $env:GITHUB_REF_NAME
+          $readme = Get-Content README.md -Raw -Encoding UTF8
+          $m = [regex]::Match($readme, "(?ms)^### $([regex]::Escape($tag))[ \t]*\r?\n(.*?)(?=^### v|\z)")
+          $notes = if ($m.Success) { $m.Groups[1].Value.Trim() } else { "E-mre Control Center $tag" }
+          [IO.File]::WriteAllText((Join-Path $PWD 'release-notes.md'), $notes, (New-Object System.Text.UTF8Encoding($false)))
+          Write-Host "Sürüm notu: $($notes.Length) karakter"
 
       - name: GitHub Release oluştur
         if: startsWith(github.ref, 'refs/tags/v')
         uses: softprops/action-gh-release@v2
         with:
-          files: ${{ env.ZIP_NAME }}
+          files: |
+            ${{ env.SETUP_NAME }}
+            ${{ env.ZIP_NAME }}
+          body_path: release-notes.md
           generate_release_notes: true
+
+      # Uygulama içi güncelleme: kaynak kod özel depoda kalır; kurulum dosyası ve notlar herkese açık sürüm deposuna da yayınlanır
+      # (uygulamalar yeni sürümü oradan görür). Anahtar: özel depo Settings → Secrets → Actions → RELEASES_TOKEN
+      # (yalnızca E-mre-Control-Center-Releases deposuna "Contents: Read and write" izinli ince ayarlı erişim anahtarı).
+      - name: Açık sürüm deposuna yayınla (uygulama içi güncelleme)
+        if: startsWith(github.ref, 'refs/tags/v') && env.HAS_RELEASES_TOKEN == 'true'
+        uses: softprops/action-gh-release@v2
+        with:
+          repository: E-mre-Hub/E-mre-Control-Center-Releases
+          token: ${{ secrets.RELEASES_TOKEN }}
+          tag_name: ${{ github.ref_name }}
+          name: E-mre Control Center ${{ github.ref_name }}
+          body_path: release-notes.md
+          make_latest: true
+          files: |
+            ${{ env.SETUP_NAME }}
+            ${{ env.ZIP_NAME }}
+
+      - name: Uyarı – sürüm deposu anahtarı yok
+        if: startsWith(github.ref, 'refs/tags/v') && env.HAS_RELEASES_TOKEN != 'true'
+        shell: powershell
+        run: Write-Host "::warning::RELEASES_TOKEN tanımlı değil; sürüm açık sürüm deposuna yayınlanmadı. Uygulamalar bu sürümü güncelleme olarak göremez."

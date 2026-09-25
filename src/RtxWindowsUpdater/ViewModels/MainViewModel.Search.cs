@@ -26,7 +26,7 @@ public sealed partial class MainViewModel
         [SectionKeys.LogFiles] = "günlük dosyası log klasör dışa aktar veri klasörü",
         [SectionKeys.DeviceInfo] = "işlemci cpu ekran kartı gpu bellek ram disk depolama ssd işletim sistemi windows sürüm donanım",
         [SectionKeys.DeviceStatus] = "canlı sıcaklık kullanım fan cpu gpu bellek termal",
-        [SectionKeys.DeviceAbout] = "hakkında sürüm uygulama",
+        [SectionKeys.DeviceAbout] = "hakkında sürüm uygulama kurulum yüklü kaldır",
         [SectionKeys.SpeedTest] = "internet hız ping indirme yükleme paket kaybı mbps titreşim",
         [SectionKeys.SpeedServers] = "sunucu ookla speedtest cloudflare turkcell seç otomatik",
         [SectionKeys.SpeedHistory] = "sonuçlar geçmiş hız",

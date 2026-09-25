@@ -1,6 +1,7 @@
 ﻿<#
     E-mre Control Center - tek dosya EXE üretimi
     Çıktı: <proje klasörü (E-mre Control Center)>\E-mre Control Center.exe  (klasör, betiğin konumundan bulunur; adı önemli değildir)
+           ve aynı EXE'nin kurulum adıyla kopyası: E-mre Control Center Setup.exe
 
     Kullanım (proje klasöründe):
         powershell -ExecutionPolicy Bypass -File .\tools\Build-Exe.ps1
@@ -113,13 +114,18 @@ if ($SignThumbprint) {
     $signedBy = $sig.SignerCertificate.Subject
 }
 
-# 5) EXE'yi proje kök klasörüne kopyala
+# 5) EXE'yi proje kök klasörüne kopyala. Kurulum dosyası aynı EXE'dir: adında "Setup" geçtiği için kurulum ekranıyla açılır ve
+#    kendini Program Files'a "E-mre Control Center.exe" olarak kurar (ayrı bir kurulum aracı gerekmez; imzalıysa imza da aynıdır).
 $target = Join-Path $root "$appName.exe"
 Copy-Item $exe $target -Force
+$setup = Join-Path $root "$appName Setup.exe"
+Copy-Item $exe $setup -Force
+if ((Get-FileHash $target).Hash -ne (Get-FileHash $setup).Hash) { throw "Kurulum dosyası uygulama EXE'siyle aynı değil: $setup" }
 
 $size = [Math]::Round((Get-Item $target).Length / 1MB, 1)
 Write-Host ""
 Write-Host "Tamamlandı: $target ($size MB)" -ForegroundColor Green
+Write-Host "Kurulum dosyası: $setup (aynı EXE; çift tıklayınca kurulum ekranı açılır)" -ForegroundColor Green
 if ($signedBy) {
     Write-Host "İmzalı: $signedBy (zaman damgalı, doğrulandı)" -ForegroundColor Green
 } else {

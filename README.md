@@ -21,8 +21,15 @@ kendi bakım araçlarını (SFC, DISM CheckHealth / onayla RestoreHealth, MRT h�
 - **Şeffaflık:** Sistem Sağlık Özeti, Sistem Bilgileri, her kartta son çalıştırılma zamanı, Detaylı Sonuç paneli
   (gerçek komut, çıkış kodu, stdout/stderr, süre), Son İşlem özeti, işlem geçmişi, Windows bildirimleri ve Log Yönetimi.
 
+- **Kurulum ve kaldırma:** `E-mre-Control-Center-Setup-vX.Y.Z.exe` ile gerçek bir Windows programı gibi kurulur (Program Files,
+  Başlat menüsü, isteğe bağlı masaüstü kısayolu, Ayarlar → Uygulamalar kaydı). Windows'tan kaldırılırken veda ekranı ve isteğe
+  bağlı geri bildirim ("Neden kaldırıyorsunuz?") açılır (bkz. [Kurulum ve kaldırma](#kurulum-güncelleme-ve-kaldırma)).
+- **Uygulama içi güncelleme:** yeni sürüm yayınlandığında uygulama açılışta "Yeni sürüm yayınlandı" penceresini gösterir; Güncelle ile
+  indirilir, doğrulanır ve kurulur (zorunlu; bkz. [Uygulama içi güncelleme](#uygulama-içi-güncelleme-zorunlu)).
+
 - Teknoloji: C# / .NET 8 / WPF, MVVM
-- Çıktı: `E-mre Control Center.exe`: tek dosya, self-contained (hedef bilgisayarda .NET kurulu olması gerekmez)
+- Çıktı: `E-mre Control Center.exe`: tek dosya, self-contained (hedef bilgisayarda .NET kurulu olması gerekmez). Kurulum dosyası
+  aynı EXE'dir; adında "Setup" geçtiği için kurulum ekranıyla açılır.
 - Arayüz: siyah / koyu lacivert, neon mavi vurgular, gölgeli kartlar, animasyonlar, Segoe Fluent ikonları (emoji yok)
 
 > Bu depo **özeldir (private)**. Yalnızca depo sahibinin davet ettiği kişiler erişebilir.
@@ -33,15 +40,19 @@ kendi bakım araçlarını (SFC, DISM CheckHealth / onayla RestoreHealth, MRT h�
 ## Hızlı başlangıç (arkadaşlar için)
 
 1. GitHub'dan gelen davet e-postasını kabul edin (veya https://github.com/E-mre-Hub/E-mre-Control-Center adresindeki depo davetini onaylayın).
-2. Deponun **Releases** bölümünden en son `E-mre-Control-Center-vX.Y.Z.zip` dosyasını indirin (eski paketler: v1.3.x
-   `E-mre-Hub-vX.Y.Z.zip`, v1.2.0 ve öncesi `RTX-Windows-Updater-vX.Y.Z.zip`).
-3. ZIP'i bir klasöre çıkarın ve `E-mre Control Center.exe` dosyasına çift tıklayın.
-4. **Windows SmartScreen uyarısı:** EXE dijital olarak imzalanmadığı için ilk açılışta
+2. Deponun **Releases** bölümünden en son **`E-mre-Control-Center-Setup-vX.Y.Z.exe`** dosyasını indirin ve çift tıklayın.
+   Kurulum ekranında **Yükle**'ye basın, Windows'un yönetici izni penceresinde **Evet** deyin. Kurulum bitince
+   "Bizi tercih ettiğiniz için teşekkürler!" ekranından uygulamayı başlatın; sonra Başlat menüsünden (veya masaüstü kısayolundan) açılır.
+   - Kurmadan kullanmak isterseniz aynı sayfadaki `E-mre-Control-Center-vX.Y.Z.zip` (taşınabilir) indirilip çıkarılır ve
+     `E-mre Control Center.exe` çalıştırılır (eski paketler: v1.3.x `E-mre-Hub-vX.Y.Z.zip`, v1.2.0 ve öncesi `RTX-Windows-Updater-vX.Y.Z.zip`).
+3. **Windows SmartScreen uyarısı:** dosya dijital olarak imzalanmadığı için ilk açılışta
    "Windows kişisel bilgisayarınızı korudu" uyarısı çıkabilir. **Ek bilgi → Yine de çalıştır** seçin.
    (Bu, imzasız her uygulamada görülen normal bir uyarıdır; kaynak kodun tamamı bu depodadır.) Aynı nedenle UAC penceresinde
    "Yayıncı: Bilinmeyen" yazar; bkz. [Kod imzalama](#kod-imzalama-ve-bilinmeyen-yayıncı).
-5. Uygulama yönetici izni isteyecektir; UAC penceresinde **Evet** deyin. (İzin vermezseniz uygulama açılır ama 10 kartın tamamı
+4. Uygulama açılışta yönetici izni isteyecektir; UAC penceresinde **Evet** deyin. (İzin vermezseniz uygulama açılır ama 10 kartın tamamı
    kullanım dışı olur; hiçbir kontrol veya güncelleme yapılamaz. Hız Testi, Cihaz Bilgileri ve arama yine kullanılabilir.)
+5. Kaldırmak için: **Windows Ayarlar → Uygulamalar → Yüklü uygulamalar → E-mre Control Center → Kaldır**.
+6. Yeni sürümler (v1.7.0 ve sonrası) uygulama açılırken kendiliğinden bildirilir: **Güncelle**'ye basmanız yeterlidir.
 
 Gereksinimler: Windows 11 (derleme 22000+, zorunlu), internet bağlantısı, winget (Windows 11'de hazır gelir).
 NVIDIA GeForce RTX ekran kartı önerilir. Kart yoksa, başka marka bir kart ya da RTX serisi olmayan bir NVIDIA kartı varsa
@@ -67,9 +78,13 @@ Desktop\E-mre Control Center\        ← Proje klasörü (önceki adları: E-mre
 └── src\RtxWindowsUpdater\
     ├── RtxWindowsUpdater.csproj     ← Proje, ikon, tek dosya yayın ayarları (iç proje adı eski addan kaldı; EXE adı AssemblyName'den)
     ├── app.manifest                 ← UAC / DPI / Windows 10-11 bildirimi
-    ├── App.xaml(.cs)                ← Giriş noktası, global hata yakalama, argümanlar
+    ├── App.xaml(.cs)                ← Giriş noktası (uygulama / kurulum / kaldırma), global hata yakalama, argümanlar
     ├── Core\
-    │   ├── AppInfo.cs               ← Uygulama adı (E-mre Control Center), eski adlar, veri klasörü, sürüm
+    │   ├── AppInfo.cs               ← Uygulama adı (E-mre Control Center), eski adlar, veri klasörü, sürüm, depo adresi
+    │   ├── LaunchMode.cs            ← Açılış biçimi: uygulama / kurulum (dosya adında "Setup") / --install / --uninstall
+    │   ├── ShellLink.cs             ← Windows kısayolu (.lnk) oluşturma ve okuma (IShellLinkW)
+    │   ├── SetupLog.cs              ← Kurulum / kaldırma günlüğü (%TEMP%\E-mre Control Center Kurulum.log)
+    │   ├── ProtectedDirectory.cs    ← Yalnızca Yöneticiler + SYSTEM erişimli klasör (kaldırıcı kopyası, indirilen güncelleme)
     │   ├── Logger.cs                ← Thread-safe günlük (arayüz + dosya)
     │   ├── ProcessRunner.cs         ← Harici komut çalıştırma: stdout/stderr, zaman aşımı, süreç ağacını sonlandırma
     │   ├── CmdCommand.cs            ← Güvenli cmd.exe komut satırı (tırnaklama + tehlikeli karakter reddi)
@@ -100,10 +115,15 @@ Desktop\E-mre Control Center\        ← Proje klasörü (önceki adları: E-mre
     │   ├── OoklaSpeedtestService.cs ← Speedtest by Ookla (resmi araç: bul / winget ile kur / yakın sunucular / JSON olaylarıyla test)
     │   ├── AppStateStore.cs         ← İşlem geçmişi / son sonuçlar / ayarlar / hız testi geçmişi (%LOCALAPPDATA%\…\state.json)
     │   ├── NotificationService.cs   ← Windows 11 bildirimleri (toast)
+    │   ├── InstallerService.cs      ← Kurulum / güncelleme / kaldırma (Program Files, kısayollar, Uninstall kaydı, doğrulama, geri alma)
+    │   ├── FeedbackService.cs       ← Kaldırma geri bildirimi → Google Formu (yanıtlar Google E-Tablolar'da)
+    │   ├── UpdateService.cs         ← Uygulama içi güncelleme: sürüm deposu (GitHub API) denetimi, indirme + doğrulama (boyut, SHA-256, ürün, sürüm)
     │   └── UpdateOrchestrator.cs    ← Güvenli sıra, Tümü / Seçilenler akışları, modül izolasyonu, iptal
     ├── ViewModels\                  ← MainViewModel (bölme gezinmesi; + MainViewModel.Device: Cihaz bölmeleri, canlı ölçüm; + MainViewModel.Search: ana sayfa araması), TextSearch (Türkçe harf duyarsız arama), SpeedTestViewModel, DeviceViewModels, CategoryViewModel (7 kategori + bölmeler; yalnızca
-    │                                  arayüz düzeni), DialogViewModel, DetailViewModel, ThrottledProgress, kart/satır modelleri, komutlar
-    ├── Views\                       ← MainWindow.xaml(.cs): giriş sayfası, Kontrol Merkezi ana sayfası, kategori ekranları; RingGauge.cs, SpeedGauge.cs (hız göstergesi), CenteredWrapPanel.cs, WaveBackdrop.cs (ana sayfa dalga zemini, statik); Converters.cs
+    │                                  arayüz düzeni), DialogViewModel, DetailViewModel, ThrottledProgress, kart/satır modelleri, komutlar;
+    │                                  SetupViewModels (kurulum ve kaldırma ekranları), UpdateViewModel (zorunlu güncelleme penceresi)
+    ├── Views\                       ← MainWindow.xaml(.cs): giriş sayfası, Kontrol Merkezi ana sayfası, kategori ekranları; RingGauge.cs, SpeedGauge.cs (hız göstergesi), CenteredWrapPanel.cs, WaveBackdrop.cs (ana sayfa dalga zemini, statik); Converters.cs;
+    │                                  SetupWindow.xaml (kurulum), UninstallWindow.xaml (kaldırma + geri bildirim), SetupResources.xaml, WindowFrame.cs
     └── Themes\Theme.xaml            ← Renkler, butonlar, kartlar, animasyonlar, ilerleme çubuğu
 ```
 
@@ -163,20 +183,35 @@ tırnak içinde yazılır). Depo: https://github.com/E-mre-Hub/E-mre-Control-Cen
 
 ### Yeni sürüm yayınlama (depo sahibi)
 
-1. `src\RtxWindowsUpdater\RtxWindowsUpdater.csproj` içindeki `<Version>` değerini artırın (ör. `1.6.0`).
+1. `src\RtxWindowsUpdater\RtxWindowsUpdater.csproj` içindeki `<Version>` değerini artırın (ör. `1.7.0`).
 2. Değişiklikleri commit'leyip gönderin, ardından etiket oluşturun:
 
 ```bash
-git tag v1.6.0
+git tag v1.7.0
 ```
 
 ```bash
-git push origin v1.6.0
+git push origin v1.7.0
 ```
 
-3. GitHub Actions (`.github/workflows/release.yml`) EXE'yi Windows sunucusunda derler ve
-   `E-mre-Control-Center-v1.6.0.zip` olarak **Releases** sayfasına ekler. Davetli arkadaşlar oradan indirir.
-   Etiketteki sürüm (v1.6.0) EXE'nin sürümü olarak kullanılır; csproj'daki `<Version>` ile aynı olmalıdır.
+3. GitHub Actions (`.github/workflows/release.yml`) EXE'yi Windows sunucusunda derler ve **Releases** sayfasına iki dosya ekler:
+   `E-mre-Control-Center-Setup-v1.7.0.exe` (kurulum) ve `E-mre-Control-Center-v1.7.0.zip` (taşınabilir). Davetli arkadaşlar oradan indirir.
+   Etiketteki sürüm (v1.7.0) EXE'nin sürümü olarak kullanılır; csproj'daki `<Version>` ile aynı olmalıdır. Sürüm notları README'deki
+   `### v1.7.0` bölümünden alınır (uygulamadaki güncelleme penceresinde de bu metin görünür).
+4. Aynı dosyalar ve notlar herkese açık **sürüm deposuna** da yayınlanır (`E-mre-Hub/E-mre-Control-Center-Releases`); uygulamalar yeni
+   sürümü buradan görür. Bunun için özel depoda `RELEASES_TOKEN` gizli anahtarı tanımlı olmalıdır (bkz. aşağıdaki tek seferlik kurulum).
+   Tanımlı değilse derleme uyarı verir ve uygulamalar o sürümü güncelleme olarak göremez.
+
+#### Sürüm deposu – tek seferlik kurulum (depo sahibi)
+
+1. GitHub'da `E-mre-Hub` altında **herkese açık (Public)** yeni depo: `E-mre-Control-Center-Releases`, "Add a README file" işaretli
+   (boş depoya sürüm yayınlanamaz). Bu depoya kod konmaz; yalnızca Actions'ın yayınladığı kurulum dosyaları ve notlar durur.
+2. GitHub → Settings → Developer settings → **Personal access tokens → Fine-grained tokens → Generate new token**:
+   Resource owner `E-mre-Hub`, Repository access **Only select repositories → E-mre-Control-Center-Releases**, Permissions →
+   Repository permissions → **Contents: Read and write**. Süre sonu seçilebilir (dolunca yenilenir). (Kuruluş ince ayarlı anahtarları
+   onaya bağlıysa `E-mre-Hub` → Settings → Personal access tokens bölümünden onaylanır.)
+3. Özel depo `E-mre-Control-Center` → Settings → Secrets and variables → Actions → **New repository secret**: ad `RELEASES_TOKEN`,
+   değer 2. adımdaki anahtar. Anahtar uygulamaya konmaz, yalnızca GitHub Actions kullanır.
 
 Not: Özel depolarda GitHub Actions ücretsiz planda aylık 2.000 dakika ile sınırlıdır (Windows dakikaları 2 kat sayılır);
 bir derleme yaklaşık 3-5 dakika sürer.
@@ -343,6 +378,70 @@ Hiçbir hata başarılı gibi gösterilmez; nedeni kartta, sonuç ekranında ve 
 11. Güncellemeden sonra çalışan bir uygulama engel olduysa "Çalışan uygulamalar güncellemeyi engelliyor" penceresi çıkar
    (kapatılacak ve kapatılmayacak işlemler ayrı listelenir). "İşlem Tamamlandı" ekranı her bileşenin gerçek sonucunu gösterir. Yeniden başlatma gerekiyorsa
    "Yeniden başlat" butonu çıkar; onaylarsanız 60 saniye sonra yeniden başlar (`shutdown /a` ile iptal edilebilir).
+
+### Kurulum, güncelleme ve kaldırma
+
+**Kurulum** (`E-mre-Control-Center-Setup-vX.Y.Z.exe`):
+
+- Kurulum dosyası uygulamanın kendisidir: adında "Setup" geçtiği için kurulum ekranıyla açılır ve kendini
+  `C:\Program Files\E-mre Control Center\E-mre Control Center.exe` olarak kopyalar (ayrı kurulum aracı, internetten indirme yok).
+- **Yükle** → Windows yönetici izni (UAC) ister; izin verilmezse hiçbir şey değişmez. Program Files seçilmesinin nedeni: uygulama
+  yönetici olarak çalıştığı için EXE'sinin yalnızca yöneticinin yazabildiği bir klasörde durması gerekir.
+- Adımlar ekranda gerçek sonuçlarıyla gösterilir: çalışan uygulama denetimi → program dosyası kopyalama (gerçek bayt ilerlemesi) →
+  SHA-256 doğrulaması (kurulan dosya indirilenle bayt bayt aynı) → Başlat menüsü kısayolu → masaüstü kısayolu (isteğe bağlı) →
+  Windows Uygulamalar kaydı (ad, sürüm, yayıncı, simge, boyut, kaldırma komutu; kayıt yeniden okunarak doğrulanır).
+- Bir adım başarısız olursa yapılanlar geri alınır (önceki sürüm geri yüklenir, yeni kısayollar ve kayıt silinir) ve neden yazılır.
+- Son ekran: **"Bizi tercih ettiğiniz için teşekkürler! Aramıza hoş geldin."** ve "E-mre Control Center'ı şimdi başlat".
+- **Güncelleme:** yeni sürümün Setup dosyası aynı şekilde çalıştırılır (buton "Güncelle"). Uygulama açıksa kurulum sorar ve normal
+  kapanma isteği gönderir; zorla kapatmaz (bir işlem sürüyorsa uygulama kendi onay sorusunu gösterir). Ayarlar, geçmiş ve günlükler
+  (`%LOCALAPPDATA%\E-mre Control Center`) korunur.
+
+**Kaldırma** (Windows Ayarlar → Uygulamalar → Yüklü uygulamalar → E-mre Control Center → Kaldır):
+
+- Windows yönetici izni ister, ardından kaldırma ekranı açılır: solda **"Bir dahaki sefere görüşmek üzere!"** ve kaldırılacaklar;
+  sağda **"Neden kaldırıyorsunuz?"** (Sevmedim · Kasıyor / yavaş çalışıyor · Hata veriyor · Artık ihtiyacım yok · Diğer) ve isteğe
+  bağlı mesaj (en fazla 500 karakter). Butonlar: **Gönder ve Kaldır** (bir şey seçildiyse; yoksa **Kaldır**) ve **İptal**
+  (hiçbir şey değişmez).
+- Kaldırılanlar: program dosyası ve klasörü, Başlat menüsü / masaüstü kısayolları (yalnızca hedefi bu uygulama olanlar), Windows
+  Uygulamalar kaydı, uygulamanın geçici dosyaları (`%TEMP%\.net\E-mre Control Center` ve eski adları) ve bildirim kaydı.
+- **"Ayarlarımı, geçmişimi ve günlüklerimi de sil"** işaretlenirse `%LOCALAPPDATA%\E-mre Control Center` (ve varsa eski
+  `E-mre Hub` / `RTX Windows Updater` klasörleri) de silinir; işaretlenmezse korunur ve yeniden kurulumda kalınan yerden devam edilir.
+- Güvenlik: yalnızca bu uygulamanın bilinen yolları silinir. Program klasörüne sonradan konmuş başka dosyalar ve hedefi başka
+  program olan kısayollar bırakılır ve ekranda yazılır; klasör bağlantıları (junction / symlink) izlenmez. Kaldırma,
+  `C:\ProgramData` altında yalnızca Yöneticiler ve SYSTEM'in erişebildiği geçici bir kopyadan çalışır: kurulu dosya kullanımda
+  kalmadığı için hemen silinir, geçici kopyayı Windows bilgisayar yeniden başlatılınca siler.
+- Speedtest by Ookla aracını kurduysanız o ayrı bir programdır; Windows Uygulamalar'dan ayrıca kaldırılabilir.
+
+**Geri bildirim (Google Formlar):**
+
+- Gönderilenler: seçilen nedenler, mesaj, uygulama sürümü ve Windows sürümü (ör. "Windows 11 25H2 (Derleme 26200.9550)").
+  Ad, e-posta, kullanıcı adı veya bilgisayar adı gönderilmez (Google, isteğin IP adresini görür).
+- Başarı yalnızca Google'ın gerçek yanıtıdır (HTTP 200). Gönderilemezse (ör. internet yok) kaldırma yine yapılır; son ekranda
+  gerçek hata ve **Tekrar gönder** gösterilir.
+- Yanıtlar depo sahibinin Google Formuna bağlı Google E-Tablosunda toplanır. Form kimlikleri `Services\FeedbackService.cs`
+  içindeki `FeedbackForm` sabitlerindedir; boşsa gönderim kapalıdır ve kaldırma ekranı neden / mesaj alanlarını göstermez
+  (sahte "gönderildi" yok).
+
+Kurulum / kaldırma günlüğü: `%TEMP%\E-mre Control Center Kurulum.log`. Uygulamanın Hakkında bölmesinde bu kopyanın kurulu mu
+taşınabilir mi olduğu yazar.
+
+### Uygulama içi güncelleme (zorunlu)
+
+- Uygulama her açılışta (gereksinimler geçtikten sonra, arka planda) herkese açık sürüm deposundaki son yayını denetler:
+  `https://api.github.com/repos/E-mre-Hub/E-mre-Control-Center-Releases/releases/latest` (oturum açılmaz; kaynak kod deposu özel kalır).
+- Yeni sürüm varsa girişten sonra ekranın önüne **"Yeni sürüm yayınlandı"** penceresi gelir: yeni / yüklü sürüm, yayın tarihi, boyut ve
+  sürüm notları (README'deki sürüm geçmişinden). Güncelleme **zorunludur**: arkadaki ekran kullanılamaz; seçenekler **Güncelle** veya
+  **Uygulamayı kapat**. Bir kontrol / güncelleme işlemi veya hız testi sürerken pencere beklenir (işlem yarıda bırakılmaz).
+- **Güncelle:** kurulum dosyası indirilir (gerçek bayt ilerlemesi) ve yalnızca şu doğrulamalardan geçerse çalıştırılır: GitHub'ın
+  bildirdiği boyut, GitHub'ın bildirdiği SHA-256 özeti, EXE içindeki ürün adı ("E-mre Control Center") ve sürüm (etiketle aynı).
+  Uygulama yönetici olarak çalışıyorsa dosya yalnızca Yöneticiler + SYSTEM erişimli bir klasöre (`C:\ProgramData`) indirilir.
+  Ardından kurulum başlatılır, uygulama kapanır; kurulum eski sürümün kapanmasını bekler, yeni sürümü kurar ve **kendiliğinden açar**.
+  Ayarlar ve geçmiş korunur. Uygulama yönetici olarak çalışmıyorsa Windows UAC sorar; reddedilirse güncelleme yapılmaz ve neden yazar.
+- Denetlenemezse (internet yok, GitHub yanıt vermedi, istek sınırı) uygulama normal açılır; güncelleme varmış gibi gösterilmez.
+  **Cihaz Bilgileri → Hakkında → Güncelleme** satırında gerçek sonuç yazar ("Güncel · son denetim …" / "Denetlenemedi: …") ve
+  **Şimdi denetle** ile yeniden denetlenebilir.
+- Taşınabilir (ZIP) kopyadan güncelleme, uygulamayı Program Files'a kurar (pencerede yazar); sonra Başlat menüsünden açılır.
+- v1.6.0 ve öncesinde bu özellik yoktur: o sürümleri kullananlar v1.7.0'ı bir kez Setup ile kurmalıdır; sonrakiler otomatik gelir.
 
 ### Kontrol Merkezi (ana sayfa ve kategoriler)
 
@@ -555,8 +654,42 @@ eski klasörlerde kalır (`%LOCALAPPDATA%\E-mre Hub\Logs\`, `%LOCALAPPDATA%\RTX 
 - MRT, Windows Update ile aylık dağıtılan bir araçtır (KB890830). Sistemde yoksa MRT kartı "Tarama başarısız – MRT.exe bulunamadı" gösterir.
 - Çöp Kutusu, UAC'yi onaylayan kullanıcı hesabının çöp kutusudur (standart kullanıcı + başka bir yönetici parolası
   kullanılırsa o yönetici hesabının çöp kutusu olur).
+- **Kurulum:** kurulum dosyası da imzasızdır (SmartScreen ve UAC "Bilinmeyen yayıncı"). Kurulum tüm kullanıcılar için Program Files'a
+  yapılır ve yönetici izni gerektirir; kullanıcı başına (izinsiz) kurulum yoktur. Kaldırmada kullanımdaki dosyalar (ör. açık kalan
+  bir kopyanın geçici dosyaları) ve kaldırıcının geçici kopyası bilgisayar yeniden başlatılınca silinir. "Ayarlarımı… sil" seçeneği,
+  UAC'yi onaylayan hesabın `%LOCALAPPDATA%` klasörünü siler (standart kullanıcı + başka bir yönetici parolasıyla kaldırılırsa o
+  yöneticinin klasörü).
 
 ## Sürüm geçmişi
+
+### v1.7.0
+
+**Yeni**
+- **Kurulum programı:** Releases'ta `E-mre-Control-Center-Setup-vX.Y.Z.exe`. Çift tıklayınca uygulamanın kendi tasarımında kurulum
+  ekranı açılır: Yükle → UAC → `C:\Program Files\E-mre Control Center`, Başlat menüsü kısayolu, isteğe bağlı masaüstü kısayolu ve
+  Windows Ayarlar → Uygulamalar kaydı. Her adım doğrulanır (SHA-256, kısayol hedefi, kayıt); başarısız kurulum geri alınır. Son ekran:
+  "Bizi tercih ettiğiniz için teşekkürler! Aramıza hoş geldin." Yeni sürüm aynı dosyayla güncellenir (ayarlar ve geçmiş korunur).
+- **Windows'tan kaldırma:** Ayarlar → Uygulamalar → Kaldır → "Bir dahaki sefere görüşmek üzere!" ekranı, "Neden kaldırıyorsunuz?"
+  (Sevmedim, Kasıyor / yavaş çalışıyor, Hata veriyor, Artık ihtiyacım yok, Diğer) + mesaj, **Gönder ve Kaldır** / **İptal**.
+  Ayarları, geçmişi ve günlükleri silmek isteğe bağlıdır. Geri bildirim Google Formuna gönderilir (yanıtlar Google E-Tablolar'da);
+  gönderilemezse kaldırma yine yapılır ve gerçek hata + "Tekrar gönder" gösterilir.
+- **Uygulama içi güncelleme (zorunlu):** açılışta herkese açık sürüm deposu denetlenir; yeni sürüm varsa "Yeni sürüm yayınlandı"
+  penceresi (sürüm notlarıyla) gelir ve uygulama güncellenmeden kullanılamaz. Güncelle → indirme (gerçek ilerleme) → boyut + SHA-256 +
+  ürün adı + sürüm doğrulaması → kurulum → yeni sürüm kendiliğinden açılır. Denetlenemezse uygulama normal açılır, neden Hakkında'da yazar.
+- Hakkında bölmesinde **Kurulum** (yüklü / taşınabilir) ve **Güncelleme** (son denetim sonucu + "Şimdi denetle") satırları.
+
+**Güvenlik**
+- Kaldırma, `C:\ProgramData` altında yalnızca Yöneticiler ve SYSTEM erişimli geçici bir kopyadan çalışır (yerel kitaplıkları da orada);
+  yalnızca bu uygulamanın bilinen yolları silinir, klasör bağlantıları izlenmez, başka programların dosyaları / kısayolları bırakılır.
+- Çalışan uygulama kurulum veya kaldırma için zorla kapatılmaz (yalnızca normal kapanma isteği).
+
+- İndirilen güncelleme doğrulanmadan çalıştırılmaz; yönetici olarak çalışırken yalnızca Yöneticiler + SYSTEM erişimli klasöre indirilir.
+
+**Dağıtım**
+- GitHub Actions her sürümde Setup EXE'sini ve taşınabilir ZIP'i birlikte yayınlar; `tools\Build-Exe.ps1` yerelde
+  `E-mre Control Center Setup.exe` dosyasını da üretir (aynı EXE).
+- Sürüm notları README'deki sürüm geçmişinden alınır; kurulum dosyası ve notlar herkese açık sürüm deposuna
+  (`E-mre-Hub/E-mre-Control-Center-Releases`) da yayınlanır (kaynak kod özel kalır; `RELEASES_TOKEN` gerekir).
 
 ### v1.6.0
 

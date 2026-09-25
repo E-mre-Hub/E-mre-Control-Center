@@ -237,6 +237,14 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
             RefreshCategories();
             RaiseUpdateAvailabilityChanged();
             OnPropertyChanged(nameof(AvailableSummary));
+            OnPropertyChanged(nameof(ShowUpdateOverlay));
+        };
+
+        // Uygulama içi güncelleme (zorunlu): yeni sürüm varsa ana ekranın önüne pencere gelir.
+        Update = new UpdateViewModel(_logger);
+        Update.PropertyChanged += (_, e) =>
+        {
+            if (e.PropertyName == nameof(UpdateViewModel.IsRequired)) OnPropertyChanged(nameof(ShowUpdateOverlay));
         };
 
         // Kontrol Merkezi: mevcut kartlar (aynı nesneler) 7 kategori altında gruplanır; yalnızca arayüz düzenidir.
@@ -313,6 +321,14 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
 
     /// <summary>Yeni bir sistem işlemi (kontrol / güncelleme / kart işlemi) başlatılabilir mi? Hız testi sürerken hayır.</summary>
     private bool CanStartOperation => !IsBusy && SpeedTest?.IsWorking != true;
+
+    public UpdateViewModel Update { get; }
+
+    /// <summary>
+    /// "Yeni sürüm yayınlandı" penceresi: girişten sonra (Kontrol Merkezi), sistem işlemi veya hız testi sürmüyorken gösterilir
+    /// (süren işlem yarıda bırakılmasın; bitince pencere gelir).
+    /// </summary>
+    public bool ShowUpdateOverlay => Update.IsRequired && IsDashboard && !IsBusy && SpeedTest?.IsWorking != true;
     public ObservableCollection<RequirementRowViewModel> Requirements { get; }
     public RequirementRowViewModel WindowsRow { get; }
     public RequirementRowViewModel GpuRow { get; }
@@ -492,7 +508,13 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
     public bool IsDashboard
     {
         get => _isDashboard;
-        private set { Set(ref _isDashboard, value); OnPropertyChanged(nameof(IsRequirementsPage)); OnPropertyChanged(nameof(IsHomeScreen)); }
+        private set
+        {
+            Set(ref _isDashboard, value);
+            OnPropertyChanged(nameof(IsRequirementsPage));
+            OnPropertyChanged(nameof(IsHomeScreen));
+            OnPropertyChanged(nameof(ShowUpdateOverlay));
+        }
     }
 
     public bool IsRequirementsPage => !IsDashboard;
@@ -635,6 +657,22 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
 
     public string AppVersion { get; } = "v" + AppInfo.Version;
 
+    /// <summary>Hakkında → Kurulum: bu kopya Program Files'taki kurulu uygulama mı, taşınabilir (ZIP) kopya mı (Uninstall kaydından).</summary>
+    public string InstallStatusText => _installStatusText ??= DescribeInstall();
+    private string? _installStatusText;
+
+    private string DescribeInstall()
+    {
+        var layout = InstallLayout.Machine;
+        var exe = Environment.ProcessPath;
+        if (exe is not null && string.Equals(System.IO.Path.GetFullPath(exe), layout.ExePath, StringComparison.OrdinalIgnoreCase))
+            return $"Yüklü · {layout.InstallDir} · kaldırmak için Windows Ayarlar → Uygulamalar";
+        var installed = new InstallerService(layout, _logger.Info).ReadInstalled();
+        return installed?.Version is { } version
+            ? $"Taşınabilir kopya çalışıyor · yüklü sürüm {version} ({layout.InstallDir})"
+            : "Taşınabilir (yüklü değil) · kurmak için E-mre Control Center Setup dosyasını kullanın";
+    }
+
     public ICommand ContinueCommand { get; }
     public ICommand ContinueWithoutGpuCommand { get; }
     public ICommand ElevateCommand { get; }
@@ -674,6 +712,9 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
 
         // Sistem bilgileri arka planda okunur; arayüz beklemez.
         _ = RefreshSystemInfoAsync();
+
+        // Yeni sürüm denetimi (arka planda; sonuç gelince zorunlu güncelleme penceresi girişten sonra gösterilir).
+        if (UpdateViewModel.AutoCheckEnabled) _ = Update.CheckAsync();
 
         if (_argAccepted)
         {
@@ -1575,6 +1616,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         OnPropertyChanged(nameof(IsBusy));
         OnPropertyChanged(nameof(IsOperationRunning));
         if (busy) RaiseUpdateAvailabilityChanged();
+        OnPropertyChanged(nameof(ShowUpdateOverlay));
         SpeedTest.OnSystemBusyChanged();
     }
 
