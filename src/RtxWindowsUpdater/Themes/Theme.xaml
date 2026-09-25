@@ -5,7 +5,7 @@
     <!-- ============================================================ -->
     <!--  RENK PALETİ – siyah / koyu lacivert / neon mavi               -->
     <!-- ============================================================ -->
-    <Color x:Key="C.Bg0">#FF04060B</Color>
+    <Color x:Key="C.Bg0">#FF020307</Color>
     <Color x:Key="C.Bg1">#FF070C18</Color>
     <Color x:Key="C.Bg2">#FF0B1426</Color>
     <Color x:Key="C.Surface">#FF0C1424</Color>
@@ -15,8 +15,8 @@
     <Color x:Key="C.Neon">#FF1FB6FF</Color>
     <Color x:Key="C.Neon2">#FF3D6BFF</Color>
     <Color x:Key="C.Text">#FFE7EEF9</Color>
-    <Color x:Key="C.Text2">#FF93A4C3</Color>
-    <Color x:Key="C.Text3">#FF5A6A88</Color>
+    <Color x:Key="C.Text2">#FFA7B5CF</Color>
+    <Color x:Key="C.Text3">#FF7887A5</Color>
     <Color x:Key="C.Green">#FF2BD67B</Color>
     <Color x:Key="C.Orange">#FFFFA63D</Color>
     <Color x:Key="C.Red">#FFFF4D61</Color>
@@ -39,11 +39,16 @@
     <SolidColorBrush x:Key="B.Gray" Color="{StaticResource C.Gray}" />
     <SolidColorBrush x:Key="B.Blue" Color="{StaticResource C.Blue}" />
 
-    <RadialGradientBrush x:Key="B.WindowBg" Center="0.15,0" GradientOrigin="0.15,0" RadiusX="1.2" RadiusY="1.1">
-        <GradientStop Color="#FF0C1A36" Offset="0" />
-        <GradientStop Color="#FF070C18" Offset="0.45" />
-        <GradientStop Color="#FF04060B" Offset="1" />
+    <!-- Pencere zemini: neredeyse siyah; üst ortada (logo / başlık) çok hafif lacivert aydınlık. Önemli öğeler neon ile öne çıkar. -->
+    <RadialGradientBrush x:Key="B.WindowBg" Center="0.5,0" GradientOrigin="0.5,0" RadiusX="0.9" RadiusY="0.85">
+        <GradientStop Color="#FF081226" Offset="0" />
+        <GradientStop Color="#FF040811" Offset="0.5" />
+        <GradientStop Color="#FF020307" Offset="1" />
     </RadialGradientBrush>
+
+    <!-- Parlak neon (ana sayfa simgeleri ve arama kutusu) ve simge parlaması -->
+    <SolidColorBrush x:Key="B.NeonBright" Color="#FF4CCBFF" />
+    <DropShadowEffect x:Key="Fx.IconGlow" BlurRadius="20" ShadowDepth="0" Opacity="0.85" Color="#1FB6FF" />
 
     <LinearGradientBrush x:Key="B.NeonGradient" StartPoint="0,0" EndPoint="1,1">
         <GradientStop Color="#FF1FB6FF" Offset="0" />
@@ -51,8 +56,8 @@
     </LinearGradientBrush>
 
     <LinearGradientBrush x:Key="B.CardBg" StartPoint="0,0" EndPoint="0,1">
-        <GradientStop Color="#FF0E182C" Offset="0" />
-        <GradientStop Color="#FF0A1222" Offset="1" />
+        <GradientStop Color="#FF0C1528" Offset="0" />
+        <GradientStop Color="#FF080F1D" Offset="1" />
     </LinearGradientBrush>
 
     <FontFamily x:Key="F.Icons">Segoe Fluent Icons, Segoe MDL2 Assets</FontFamily>

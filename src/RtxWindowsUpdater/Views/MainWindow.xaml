@@ -423,88 +423,80 @@
                 </Setter.Value>
             </Setter>
         </Style>
-        <!-- Kontrol Merkezi kategori kartı (ana sayfa: üstte 4, altta 3). Sürekli animasyon yok: yalnızca üzerine gelince kısa büyüme, neon kenarlık,
-             ikon parlaması ve hafif glow. Glow katmanı boştayken gizlidir (efekt hesaplanmaz); gölge ayrı statik katmandadır. -->
-        <Style x:Key="Btn.CategoryTile" TargetType="Button">
+        <!-- Kontrol Merkezi ana sayfa öğesi (Monster düzeni): kutusuz; solda parlayan neon simge, sağda kalın beyaz başlık, açıklama ve
+             gerçek durum satırı. Keskin görünüm için metnin atasında efekt yoktur (parlama yalnızca simgede, statik). Animasyon yok:
+             üzerine gelince yalnızca hafif zemin ve neon kenar belirir. -->
+        <Style x:Key="Btn.HomeItem" TargetType="Button">
             <Setter Property="Cursor" Value="Hand" />
             <Setter Property="FocusVisualStyle" Value="{x:Null}" />
-            <Setter Property="Margin" Value="10" />
+            <Setter Property="Margin" Value="4" />
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="Button">
-                        <Grid x:Name="root" RenderTransformOrigin="0.5,0.5" MinHeight="192">
-                            <Grid.RenderTransform>
-                                <ScaleTransform />
-                            </Grid.RenderTransform>
-                            <Border Style="{StaticResource CardShadowLayer}" CornerRadius="18" />
-                            <Border x:Name="glow" CornerRadius="18" BorderBrush="{StaticResource B.Neon}" BorderThickness="1.5"
-                                    Visibility="Hidden" Opacity="0" IsHitTestVisible="False" Effect="{StaticResource Fx.NeonGlow}" />
-                            <Border x:Name="surface" CornerRadius="18" BorderThickness="1" BorderBrush="{StaticResource B.Border}" Padding="20,20,20,18">
-                                <Border.Background>
-                                    <LinearGradientBrush StartPoint="0,0" EndPoint="0,1">
-                                        <GradientStop Color="#E6101B31" Offset="0" />
-                                        <GradientStop Color="#E60A1222" Offset="1" />
-                                    </LinearGradientBrush>
-                                </Border.Background>
-                                <StackPanel VerticalAlignment="Center">
-                                    <Grid Width="66" Height="66" HorizontalAlignment="Center">
-                                        <Border x:Name="iconBg" CornerRadius="20" Background="#FF0E1A30" BorderBrush="#FF1E3A66" BorderThickness="1" />
-                                        <TextBlock x:Name="icon" Text="{Binding Glyph}" Style="{StaticResource T.Icon}" FontSize="31"
-                                                   Foreground="{StaticResource B.Neon}" Opacity="0.85" Effect="{StaticResource Fx.SoftGlow}" />
-                                    </Grid>
-                                    <TextBlock Text="{Binding TileTitle}" FontFamily="{StaticResource F.Display}" FontSize="15.5" FontWeight="SemiBold"
-                                               Foreground="{StaticResource B.Text}" HorizontalAlignment="Center" Margin="0,15,0,0" />
-                                    <TextBlock Text="{Binding Description}" FontSize="12.5" LineHeight="18" Foreground="{StaticResource B.Text2}"
-                                               TextAlignment="Center" TextWrapping="Wrap" HorizontalAlignment="Center" MaxWidth="240" Margin="0,6,0,0" />
-                                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,12,0,0">
-                                        <Ellipse Width="7" Height="7" VerticalAlignment="Center" Margin="0,0,7,0"
+                        <Border x:Name="bg" CornerRadius="14" Background="Transparent" BorderThickness="1" BorderBrush="Transparent" Padding="14,14,12,14">
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="54" />
+                                    <ColumnDefinition Width="*" />
+                                </Grid.ColumnDefinitions>
+                                <TextBlock x:Name="icon" Text="{Binding Glyph}" Style="{StaticResource T.Icon}" FontSize="38" VerticalAlignment="Top"
+                                           HorizontalAlignment="Left" Margin="0,2,0,0" Foreground="{StaticResource B.NeonBright}" Effect="{StaticResource Fx.IconGlow}" />
+                                <StackPanel Grid.Column="1" Margin="8,0,0,0" VerticalAlignment="Top">
+                                    <TextBlock x:Name="title" Text="{Binding Title}" FontFamily="{StaticResource F.Display}" FontSize="16.5" FontWeight="Bold"
+                                               Foreground="White" TextTrimming="CharacterEllipsis" />
+                                    <TextBlock Text="{Binding Description}" FontSize="12.5" LineHeight="17" Foreground="{StaticResource B.Text2}"
+                                               TextWrapping="Wrap" Margin="0,3,0,0" />
+                                    <!-- Grid: metin sütun genişliğiyle sınırlanır ve sarılır (yatay StackPanel sonsuz genişlik verip metni kırpıyordu) -->
+                                    <Grid Margin="0,8,0,0">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="Auto" />
+                                            <ColumnDefinition Width="*" />
+                                        </Grid.ColumnDefinitions>
+                                        <Ellipse Width="7" Height="7" VerticalAlignment="Top" Margin="0,5,7,0"
                                                  Fill="{Binding Status, Converter={StaticResource StatusBrush}}" />
-                                        <TextBlock Text="{Binding StatusText}" FontSize="11.5" Foreground="{StaticResource B.Text3}"
-                                                   TextTrimming="CharacterEllipsis" MaxWidth="180" ToolTip="{Binding StatusText}" />
-                                    </StackPanel>
+                                        <TextBlock Grid.Column="1" Text="{Binding StatusText}" FontSize="11.5" LineHeight="16" Foreground="{StaticResource B.Text3}"
+                                                   TextWrapping="Wrap" ToolTip="{Binding StatusText}" />
+                                    </Grid>
                                 </StackPanel>
-                            </Border>
-                        </Grid>
+                            </Grid>
+                        </Border>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsMouseOver" Value="True">
-                                <Setter TargetName="surface" Property="BorderBrush" Value="#FF2A6FB0" />
-                                <Setter TargetName="iconBg" Property="BorderBrush" Value="{StaticResource B.Neon}" />
+                                <Setter TargetName="bg" Property="Background" Value="#141FB6FF" />
+                                <Setter TargetName="bg" Property="BorderBrush" Value="#552A8FD0" />
                                 <Setter TargetName="icon" Property="Foreground" Value="#FF8BDBFF" />
-                                <Setter TargetName="glow" Property="Visibility" Value="Visible" />
-                                <Trigger.EnterActions>
-                                    <BeginStoryboard>
-                                        <Storyboard>
-                                            <DoubleAnimation Storyboard.TargetName="root" Storyboard.TargetProperty="RenderTransform.(ScaleTransform.ScaleX)" To="1.025" Duration="0:0:0.16">
-                                                <DoubleAnimation.EasingFunction><CubicEase EasingMode="EaseOut" /></DoubleAnimation.EasingFunction>
-                                            </DoubleAnimation>
-                                            <DoubleAnimation Storyboard.TargetName="root" Storyboard.TargetProperty="RenderTransform.(ScaleTransform.ScaleY)" To="1.025" Duration="0:0:0.16">
-                                                <DoubleAnimation.EasingFunction><CubicEase EasingMode="EaseOut" /></DoubleAnimation.EasingFunction>
-                                            </DoubleAnimation>
-                                            <DoubleAnimation Storyboard.TargetName="glow" Storyboard.TargetProperty="Opacity" To="0.85" Duration="0:0:0.16" />
-                                            <DoubleAnimation Storyboard.TargetName="icon" Storyboard.TargetProperty="Opacity" To="1" Duration="0:0:0.16" />
-                                        </Storyboard>
-                                    </BeginStoryboard>
-                                </Trigger.EnterActions>
-                                <Trigger.ExitActions>
-                                    <BeginStoryboard>
-                                        <Storyboard>
-                                            <DoubleAnimation Storyboard.TargetName="root" Storyboard.TargetProperty="RenderTransform.(ScaleTransform.ScaleX)" To="1" Duration="0:0:0.22">
-                                                <DoubleAnimation.EasingFunction><CubicEase EasingMode="EaseOut" /></DoubleAnimation.EasingFunction>
-                                            </DoubleAnimation>
-                                            <DoubleAnimation Storyboard.TargetName="root" Storyboard.TargetProperty="RenderTransform.(ScaleTransform.ScaleY)" To="1" Duration="0:0:0.22">
-                                                <DoubleAnimation.EasingFunction><CubicEase EasingMode="EaseOut" /></DoubleAnimation.EasingFunction>
-                                            </DoubleAnimation>
-                                            <DoubleAnimation Storyboard.TargetName="glow" Storyboard.TargetProperty="Opacity" To="0" Duration="0:0:0.12" />
-                                            <DoubleAnimation Storyboard.TargetName="icon" Storyboard.TargetProperty="Opacity" To="0.85" Duration="0:0:0.22" />
-                                        </Storyboard>
-                                    </BeginStoryboard>
-                                </Trigger.ExitActions>
-                            </Trigger>
-                            <Trigger Property="IsPressed" Value="True">
-                                <Setter TargetName="surface" Property="BorderBrush" Value="{StaticResource B.Neon}" />
+                                <Setter TargetName="title" Property="Foreground" Value="#FF8BDBFF" />
                             </Trigger>
                             <Trigger Property="IsKeyboardFocused" Value="True">
-                                <Setter TargetName="surface" Property="BorderBrush" Value="{StaticResource B.Neon}" />
+                                <Setter TargetName="bg" Property="BorderBrush" Value="{StaticResource B.Neon}" />
+                            </Trigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter TargetName="bg" Property="Background" Value="#241FB6FF" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- Ana sayfa arama sonucu satırı (simge + başlık + nerede olduğu) -->
+        <Style x:Key="Btn.SearchRow" TargetType="Button">
+            <Setter Property="Cursor" Value="Hand" />
+            <Setter Property="FocusVisualStyle" Value="{x:Null}" />
+            <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="bg" CornerRadius="9" Background="Transparent" BorderThickness="1" BorderBrush="Transparent" Padding="12,8">
+                            <ContentPresenter />
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="bg" Property="Background" Value="#FF102038" />
+                            </Trigger>
+                            <Trigger Property="IsKeyboardFocused" Value="True">
+                                <Setter TargetName="bg" Property="Background" Value="#FF102038" />
+                                <Setter TargetName="bg" Property="BorderBrush" Value="{StaticResource B.Neon}" />
                             </Trigger>
                         </ControlTemplate.Triggers>
                     </ControlTemplate>
@@ -879,13 +871,20 @@
             <Canvas.CacheMode>
                 <BitmapCache EnableClearType="False" RenderAtScale="1" SnapsToDevicePixels="False" />
             </Canvas.CacheMode>
-            <Ellipse Width="620" Height="620" Canvas.Left="-220" Canvas.Top="-260" Fill="#FF1FB6FF" Opacity="0.105">
+            <Ellipse Width="620" Height="620" Canvas.Left="-220" Canvas.Top="-260" Fill="#FF1FB6FF" Opacity="0.05">
                 <Ellipse.Effect><BlurEffect Radius="160" /></Ellipse.Effect>
             </Ellipse>
-            <Ellipse Width="700" Height="700" Canvas.Right="-260" Canvas.Bottom="-320" Fill="#FF3D6BFF" Opacity="0.075">
+            <Ellipse Width="700" Height="700" Canvas.Right="-260" Canvas.Bottom="-320" Fill="#FF3D6BFF" Opacity="0.04">
                 <Ellipse.Effect><BlurEffect Radius="180" /></Ellipse.Effect>
             </Ellipse>
         </Canvas>
+        <!-- Ana sayfa: alt kısımda ince dalga çizgileri (statik, bir kez çizilir; yalnızca Kontrol Merkezi ana sayfasında) -->
+        <views:WaveBackdrop x:Name="HomeWaves" Grid.RowSpan="2" IsHitTestVisible="False" LineBrush="#FF2E4468"
+                            Visibility="{Binding IsHomeScreen, Converter={StaticResource Visible}}">
+            <views:WaveBackdrop.CacheMode>
+                <BitmapCache EnableClearType="False" RenderAtScale="1" SnapsToDevicePixels="False" />
+            </views:WaveBackdrop.CacheMode>
+        </views:WaveBackdrop>
 
         <!-- ================= Başlık çubuğu ================= -->
         <Grid Grid.Row="0" Background="Transparent">
@@ -1018,20 +1017,101 @@
                     <Grid.RenderTransform><TranslateTransform /></Grid.RenderTransform>
                     <ScrollViewer x:Name="HomeScroll" VerticalScrollBarVisibility="Auto">
                         <Grid MinHeight="{Binding ViewportHeight, RelativeSource={RelativeSource AncestorType=ScrollViewer}}">
-                            <StackPanel MaxWidth="1020" VerticalAlignment="Center" Margin="0,0,0,8">
-                                <!-- Logo + ad -->
-                                <Grid HorizontalAlignment="Center" Width="76" Height="76">
-                                    <Border CornerRadius="22" Background="{StaticResource B.NeonGradient}" Opacity="0.4" Margin="6">
-                                        <Border.Effect><BlurEffect Radius="26" /></Border.Effect>
+                            <StackPanel MaxWidth="1056" VerticalAlignment="Center" Margin="0,0,0,8">
+                                <!-- Logo: neon parlama (radyal gradyan; bulanıklık yok, keskin) + neon çerçeve -->
+                                <Grid HorizontalAlignment="Center" Width="200" Height="136" Margin="0,-6,0,0">
+                                    <Ellipse IsHitTestVisible="False">
+                                        <Ellipse.Fill>
+                                            <RadialGradientBrush>
+                                                <GradientStop Color="#591FB6FF" Offset="0" />
+                                                <GradientStop Color="#1A1FB6FF" Offset="0.5" />
+                                                <GradientStop Color="#001FB6FF" Offset="1" />
+                                            </RadialGradientBrush>
+                                        </Ellipse.Fill>
+                                    </Ellipse>
+                                    <Border x:Name="HomeLogo" Width="92" Height="92" CornerRadius="24" BorderThickness="1.5" BorderBrush="{StaticResource B.NeonBright}"
+                                            Effect="{StaticResource Fx.IconGlow}">
+                                        <Rectangle RadiusX="22" RadiusY="22" Fill="{StaticResource LogoBrush}" />
                                     </Border>
-                                    <Rectangle RadiusX="20" RadiusY="20" Fill="{StaticResource LogoBrush}" Stroke="#FF24365C" StrokeThickness="1" />
                                 </Grid>
-                                <TextBlock Text="{x:Static core:AppInfo.Name}" Style="{StaticResource T.H1}" FontSize="28"
-                                           HorizontalAlignment="Center" Margin="0,14,0,4" />
-                                <TextBlock Text="KONTROL MERKEZİ" Style="{StaticResource T.Label}" Foreground="{StaticResource B.Neon}"
+                                <TextBlock Text="{x:Static core:AppInfo.Name}" FontFamily="{StaticResource F.Display}" FontSize="31" Foreground="White"
+                                           HorizontalAlignment="Center" Margin="0,6,0,4" />
+                                <TextBlock Text="KONTROL MERKEZİ" Style="{StaticResource T.Label}" FontSize="11.5" Foreground="{StaticResource B.NeonBright}"
                                            HorizontalAlignment="Center" />
                                 <TextBlock Text="{Binding PlatformText}" FontSize="12" Foreground="{StaticResource B.Text3}"
                                            HorizontalAlignment="Center" Margin="0,6,0,0" />
+
+                                <!-- Ara: kategori, bölme ve kart adlarında arar; sonuç seçilince ilgili bölme açılır (Enter = ilk sonuç, Esc = temizle) -->
+                                <Grid HorizontalAlignment="Center" Width="400" Height="44" Margin="0,24,0,0">
+                                    <!-- neon parlama ayrı ve statik katmanda (imleç yanıp sönerken efekt yeniden hesaplanmaz) -->
+                                    <Border CornerRadius="22" BorderBrush="{StaticResource B.Neon}" BorderThickness="1.5" IsHitTestVisible="False"
+                                            Effect="{StaticResource Fx.SoftGlow}" />
+                                    <Border x:Name="HomeSearchFrame" CornerRadius="22" BorderBrush="{StaticResource B.NeonBright}" BorderThickness="1.5">
+                                        <Border.Background>
+                                            <LinearGradientBrush StartPoint="0,0" EndPoint="1,0">
+                                                <GradientStop Color="#FF0A2032" Offset="0" />
+                                                <GradientStop Color="#FF050A13" Offset="1" />
+                                            </LinearGradientBrush>
+                                        </Border.Background>
+                                        <Grid>
+                                            <TextBox x:Name="HomeSearchBox" Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}" Margin="20,0,46,0"
+                                                     Background="Transparent" BorderThickness="0" Foreground="{StaticResource B.Text}" CaretBrush="{StaticResource B.NeonBright}"
+                                                     FontSize="14" VerticalContentAlignment="Center" AutomationProperties.Name="Ara"
+                                                     ToolTip="Kategori, bölme veya kart ara (Ctrl+F)">
+                                                <TextBox.InputBindings>
+                                                    <KeyBinding Key="Enter" Command="{Binding OpenFirstSearchResultCommand}" />
+                                                </TextBox.InputBindings>
+                                            </TextBox>
+                                            <TextBlock Text="Ara" FontSize="14" Foreground="{StaticResource B.Text3}" Margin="23,0,0,0" VerticalAlignment="Center"
+                                                       IsHitTestVisible="False" Visibility="{Binding SearchText, Converter={StaticResource Hidden}}" />
+                                            <TextBlock Text="&#xE721;" Style="{StaticResource T.Icon}" FontSize="16" Foreground="{StaticResource B.NeonBright}"
+                                                       HorizontalAlignment="Right" Margin="0,0,18,0" IsHitTestVisible="False"
+                                                       Visibility="{Binding SearchText, Converter={StaticResource Hidden}}" />
+                                            <Button Style="{StaticResource Btn.Link}" HorizontalAlignment="Right" Margin="0,0,10,0" Command="{Binding ClearSearchCommand}"
+                                                    ToolTip="Aramayı temizle (Esc)" AutomationProperties.Name="Aramayı temizle"
+                                                    Visibility="{Binding SearchText, Converter={StaticResource Visible}}">
+                                                <TextBlock Text="&#xE711;" Style="{StaticResource T.Icon}" FontSize="12" />
+                                            </Button>
+                                        </Grid>
+                                    </Border>
+                                    <Popup x:Name="HomeSearchPopup" PlacementTarget="{Binding ElementName=HomeSearchFrame}" Placement="Bottom" VerticalOffset="8"
+                                           HorizontalOffset="-30" Width="460" AllowsTransparency="True" StaysOpen="False" PopupAnimation="Fade"
+                                           IsOpen="{Binding IsSearchOpen, Mode=TwoWay}">
+                                        <Border Margin="0,0,0,14" CornerRadius="14" Background="#FF08111F" BorderBrush="#FF24365C" BorderThickness="1" Padding="8">
+                                            <Border.Effect>
+                                                <DropShadowEffect BlurRadius="24" ShadowDepth="4" Direction="270" Opacity="0.7" Color="#000000" />
+                                            </Border.Effect>
+                                            <StackPanel>
+                                                <ItemsControl x:Name="HomeSearchResults" ItemsSource="{Binding SearchResults}" Focusable="False">
+                                                    <ItemsControl.ItemTemplate>
+                                                        <DataTemplate DataType="{x:Type vm:SearchResultViewModel}">
+                                                            <Button Style="{StaticResource Btn.SearchRow}" AutomationProperties.Name="{Binding Title}"
+                                                                    Command="{Binding DataContext.OpenSearchResultCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
+                                                                    CommandParameter="{Binding}">
+                                                                <Grid>
+                                                                    <Grid.ColumnDefinitions>
+                                                                        <ColumnDefinition Width="34" />
+                                                                        <ColumnDefinition Width="*" />
+                                                                    </Grid.ColumnDefinitions>
+                                                                    <TextBlock Text="{Binding Glyph}" Style="{StaticResource T.Icon}" FontSize="17" HorizontalAlignment="Left"
+                                                                               Foreground="{StaticResource B.NeonBright}" />
+                                                                    <StackPanel Grid.Column="1">
+                                                                        <TextBlock Text="{Binding Title}" FontSize="13.5" FontWeight="SemiBold" Foreground="{StaticResource B.Text}"
+                                                                                   TextTrimming="CharacterEllipsis" />
+                                                                        <TextBlock Text="{Binding Subtitle}" FontSize="11.5" Foreground="{StaticResource B.Text3}" Margin="0,1,0,0"
+                                                                                   TextTrimming="CharacterEllipsis" />
+                                                                    </StackPanel>
+                                                                </Grid>
+                                                            </Button>
+                                                        </DataTemplate>
+                                                    </ItemsControl.ItemTemplate>
+                                                </ItemsControl>
+                                                <TextBlock Text="Sonuç bulunamadı." FontSize="12.5" Foreground="{StaticResource B.Text3}" Margin="12,8"
+                                                           Visibility="{Binding ShowNoSearchResults, Converter={StaticResource Visible}}" />
+                                            </StackPanel>
+                                        </Border>
+                                    </Popup>
+                                </Grid>
 
                                 <!-- Yönetici değil: tüm kartlar kullanım dışı (yetki yalnızca UAC onayıyla yeniden başlatarak alınır) -->
                                 <Border Visibility="{Binding ShowElevate, Converter={StaticResource Visible}}" HorizontalAlignment="Center" MaxWidth="780"
@@ -1057,16 +1137,16 @@
                                 </Border>
 
                                 <!-- 7 kategori: üstte 4, altta 3 (ortalı) -->
-                                <ItemsControl ItemsSource="{Binding Categories}" Margin="0,16,0,0" Focusable="False">
+                                <ItemsControl x:Name="HomeCategories" ItemsSource="{Binding Categories}" Margin="0,30,0,6" Focusable="False">
                                     <ItemsControl.ItemsPanel>
                                         <ItemsPanelTemplate>
-                                            <views:CenteredWrapPanel ItemWidth="255" />
+                                            <views:CenteredWrapPanel ItemWidth="264" />
                                         </ItemsPanelTemplate>
                                     </ItemsControl.ItemsPanel>
                                     <ItemsControl.ItemTemplate>
                                         <DataTemplate DataType="{x:Type vm:CategoryViewModel}">
-                                            <Button Style="{StaticResource Btn.CategoryTile}" Command="{Binding OpenCommand}"
-                                                    AutomationProperties.Name="{Binding Title}" ToolTip="{Binding Description}" />
+                                            <Button Style="{StaticResource Btn.HomeItem}" Command="{Binding OpenCommand}"
+                                                    AutomationProperties.Name="{Binding Title}" />
                                         </DataTemplate>
                                     </ItemsControl.ItemTemplate>
                                 </ItemsControl>

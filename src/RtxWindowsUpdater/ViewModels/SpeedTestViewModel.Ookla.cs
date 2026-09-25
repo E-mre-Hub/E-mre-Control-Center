@@ -360,21 +360,16 @@ public sealed partial class SpeedTestViewModel
 
     private void ApplyFilter()
     {
-        var q = Normalize(SearchText.Trim());
+        var q = SearchText.Trim();
         Servers.Clear();
         foreach (var s in _allServers)
         {
-            if (q.Length > 0 && !new[] { s.Sponsor, s.Location, s.Country, s.Id.ToString(CultureInfo.InvariantCulture) }
-                    .Any(field => CultureInfo.InvariantCulture.CompareInfo.IndexOf(Normalize(field), q,
-                        CompareOptions.IgnoreCase | CompareOptions.IgnoreNonSpace) >= 0))
+            if (!new[] { s.Sponsor, s.Location, s.Country, s.Id.ToString(CultureInfo.InvariantCulture) }.Any(field => TextSearch.Contains(field, q)))
                 continue;
             Servers.Add(new OoklaServerViewModel(s) { IsSelected = s.Id == _serverId });
         }
         OnPropertyChanged(nameof(HasServers));
     }
-
-    /// <summary>Türkçe ı / İ harflerini aramada i / I ile eşleştirir (aksan ve büyük/küçük harf duyarsız karşılaştırmaya ek).</summary>
-    private static string Normalize(string s) => s.Replace('ı', 'i').Replace('İ', 'I');
 
     /// <summary>Yalnızca Ookla adreslerini (koşullar ve sonuç sayfası) varsayılan tarayıcıda açar.</summary>
     private void OpenUrl(string? url)

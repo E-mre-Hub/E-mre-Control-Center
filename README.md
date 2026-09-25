@@ -12,7 +12,8 @@ kendi bakım araçlarını (SFC, DISM CheckHealth / onayla RestoreHealth, MRT h�
   Seçilenleri Güncelle-Çalıştır". Seçilmeyen karta hiçbir şekilde dokunulmaz. Güncelleme butonları ancak gerçek bir
   kontrol işlem gerektiren bir sonuç bulduğunda etkinleşir.
 - **Kontrol Merkezi:** ana sayfada 7 kategori (üstte 4, altta 3): **Güncelleme**, **Temizleme**, **Cihaz Sağlık**, **Hız Testi**,
-  **Genel Ayarlar**, **Özet**, **Cihaz Bilgileri**. Her kategori ekranında solda bölmeler (alt menü), sağda seçili bölmenin içeriği bulunur. 10 kartın tamamı
+  **Genel Ayarlar**, **Özet**, **Cihaz Bilgileri**. Her kategori ekranında solda bölmeler (alt menü), sağda seçili bölmenin içeriği bulunur. Ana sayfadaki **Ara** kutusu
+  (Ctrl+F) kategori, bölme ve kart adlarında arar. 10 kartın tamamı
   aynı yapıda (solda büyük ikon, sağda geniş kart): açıklama, gerçek durum, "?" bilgi kutusu, seçim kutusu ve kartın kendi
   işlem butonu ("Kontrol Et", "Tarama Başlat", "Kontrolü Başlat", "Hızlı Taramayı Başlat").
 - **Hız Testi:** gerçek ölçümle indirme / yükleme hızı, ping (boşta ve yük altında), titreşim, paket kaybı, ISS ve test sunucusu;
@@ -100,9 +101,9 @@ Desktop\E-mre Control Center\        ← Proje klasörü (önceki adları: E-mre
     │   ├── AppStateStore.cs         ← İşlem geçmişi / son sonuçlar / ayarlar / hız testi geçmişi (%LOCALAPPDATA%\…\state.json)
     │   ├── NotificationService.cs   ← Windows 11 bildirimleri (toast)
     │   └── UpdateOrchestrator.cs    ← Güvenli sıra, Tümü / Seçilenler akışları, modül izolasyonu, iptal
-    ├── ViewModels\                  ← MainViewModel (bölme gezinmesi; + MainViewModel.Device: Cihaz bölmeleri, canlı ölçüm), SpeedTestViewModel, DeviceViewModels, CategoryViewModel (7 kategori + bölmeler; yalnızca
+    ├── ViewModels\                  ← MainViewModel (bölme gezinmesi; + MainViewModel.Device: Cihaz bölmeleri, canlı ölçüm; + MainViewModel.Search: ana sayfa araması), TextSearch (Türkçe harf duyarsız arama), SpeedTestViewModel, DeviceViewModels, CategoryViewModel (7 kategori + bölmeler; yalnızca
     │                                  arayüz düzeni), DialogViewModel, DetailViewModel, ThrottledProgress, kart/satır modelleri, komutlar
-    ├── Views\                       ← MainWindow.xaml(.cs): giriş sayfası, Kontrol Merkezi ana sayfası, kategori ekranları; RingGauge.cs, SpeedGauge.cs (hız göstergesi), CenteredWrapPanel.cs; Converters.cs
+    ├── Views\                       ← MainWindow.xaml(.cs): giriş sayfası, Kontrol Merkezi ana sayfası, kategori ekranları; RingGauge.cs, SpeedGauge.cs (hız göstergesi), CenteredWrapPanel.cs, WaveBackdrop.cs (ana sayfa dalga zemini, statik); Converters.cs
     └── Themes\Theme.xaml            ← Renkler, butonlar, kartlar, animasyonlar, ilerleme çubuğu
 ```
 
@@ -162,20 +163,20 @@ tırnak içinde yazılır). Depo: https://github.com/E-mre-Hub/E-mre-Control-Cen
 
 ### Yeni sürüm yayınlama (depo sahibi)
 
-1. `src\RtxWindowsUpdater\RtxWindowsUpdater.csproj` içindeki `<Version>` değerini artırın (ör. `1.5.0`).
+1. `src\RtxWindowsUpdater\RtxWindowsUpdater.csproj` içindeki `<Version>` değerini artırın (ör. `1.6.0`).
 2. Değişiklikleri commit'leyip gönderin, ardından etiket oluşturun:
 
 ```bash
-git tag v1.5.0
+git tag v1.6.0
 ```
 
 ```bash
-git push origin v1.5.0
+git push origin v1.6.0
 ```
 
 3. GitHub Actions (`.github/workflows/release.yml`) EXE'yi Windows sunucusunda derler ve
-   `E-mre-Control-Center-v1.5.0.zip` olarak **Releases** sayfasına ekler. Davetli arkadaşlar oradan indirir.
-   Etiketteki sürüm (v1.5.0) EXE'nin sürümü olarak kullanılır; csproj'daki `<Version>` ile aynı olmalıdır.
+   `E-mre-Control-Center-v1.6.0.zip` olarak **Releases** sayfasına ekler. Davetli arkadaşlar oradan indirir.
+   Etiketteki sürüm (v1.6.0) EXE'nin sürümü olarak kullanılır; csproj'daki `<Version>` ile aynı olmalıdır.
 
 Not: Özel depolarda GitHub Actions ücretsiz planda aylık 2.000 dakika ile sınırlıdır (Windows dakikaları 2 kat sayılır);
 bir derleme yaklaşık 3-5 dakika sürer.
@@ -345,9 +346,16 @@ Hiçbir hata başarılı gibi gösterilmez; nedeni kartta, sonuç ekranında ve 
 
 ### Kontrol Merkezi (ana sayfa ve kategoriler)
 
-Ana ekran bir **Kontrol Merkezi**'dir: ortada logo ve ad, altında 7 kategori (üstte 4, altta ortalı 3). Her kategori kartında büyük ikon,
-başlık, kısa açıklama ve mevcut gerçek durumdan bir durum satırı bulunur (ör. "3 işlem · kontrol edilmedi", "1 işlemde hata var",
-"Kullanım dışı"). Karta tıklamak ilgili ekranı açar; sol üstteki **Ana Sayfa** butonu veya **Esc** ile geri dönülür.
+Ana ekran bir **Kontrol Merkezi**'dir: koyu (neredeyse siyah) zeminde ortada parlayan logo ve ad, altında **Ara** kutusu ve 7 kategori
+(üstte 4, altta ortalı 3). Her kategoride parlak neon simge, kalın başlık, kısa açıklama ve mevcut gerçek durumdan bir durum satırı
+bulunur (ör. "3 işlem · kontrol edilmedi", "1 işlemde hata var", "Kullanım dışı"). Kategoriler çerçevesizdir; üzerine gelince hafifçe
+aydınlanır, klavyeyle seçilince neon çerçeve alır. Alttaki ince dalga çizgileri yalnızca süsdür ve hareketsizdir (animasyon yok).
+Karta tıklamak ilgili ekranı açar; sol üstteki **Ana Sayfa** butonu veya **Esc** ile geri dönülür.
+
+- **Ara** (Ctrl+F): kategori, bölme ve kart adlarında / açıklamalarında arar (ör. "ping" → Hız Testi, "dism" → Cihaz Sağlık →
+  Sağlık Araçları, "günlük" → İşlem Günlüğü ve Günlük Dosyaları). Büyük / küçük harf ve Türkçe karakter duyarsızdır ("gunluk" =
+  "günlük"). **Enter** ilk sonucu açar, **Aşağı ok** sonuç listesine geçer, **Esc** aramayı temizler. Arama yalnızca gezinmedir;
+  hiçbir işlem başlatmaz.
 
 Her kategori ekranı aynı düzendedir: **solda** Ana Sayfa, kategori başlığı ve **bölmeler** (alt menü); **sağda** seçili bölmenin
 başlığı ve içeriği. Kartlar ve ayar satırları Cihaz Bilgileri'ndeki gibi solda büyük ikon, sağda geniş kart olarak gösterilir.
@@ -547,6 +555,21 @@ eski klasörlerde kalır (`%LOCALAPPDATA%\E-mre Hub\Logs\`, `%LOCALAPPDATA%\RTX 
   kullanılırsa o yönetici hesabının çöp kutusu olur).
 
 ## Sürüm geçmişi
+
+### v1.6.0
+
+**Yeni**
+- **Ana sayfada Ara kutusu** (Ctrl+F): kategori, bölme ve kart adlarında / açıklamalarında arar; büyük / küçük harf ve Türkçe karakter
+  duyarsız ("gunluk" = "günlük", "dism" → Cihaz Sağlık → Sağlık Araçları). Enter ilk sonucu açar, Aşağı ok sonuçlara geçer, Esc
+  temizler. Yalnızca gezinmedir, işlem başlatmaz.
+
+**İyileştirmeler (göz yormayan, daha net ana sayfa)**
+- Zemin daha koyu (neredeyse siyah; üst ortada hafif lacivert aydınlık); kartların zemini de koyulaştırıldı.
+- Önemli öğeler parlak neon: logo çevresinde ışıma, parlayan kategori simgeleri, neon çerçeveli arama kutusu, "KONTROL MERKEZİ" yazısı.
+- Kategoriler çerçevesiz ve sade: kalın beyaz başlık, okunaklı açıklama, durum noktası + durum metni (uzun durum metni artık kırpılmaz,
+  iki satıra sarılır); üzerine gelince hafif aydınlanma, klavye odağında neon çerçeve.
+- İkincil metinler daha açık ve okunaklı (açıklama ve soluk metin renkleri açıldı; kontrast arttı).
+- Ana sayfanın alt kısmında ince dalga çizgileri (hareketsiz, önbellekli; boşta arayüz CPU'su ~%0,3).
 
 ### v1.5.0
 

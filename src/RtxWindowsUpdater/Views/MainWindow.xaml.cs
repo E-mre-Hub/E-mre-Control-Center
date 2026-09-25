@@ -133,8 +133,37 @@ public partial class MainWindow : Window
 
     private void OnPreviewKeyDown(object sender, System.Windows.Input.KeyEventArgs e)
     {
-        // Esc: önce iletişim kutusu (varsa kendi İptal butonu), sonra Detaylı Sonuç paneli kapanır, sonra Ana Sayfa'ya dönülür.
+        var onHome = _vm.IsDashboard && _vm.IsHome && !_vm.Dialog.IsOpen && !_vm.Detail.IsOpen;
+        // Ctrl+F: ana sayfada arama kutusuna odaklan
+        if (onHome && e.Key == System.Windows.Input.Key.F && System.Windows.Input.Keyboard.Modifiers == System.Windows.Input.ModifierKeys.Control)
+        {
+            HomeSearchBox.Focus();
+            HomeSearchBox.SelectAll();
+            e.Handled = true;
+            return;
+        }
+        // Aşağı ok (arama kutusundayken): ilk sonuca geç; sonuçlar arasında Tab / ok tuşlarıyla dolaşılır
+        if (onHome && e.Key == System.Windows.Input.Key.Down && HomeSearchBox.IsKeyboardFocusWithin && _vm.HasSearchResults)
+        {
+            _vm.IsSearchOpen = true;
+            if (HomeSearchResults.ItemContainerGenerator.ContainerFromIndex(0) is DependencyObject first && FindChild<System.Windows.Controls.Button>(first) is { } button)
+            {
+                button.Focus();
+                e.Handled = true;
+            }
+            return;
+        }
+
+        // Esc: önce iletişim kutusu (varsa kendi İptal butonu), sonra Detaylı Sonuç paneli kapanır, ana sayfada arama temizlenir,
+        // sonra Ana Sayfa'ya dönülür.
         if (e.Key != System.Windows.Input.Key.Escape || _vm.Dialog.IsOpen) return;
+        if (onHome && _vm.SearchText.Length > 0)
+        {
+            _vm.SearchText = string.Empty;
+            HomeSearchBox.Focus();
+            e.Handled = true;
+            return;
+        }
         if (_vm.Detail.IsOpen)
         {
             _vm.Detail.IsOpen = false;
@@ -145,6 +174,17 @@ public partial class MainWindow : Window
             _vm.GoHomeCommand.Execute(null);
             e.Handled = true;
         }
+    }
+
+    private static T? FindChild<T>(DependencyObject root) where T : DependencyObject
+    {
+        for (var i = 0; i < VisualTreeHelper.GetChildrenCount(root); i++)
+        {
+            var child = VisualTreeHelper.GetChild(root, i);
+            if (child is T match) return match;
+            if (FindChild<T>(child) is { } nested) return nested;
+        }
+        return null;
     }
 
     private void PlayPageIn(FrameworkElement page)

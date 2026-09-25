@@ -275,6 +275,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
             category.OpenCommand = new RelayCommand(() => CurrentCategory = c);
         }
         GoHomeCommand = new RelayCommand(() => CurrentCategory = null);
+        InitSearch();
 
         RecentOperations = new ObservableCollection<OperationRecord>(_state.State.Recent);
         _lastOperation = RecentOperations.FirstOrDefault();
@@ -403,6 +404,8 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
             if (!Set(ref _currentCategory, value)) return;
             _currentSection = value?.Sections.FirstOrDefault();
             OnPropertyChanged(nameof(IsHome));
+            OnPropertyChanged(nameof(IsHomeScreen));
+            if (value is not null) IsSearchOpen = false;
             OnPropertyChanged(nameof(IsCardsPage));
             OnPropertyChanged(nameof(IsSettingsPage));
             OnPropertyChanged(nameof(IsSummaryPage));
@@ -452,6 +455,9 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
     }
 
     public bool IsHome => CurrentCategory is null;
+
+    /// <summary>Kontrol Merkezi ana sayfası gerçekten ekranda (dalga arka planı yalnızca burada çizilir).</summary>
+    public bool IsHomeScreen => IsDashboard && IsHome;
     public bool IsCardsPage => CurrentCategory?.HasCards == true;
     public bool IsSettingsPage => CurrentCategory?.Key == CategoryKeys.Settings;
     public bool IsSummaryPage => CurrentCategory?.Key == CategoryKeys.Summary;
@@ -486,7 +492,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
     public bool IsDashboard
     {
         get => _isDashboard;
-        private set { Set(ref _isDashboard, value); OnPropertyChanged(nameof(IsRequirementsPage)); }
+        private set { Set(ref _isDashboard, value); OnPropertyChanged(nameof(IsRequirementsPage)); OnPropertyChanged(nameof(IsHomeScreen)); }
     }
 
     public bool IsRequirementsPage => !IsDashboard;
