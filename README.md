@@ -32,14 +32,14 @@ kendi bakım araçlarını (SFC, DISM CheckHealth / onayla RestoreHealth, MRT h�
   aynı EXE'dir; adında "Setup" geçtiği için kurulum ekranıyla açılır.
 - Arayüz: siyah / koyu lacivert, neon mavi vurgular, gölgeli kartlar, animasyonlar, Segoe Fluent ikonları (emoji yok)
 
-> Bu depo **özeldir (private)**. Yalnızca depo sahibinin davet ettiği kişiler erişebilir.
-> Lütfen EXE'yi veya kaynak kodu depo dışına paylaşmayın.
+> Bu depo **herkese açıktır (public)**: kaynak kod ve Releases'taki kurulum dosyaları herkes tarafından görülebilir ve
+> indirilebilir. Uygulama içi güncelleme de yeni sürümü bu deponun Releases sayfasından okur.
 
 ---
 
 ## Hızlı başlangıç (arkadaşlar için)
 
-1. GitHub'dan gelen davet e-postasını kabul edin (veya https://github.com/E-mre-Hub/E-mre-Control-Center adresindeki depo davetini onaylayın).
+1. https://github.com/E-mre-Hub/E-mre-Control-Center/releases/latest adresini açın (GitHub hesabı veya davet gerekmez).
 2. Deponun **Releases** bölümünden en son **`E-mre-Control-Center-Setup-vX.Y.Z.exe`** dosyasını indirin ve çift tıklayın.
    Kurulum ekranında **Yükle**'ye basın, Windows'un yönetici izni penceresinde **Evet** deyin. Kurulum bitince
    "Bizi tercih ettiğiniz için teşekkürler!" ekranından uygulamayı başlatın; sonra Başlat menüsünden (veya masaüstü kısayolundan) açılır.
@@ -117,7 +117,7 @@ Desktop\E-mre Control Center\        ← Proje klasörü (önceki adları: E-mre
     │   ├── NotificationService.cs   ← Windows 11 bildirimleri (toast)
     │   ├── InstallerService.cs      ← Kurulum / güncelleme / kaldırma (Program Files, kısayollar, Uninstall kaydı, doğrulama, geri alma)
     │   ├── FeedbackService.cs       ← Kaldırma geri bildirimi → Google Formu (yanıtlar Google E-Tablolar'da)
-    │   ├── UpdateService.cs         ← Uygulama içi güncelleme: sürüm deposu (GitHub API) denetimi, indirme + doğrulama (boyut, SHA-256, ürün, sürüm)
+    │   ├── UpdateService.cs         ← Uygulama içi güncelleme: ana deponun GitHub Releases'ı (API) denetimi, indirme + doğrulama (boyut, SHA-256, ürün, sürüm)
     │   └── UpdateOrchestrator.cs    ← Güvenli sıra, Tümü / Seçilenler akışları, modül izolasyonu, iptal
     ├── ViewModels\                  ← MainViewModel (bölme gezinmesi; + MainViewModel.Device: Cihaz bölmeleri, canlı ölçüm; + MainViewModel.Search: ana sayfa araması), TextSearch (Türkçe harf duyarsız arama), SpeedTestViewModel, DeviceViewModels, CategoryViewModel (7 kategori + bölmeler; yalnızca
     │                                  arayüz düzeni), DialogViewModel, DetailViewModel, ThrottledProgress, kart/satır modelleri, komutlar;
@@ -183,37 +183,24 @@ tırnak içinde yazılır). Depo: https://github.com/E-mre-Hub/E-mre-Control-Cen
 
 ### Yeni sürüm yayınlama (depo sahibi)
 
-1. `src\RtxWindowsUpdater\RtxWindowsUpdater.csproj` içindeki `<Version>` değerini artırın (ör. `1.7.1`).
+1. `src\RtxWindowsUpdater\RtxWindowsUpdater.csproj` içindeki `<Version>` değerini artırın (ör. `1.7.2`).
 2. Değişiklikleri commit'leyip gönderin, ardından etiket oluşturun:
 
 ```bash
-git tag v1.7.1
+git tag v1.7.2
 ```
 
 ```bash
-git push origin v1.7.1
+git push origin v1.7.2
 ```
 
 3. GitHub Actions (`.github/workflows/release.yml`) EXE'yi Windows sunucusunda derler ve **Releases** sayfasına iki dosya ekler:
-   `E-mre-Control-Center-Setup-v1.7.1.exe` (kurulum) ve `E-mre-Control-Center-v1.7.1.zip` (taşınabilir). Davetli arkadaşlar oradan indirir.
-   Etiketteki sürüm (v1.7.1) EXE'nin sürümü olarak kullanılır; csproj'daki `<Version>` ile aynı olmalıdır. Sürüm notları README'deki
-   `### v1.7.1` bölümünden alınır (uygulamadaki güncelleme penceresinde de bu metin görünür).
-4. Aynı dosyalar ve notlar herkese açık **sürüm deposuna** da yayınlanır (`E-mre-Hub/E-mre-Control-Center-Releases`); uygulamalar yeni
-   sürümü buradan görür. Bunun için özel depoda `RELEASES_TOKEN` gizli anahtarı tanımlı olmalıdır (bkz. aşağıdaki tek seferlik kurulum).
-   Tanımlı değilse derleme uyarı verir ve uygulamalar o sürümü güncelleme olarak göremez.
+   `E-mre-Control-Center-Setup-v1.7.2.exe` (kurulum) ve `E-mre-Control-Center-v1.7.2.zip` (taşınabilir). Arkadaşlar oradan indirir;
+   yüklü uygulamalar bu yayını "Yeni sürüm yayınlandı" olarak görür (v1.7.2 ve sonrası).
+   Etiketteki sürüm (v1.7.2) EXE'nin sürümü olarak kullanılır; csproj'daki `<Version>` ile aynı olmalıdır. Yayının metni yalnızca
+   README'deki `### v1.7.2` bölümüdür (uygulamadaki güncelleme penceresinde de bu metin görünür); bu bölüm etiketten önce yazılmalıdır.
 
-#### Sürüm deposu – tek seferlik kurulum (depo sahibi)
-
-1. GitHub'da `E-mre-Hub` altında **herkese açık (Public)** yeni depo: `E-mre-Control-Center-Releases`, "Add a README file" işaretli
-   (boş depoya sürüm yayınlanamaz). Bu depoya kod konmaz; yalnızca Actions'ın yayınladığı kurulum dosyaları ve notlar durur.
-2. GitHub → Settings → Developer settings → **Personal access tokens → Fine-grained tokens → Generate new token**:
-   Resource owner `E-mre-Hub`, Repository access **Only select repositories → E-mre-Control-Center-Releases**, Permissions →
-   Repository permissions → **Contents: Read and write**. Süre sonu seçilebilir (dolunca yenilenir). (Kuruluş ince ayarlı anahtarları
-   onaya bağlıysa `E-mre-Hub` → Settings → Personal access tokens bölümünden onaylanır.)
-3. Özel depo `E-mre-Control-Center` → Settings → Secrets and variables → Actions → **New repository secret**: ad `RELEASES_TOKEN`,
-   değer 2. adımdaki anahtar. Anahtar uygulamaya konmaz, yalnızca GitHub Actions kullanır.
-
-Not: Özel depolarda GitHub Actions ücretsiz planda aylık 2.000 dakika ile sınırlıdır (Windows dakikaları 2 kat sayılır);
+Not: Herkese açık depolarda GitHub Actions standart sunucularda ücretsizdir;
 bir derleme yaklaşık 3-5 dakika sürer.
 
 ### Kod imzalama ve "Bilinmeyen yayıncı"
@@ -247,8 +234,8 @@ powershell -ExecutionPolicy Bypass -File .\tools\Build-Exe.ps1 -SignThumbprint <
 
 ### Arkadaş ekleme (depo sahibi)
 
-GitHub'da depo sayfası → **Settings → Collaborators and teams → Add people** → arkadaşınızın GitHub kullanıcı adı.
-Davet edilen kişi daveti kabul ettikten sonra depoyu ve Releases'ı görebilir. Erişimi aynı sayfadan kaldırabilirsiniz.
+Depo herkese açık olduğu için indirmek ve güncelleme almak için davet gerekmez. Birine koda **yazma** izni vermek için:
+depo sayfası → **Settings → Collaborators and teams → Add people** → GitHub kullanıcı adı (erişim aynı sayfadan kaldırılır).
 
 ## 5. Yönetici izni (UAC) nasıl çalışır
 
@@ -427,8 +414,8 @@ taşınabilir mi olduğu yazar.
 
 ### Uygulama içi güncelleme (zorunlu)
 
-- Uygulama her açılışta (gereksinimler geçtikten sonra, arka planda) herkese açık sürüm deposundaki son yayını denetler:
-  `https://api.github.com/repos/E-mre-Hub/E-mre-Control-Center-Releases/releases/latest` (oturum açılmaz; kaynak kod deposu özel kalır).
+- Uygulama her açılışta (gereksinimler geçtikten sonra, arka planda) bu deponun son yayınını denetler:
+  `https://api.github.com/repos/E-mre-Hub/E-mre-Control-Center/releases/latest` (oturum açılmaz, anahtar kullanılmaz).
 - Yeni sürüm varsa girişten sonra ekranın önüne **"Yeni sürüm yayınlandı"** penceresi gelir: yeni / yüklü sürüm, yayın tarihi, boyut ve
   sürüm notları (README'deki sürüm geçmişinden). Güncelleme **zorunludur**: arkadaki ekran kullanılamaz; seçenekler **Güncelle** veya
   **Uygulamayı kapat**. Bir kontrol / güncelleme işlemi veya hız testi sürerken pencere beklenir (işlem yarıda bırakılmaz).
@@ -438,10 +425,13 @@ taşınabilir mi olduğu yazar.
   Ardından kurulum başlatılır, uygulama kapanır; kurulum eski sürümün kapanmasını bekler, yeni sürümü kurar ve **kendiliğinden açar**.
   Ayarlar ve geçmiş korunur. Uygulama yönetici olarak çalışmıyorsa Windows UAC sorar; reddedilirse güncelleme yapılmaz ve neden yazar.
 - Denetlenemezse (internet yok, GitHub yanıt vermedi, istek sınırı) uygulama normal açılır; güncelleme varmış gibi gösterilmez.
-  **Cihaz Bilgileri → Hakkında → Güncelleme** satırında gerçek sonuç yazar ("Güncel · son denetim …" / "Denetlenemedi: …") ve
+  **Cihaz Bilgileri → Hakkında → Güncelleme** satırında gerçek sonuç yazar ("Güncel (son yayın …) · son denetim …" / "Denetlenemedi: …") ve
   **Şimdi denetle** ile yeniden denetlenebilir.
 - Taşınabilir (ZIP) kopyadan güncelleme, uygulamayı Program Files'a kurar (pencerede yazar); sonra Başlat menüsünden açılır.
-- v1.6.0 ve öncesinde bu özellik yoktur: o sürümleri kullananlar v1.7.0'ı bir kez Setup ile kurmalıdır; sonrakiler otomatik gelir.
+- v1.6.0 ve öncesinde bu özellik yoktur. **v1.7.0 – v1.7.1** ise hiç oluşturulmamış ayrı bir sürüm deposuna
+  (`E-mre-Hub/E-mre-Control-Center-Releases`) baktığı için "Denetlenemedi (HTTP 404)" gösterir ve yeni sürümü göremez. Bu sürümleri
+  kullananlar v1.7.2'yi (veya daha yenisini) **bir kez** Setup ile kurmalıdır (Releases → `E-mre-Control-Center-Setup-vX.Y.Z.exe` →
+  Güncelle); sonraki sürümler uygulama içinden gelir.
 
 ### Kontrol Merkezi (ana sayfa ve kategoriler)
 
@@ -662,6 +652,18 @@ eski klasörlerde kalır (`%LOCALAPPDATA%\E-mre Hub\Logs\`, `%LOCALAPPDATA%\RTX 
 
 ## Sürüm geçmişi
 
+### v1.7.2
+
+**Düzeltmeler**
+- Uygulama içi güncelleme artık herkese açık ana depoyu (E-mre-Hub/E-mre-Control-Center) denetler. v1.7.0 ve v1.7.1, hiç oluşturulmamış
+  ayrı bir sürüm deposuna baktığı için "Denetlenemedi (HTTP 404)" gösteriyor ve yeni sürümü göremiyordu.
+- Güncelleme penceresinde yalnızca README'deki sürüm notu görünür; GitHub'ın otomatik "Full Changelog" bağlantısı eklenmez.
+- Hakkında → Kaynak kod: depo artık herkese açık.
+
+**Not**
+- v1.7.0 veya v1.7.1 yüklüyse bu sürüm bir kez elle kurulmalıdır: Releases → E-mre-Control-Center-Setup-v1.7.2.exe → Güncelle.
+  Sonraki sürümler uygulama içinden gelir.
+
 ### v1.7.1
 
 **İyileştirmeler**
@@ -703,7 +705,7 @@ eski klasörlerde kalır (`%LOCALAPPDATA%\E-mre Hub\Logs\`, `%LOCALAPPDATA%\RTX 
 - GitHub Actions her sürümde Setup EXE'sini ve taşınabilir ZIP'i birlikte yayınlar; `tools\Build-Exe.ps1` yerelde
   `E-mre Control Center Setup.exe` dosyasını da üretir (aynı EXE).
 - Sürüm notları README'deki sürüm geçmişinden alınır; kurulum dosyası ve notlar herkese açık sürüm deposuna
-  (`E-mre-Hub/E-mre-Control-Center-Releases`) da yayınlanır (kaynak kod özel kalır; `RELEASES_TOKEN` gerekir).
+  (`E-mre-Hub/E-mre-Control-Center-Releases`) da yayınlanır (kaynak kod özel kalır; `RELEASES_TOKEN` gerekir) – bu depo hiç oluşturulmadı; v1.7.2 ana depoyu kullanır.
 
 ### v1.6.0
 

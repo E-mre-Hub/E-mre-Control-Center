@@ -15,10 +15,11 @@ public static class AppInfo
     public const string RepositoryUrl = "https://github.com/E-mre-Hub/E-mre-Control-Center";
 
     /// <summary>
-    /// Herkese açık sürüm deposu (yalnızca kurulum dosyaları ve sürüm notları; kaynak kod özel depoda kalır). GitHub Actions her etiketle
-    /// kurulum dosyasını buraya da yayınlar; uygulama içi güncelleme buradan denetler.
+    /// Uygulama içi güncellemenin denetlediği depo: ana depo (2026-09-26'dan beri herkese açık; GitHub Actions her etiketle kurulum
+    /// dosyasını ve sürüm notlarını buraya yayınlar). v1.7.0 – v1.7.1 ayrı "E-mre-Control-Center-Releases" deposuna bakıyordu
+    /// (o depo hiç oluşturulmadı); o sürümler yeni sürümü ancak elle kurulumla veya o adda bir köprü deposuyla görür.
     /// </summary>
-    public const string ReleasesRepository = "E-mre-Hub/E-mre-Control-Center-Releases";
+    public const string ReleasesRepository = "E-mre-Hub/E-mre-Control-Center";
 
     /// <summary>Önceki adlar, en yeniden en eskiye; yalnızca eski veri klasörlerini bulmak için kullanılır.</summary>
     public static IReadOnlyList<string> LegacyNames { get; } = ["E-mre Hub", "RTX Windows Updater"];

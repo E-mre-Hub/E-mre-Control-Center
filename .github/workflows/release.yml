@@ -13,9 +13,6 @@ permissions:
 jobs:
   build:
     runs-on: windows-latest
-    env:
-      # Açık sürüm deposuna (uygulama içi güncelleme) yazma anahtarı tanımlı mı? Anahtarın kendisi günlüğe yazılmaz.
-      HAS_RELEASES_TOKEN: ${{ secrets.RELEASES_TOKEN != '' }}
     steps:
       - name: Kodu al
         uses: actions/checkout@v4
@@ -65,34 +62,15 @@ jobs:
           [IO.File]::WriteAllText((Join-Path $PWD 'release-notes.md'), $notes, (New-Object System.Text.UTF8Encoding($false)))
           Write-Host "Sürüm notu: $($notes.Length) karakter"
 
+      # Uygulama içi güncelleme bu yayını okur (ana depo herkese açık): başlık, README'deki sürüm notu ve kurulum dosyası.
+      # GitHub'ın otomatik notları ("Full Changelog" bağlantısı) eklenmez; güncelleme penceresinde yalnızca README notu görünür.
       - name: GitHub Release oluştur
         if: startsWith(github.ref, 'refs/tags/v')
         uses: softprops/action-gh-release@v2
         with:
-          files: |
-            ${{ env.SETUP_NAME }}
-            ${{ env.ZIP_NAME }}
-          body_path: release-notes.md
-          generate_release_notes: true
-
-      # Uygulama içi güncelleme: kaynak kod özel depoda kalır; kurulum dosyası ve notlar herkese açık sürüm deposuna da yayınlanır
-      # (uygulamalar yeni sürümü oradan görür). Anahtar: özel depo Settings → Secrets → Actions → RELEASES_TOKEN
-      # (yalnızca E-mre-Control-Center-Releases deposuna "Contents: Read and write" izinli ince ayarlı erişim anahtarı).
-      - name: Açık sürüm deposuna yayınla (uygulama içi güncelleme)
-        if: startsWith(github.ref, 'refs/tags/v') && env.HAS_RELEASES_TOKEN == 'true'
-        uses: softprops/action-gh-release@v2
-        with:
-          repository: E-mre-Hub/E-mre-Control-Center-Releases
-          token: ${{ secrets.RELEASES_TOKEN }}
-          tag_name: ${{ github.ref_name }}
           name: E-mre Control Center ${{ github.ref_name }}
           body_path: release-notes.md
           make_latest: true
           files: |
             ${{ env.SETUP_NAME }}
             ${{ env.ZIP_NAME }}
-
-      - name: Uyarı – sürüm deposu anahtarı yok
-        if: startsWith(github.ref, 'refs/tags/v') && env.HAS_RELEASES_TOKEN != 'true'
-        shell: powershell
-        run: Write-Host "::warning::RELEASES_TOKEN tanımlı değil; sürüm açık sürüm deposuna yayınlanmadı. Uygulamalar bu sürümü güncelleme olarak göremez."
