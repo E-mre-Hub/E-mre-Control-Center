@@ -175,6 +175,12 @@ public sealed class WingetManager(Logger logger, string source, string key, stri
         }
 
         var tables = WingetTableParser.Parse(up.StdOut);
+
+        // Önceki sürümlerin Edge / WebView2 için sakladığı "kaldır + yeniden kur" kaydı geçersiz (kaldırılamazlar): Edge
+        // güncel olsa bile silinir, CompleteOperation kalıcı kayıttan da kaldırır.
+        if (source.Equals("winget", StringComparison.OrdinalIgnoreCase))
+            foreach (var id in EdgeUpdateService.WingetIds)
+                TechnologyMismatch.TryRemove(source + "|" + id, out _);
         var exit = unchecked((uint)up.ExitCode);
         if (tables.Count == 0 && up.ExitCode != 0 && exit != NoApplicationsFound && exit != UpdateNotApplicable)
         {

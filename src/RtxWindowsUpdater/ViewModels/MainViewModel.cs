@@ -246,6 +246,14 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         {
             if (e.PropertyName == nameof(UpdateViewModel.IsRequired)) OnPropertyChanged(nameof(ShowUpdateOverlay));
         };
+        // Uygulama açıkken yeni sürüm bulundu: pencere görünürse zorunlu pencere zaten gelir; bildirim alanındaysa Windows bildirimi.
+        Update.UpdateFound += info =>
+        {
+            if (_windowVisible || !NotificationsEnabled) return;
+            _ = _notifications.ShowAsync("Yeni sürüm yayınlandı",
+                $"{AppInfo.Name} {info.Tag} yayınlandı. Güncellemek için uygulamayı açın (güncelleme zorunludur).");
+            _logger.Info($"Windows bildirimi gönderildi: yeni sürüm {info.Tag}.");
+        };
 
         // Kontrol Merkezi: mevcut kartlar (aynı nesneler) 7 kategori altında gruplanır; yalnızca arayüz düzenidir.
         // Her kategori soldaki alt menüde bölmelere ayrılır (Monster düzeni); aynı bölme türü birden fazla kategoride bulunabilir.
@@ -738,7 +746,11 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         _ = RefreshSystemInfoAsync();
 
         // Yeni sürüm denetimi (arka planda; sonuç gelince zorunlu güncelleme penceresi girişten sonra gösterilir).
-        if (UpdateViewModel.AutoCheckEnabled) _ = Update.CheckAsync();
+        if (UpdateViewModel.AutoCheckEnabled)
+        {
+            _ = Update.CheckAsync();
+            Update.StartPeriodicChecks(); // uygulama açıkken de: yeni sürüm yayınlanınca yeniden başlatmayı beklemeden gelir
+        }
 
         if (_argAccepted)
         {
@@ -2105,6 +2117,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
 
     public void Dispose()
     {
+        Update.StopPeriodicChecks();
         StopDeviceMonitoring();
         _activeTool?.Deactivate();
         _monitorInstance?.Dispose();

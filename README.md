@@ -34,8 +34,9 @@ kendi bakım araçlarını (SFC, DISM CheckHealth / onayla RestoreHealth, MRT h�
 - **Kurulum ve kaldırma:** `E-mre-Control-Center-Setup-vX.Y.Z.exe` ile gerçek bir Windows programı gibi kurulur (Program Files,
   Başlat menüsü, isteğe bağlı masaüstü kısayolu, Ayarlar → Uygulamalar kaydı). Windows'tan kaldırılırken veda ekranı ve isteğe
   bağlı geri bildirim ("Neden kaldırıyorsunuz?") açılır (bkz. [Kurulum ve kaldırma](#kurulum-güncelleme-ve-kaldırma)).
-- **Uygulama içi güncelleme:** yeni sürüm yayınlandığında uygulama açılışta "Yeni sürüm yayınlandı" penceresini gösterir; Güncelle ile
-  indirilir, doğrulanır ve kurulur (zorunlu; bkz. [Uygulama içi güncelleme](#uygulama-içi-güncelleme-zorunlu)).
+- **Uygulama içi güncelleme:** yeni sürüm yayınlandığında "Yeni sürüm yayınlandı" penceresi gelir – açılışta ve uygulama açıkken de
+  (en geç 5 dakika içinde, yeniden başlatmadan); Güncelle ile indirilir, doğrulanır ve kurulur (zorunlu; bkz.
+  [Uygulama içi güncelleme](#uygulama-içi-güncelleme-zorunlu)).
 
 - Teknoloji: C# / .NET 8 / WPF, MVVM
 - Çıktı: `E-mre Control Center.exe`: tek dosya, self-contained (hedef bilgisayarda .NET kurulu olması gerekmez). Kurulum dosyası
@@ -204,22 +205,22 @@ tırnak içinde yazılır). Depo: https://github.com/E-mre-Hub/E-mre-Control-Cen
 
 ### Yeni sürüm yayınlama (depo sahibi)
 
-1. `src\RtxWindowsUpdater\RtxWindowsUpdater.csproj` içindeki `<Version>` değerini artırın (ör. `1.8.2`).
+1. `src\RtxWindowsUpdater\RtxWindowsUpdater.csproj` içindeki `<Version>` değerini artırın (ör. `1.8.3`).
 2. Değişiklikleri commit'leyip gönderin, ardından etiket oluşturun:
 
 ```bash
-git tag v1.8.2
+git tag v1.8.3
 ```
 
 ```bash
-git push origin v1.8.2
+git push origin v1.8.3
 ```
 
 3. GitHub Actions (`.github/workflows/release.yml`) EXE'yi Windows sunucusunda derler ve **Releases** sayfasına iki dosya ekler:
-   `E-mre-Control-Center-Setup-v1.8.2.exe` (kurulum) ve `E-mre-Control-Center-v1.8.2.zip` (taşınabilir). Arkadaşlar oradan indirir;
+   `E-mre-Control-Center-Setup-v1.8.3.exe` (kurulum) ve `E-mre-Control-Center-v1.8.3.zip` (taşınabilir). Arkadaşlar oradan indirir;
    yüklü uygulamalar bu yayını "Yeni sürüm yayınlandı" olarak görür (v1.7.2 ve sonrası).
-   Etiketteki sürüm (v1.8.2) EXE'nin sürümü olarak kullanılır; csproj'daki `<Version>` ile aynı olmalıdır. Yayının metni yalnızca
-   README'deki `### v1.8.2` bölümüdür (uygulamadaki güncelleme penceresinde de bu metin görünür); bu bölüm etiketten önce yazılmalıdır.
+   Etiketteki sürüm (v1.8.3) EXE'nin sürümü olarak kullanılır; csproj'daki `<Version>` ile aynı olmalıdır. Yayının metni yalnızca
+   README'deki `### v1.8.3` bölümüdür (uygulamadaki güncelleme penceresinde de bu metin görünür); bu bölüm etiketten önce yazılmalıdır.
 
 Not: Herkese açık depolarda GitHub Actions standart sunucularda ücretsizdir;
 bir derleme yaklaşık 3-5 dakika sürer.
@@ -347,7 +348,7 @@ bulmak için kullanılır:
 | **Microsoft Store** | Store uygulamasının varlığı (`Get-AppxPackage`) + `winget upgrade --source msstore`. | Paketler winget ile tek tek güncellenir, ardından Store'un kendi taraması `MDM_EnterpriseModernAppManagement_AppManagement01.UpdateScanMethod` ile tetiklenir. |
 | **NVIDIA** | GPU: WMI. Kurulu sürücü: `nvidia-smi` (yoksa WMI sürümünden hesap). NVIDIA App: kayıt defterinden tespit (bilgi). En son sürücü: nvidia.com sürücü sayfasının kullandığı resmi NVIDIA servisleri (`lookupValueSearch.aspx` + `AjaxDriverService DriverManualLookup`, WHQL, DCH, Windows 11). | Yalnızca `https://*.download.nvidia.com` adresinden indirilir, disk alanı kontrol edilir, **Authenticode imzası doğrulanır (NVIDIA Corporation olmalı)**, `-s -noreboot` ile kurulur, ardından sürüm `nvidia-smi` ile yeniden okunarak doğrulanır. Kurulum dosyası `%ProgramData%\E-mre Control Center\Downloads` klasörüne indirilir ve işlem bitince (başarılı ya da değil) silinir. Kartsız modda bu kart hiç çalışmaz. |
 | **Defender** | `Get-MpComputerStatus` + Microsoft'un resmi Defender sürüm servisi (`microsoft.com/security/encyclopedia/adlpackages.aspx?action=info&arch=x64`) ile gerçek karşılaştırma. | `Update-MpSignature` (başarısızsa MicrosoftUpdateServer, ardından MMPC kaynağı). Sürüm yeniden okunarak doğrulanır. Defender ayarlarına dokunulmaz. |
-| **Windows Geçici Dosyalar** | Ayarlar → Sistem → Depolama → Geçici dosyalar'daki güvenli kategorilerin gerçek konumları ölçülür: Kullanıcı geçici dosyaları (`%TEMP%`, .NET tek dosya çalışma klasörü hariç), Windows geçici dosyaları (`%WINDIR%\Temp`), Teslim En İyileştirme önbelleği (resmi `Get-DeliveryOptimizationStatus` / `Get-DOConfig` + önbellek klasörünün diskteki gerçek boyutu), Windows hata raporlama dosyaları (`WER\ReportArchive`, `ReportQueue`), DirectX gölgelendirici önbelleği (`%LOCALAPPDATA%\D3DSCache`). Her kategori için ayrı ayrı **Ölçülen**, **Temizlenebilir** ve **Korunan** hesaplanır. Temizlenebilir: 24 saatten uzun süredir değişmemiş, sistem/salt okunur olmayan dosyalar; Teslim En İyileştirme'de Windows'un sabitlemediği (IsPinned) ve etkin indirmede olmayan önbellek. Korunan alan (son 24 saat, salt okunur/sistem, sabitlenmiş/etkin önbellek, bir önceki temizlikte Windows'un silmediği önbellek) asla "temizlenebilir" sayılmaz ve kartta "Ek olarak X korunuyor" diye ayrı yazılır. Bağlantı noktaları izlenmez. Okunamayan konum "0 bayt" değil "Okunamadı" olarak raporlanır. Sonuç: "Temizlenebilir: X" veya "Temizlenecek geçici dosya bulunamadı". | Onay penceresinde tahmini alan ve kategori kutuları (varsayılan işaretli, seçili toplam canlı hesaplanır). Yalnızca işaretli kategoriler temizlenir; kullanımdaki dosyalar atlanır, kök klasörler ve son 24 saatte oluşturulmuş klasörler silinmez; Teslim En İyileştirme için Windows'un resmi `Delete-DeliveryOptimizationCache -Force` komutu (sabitlenmiş dosyalar silinmez; `-IncludePinnedFiles` kullanılmaz). Temizlikten sonra TÜM kategoriler dosya sisteminden yeniden ölçülür (silme komutunun kendi bildirimi sonuç sayılmaz): **Önce / Sonra / Temizlenen / Kalan / Kullanımda-atlanan / Korunan**. Kullanımdaki dosyalar kaldıysa sonuç "Kısmen temizlendi" (uyarı) olur. Çöp Kutusu bu hesaba dahil değildir. |
+| **Windows Geçici Dosyalar** | Ayarlar → Sistem → Depolama → Geçici dosyalar'daki güvenli kategorilerin gerçek konumları ölçülür: Kullanıcı geçici dosyaları (`%TEMP%`, .NET tek dosya çalışma klasörü hariç), Windows geçici dosyaları (`%WINDIR%\Temp`), Teslim En İyileştirme önbelleği (resmi `Get-DeliveryOptimizationStatus` / `Get-DOConfig` / `Get-DeliveryOptimizationPerfSnap` – Windows'un bildirdiği önbellek boyutu; klasör okunabiliyorsa diskteki gerçek boyutu), Windows hata raporlama dosyaları (`WER\ReportArchive`, `ReportQueue`), DirectX gölgelendirici önbelleği (`%LOCALAPPDATA%\D3DSCache`). Her kategori için ayrı ayrı **Ölçülen**, **Temizlenebilir** ve **Korunan** hesaplanır. Temizlenebilir: son 24 saatte oluşturulmamış, değişmemiş ve klasöre taşınmamış (NTFS değişim zamanı – uygulamalar dosyayı eski tarihiyle Temp'e taşıyabilir), sistem/salt okunur olmayan ve şu anda başka bir uygulama tarafından silinmesine izin vermeden açık tutulmayan dosyalar (dosya silme erişimiyle açılıp hemen kapatılarak sorulur; dosya değişmez); Teslim En İyileştirme'de Windows'un sabitlemediği (IsPinned) ve etkin indirmede olmayan önbellek. Korunan alan (son 24 saat, salt okunur/sistem, **kullanımda – onu kullanan uygulamanın adıyla** (Windows Restart Manager, ör. "kullanımda 103 KB – Microsoft OneDrive"), erişim reddedilen, sabitlenmiş/etkin önbellek, bir önceki temizlikte Windows'un 60 sn içinde silmediği önbellek) asla "temizlenebilir" sayılmaz ve kartta "Ek olarak X korunuyor" diye ayrı yazılır. Bağlantı noktaları izlenmez. Okunamayan konum "0 bayt" değil "Okunamadı" olarak raporlanır. Sonuç: "Temizlenebilir: X" veya "Temizlenecek geçici dosya bulunamadı". | Onay penceresinde tahmini alan ve kategori kutuları (varsayılan işaretli, seçili toplam canlı hesaplanır). Yalnızca işaretli kategoriler temizlenir; kullanımdaki dosyalar atlanır, kök klasörler ve son 24 saatte oluşturulmuş klasörler silinmez; Teslim En İyileştirme için Windows'un resmi `Delete-DeliveryOptimizationCache -Force` komutu (sabitlenmiş dosyalar silinmez; `-IncludePinnedFiles` kullanılmaz); Windows dosyaları arka planda sildiği için silinen dosyaların Windows kaydından çıkması en fazla 60 sn beklenir ve doğrulanır. Temizlikten sonra TÜM kategoriler dosya sisteminden yeniden ölçülür (silme komutunun kendi bildirimi sonuç sayılmaz): **Önce / Sonra / Temizlenen / Kalan / Kullanımda-atlanan / Korunan**. Silme anında kullanımda olduğu için atlanan dosyalar onları kullanan uygulamayla birlikte yazılır; silinebilir olduğu hâlde silinemeyen dosya kaldıysa sonuç "Kısmen temizlendi" (uyarı) olur. Çöp Kutusu bu hesaba dahil değildir. |
 | **Çöp Kutusu** | `SHQueryRecycleBin` (tüm sürücüler). | Yalnızca onayla `SHEmptyRecycleBin`; sonra yeniden sayılarak doğrulanır. |
 | **SFC** | `sfc /verifyonly` – yalnızca tarar, **onarım yapmaz**. Çıktı (UTF-16), `sfc.exe`'nin kendi mesaj tablosundan Windows dilinde yüklenen gerçek mesajlarla eşleştirilir; ilerleme yüzdesi canlı gösterilir. | Kartın "Tarama Başlat" butonu: `sfc /scannow` (onaydan sonra). Toplu güncellemede `sfc /scannow` yalnızca doğrulama bozuk dosya bulduysa çalışır. Onarım yarıda kesilmez. |
 | **DISM** | `DISM /Online /Cleanup-Image /CheckHealth` (çıktının dilden bağımsız okunması için DISM'in `/English` görüntüleme seçeneğiyle). Sonuç: Sağlıklı / **Dikkat: Onarılabilir durumda** (başarılı sayılmaz, işlem gerektirir) / Onarılamaz / Hata. | Yalnızca kontrol "onarılabilir" dediyse ve kullanıcı onay verdiyse ("Tümünü Güncelle", "Seçilenleri Çalıştır" veya kartın "Onar" onayı): `DISM /Online /Cleanup-Image /RestoreHealth`. DISM'in "başarılı" mesajı doğrudan kabul edilmez; ardından `/CheckHealth` yeniden çalıştırılır ve bileşen deposu gerçekten sağlıklıysa "Onarıldı (doğrulandı)" gösterilir. Hata kodları (ör. 0x800F081F kaynak bulunamadı, 0x800F0906 indirilemedi) açıklamasıyla gösterilir. Onarım başladıktan sonra yarıda kesilmez. |
@@ -456,6 +457,13 @@ taşınabilir mi olduğu yazar.
 
 - Uygulama her açılışta (gereksinimler geçtikten sonra, arka planda) bu deponun son yayınını denetler:
   `https://api.github.com/repos/E-mre-Hub/E-mre-Control-Center/releases/latest` (oturum açılmaz, anahtar kullanılmaz).
+- **Uygulama açıkken de** (v1.8.3) her **5 dakikada** bir yeniden denetler; yeni sürüm yayınlanınca uygulamayı kapatıp açmak gerekmez,
+  pencere en geç 5 dakika içinde hangi sayfada olursanız olun ekrana gelir. Pencere bildirim alanından açılınca son denetim 1 dakikadan
+  eskiyse hemen denetlenir. Denetim GitHub'a **koşullu istek** olarak yapılır (son yanıtın ETag'i): yayın değişmediyse GitHub
+  "değişmedi" (HTTP 304) der ve bu istek IP başına saatlik 60 isteklik sınırdan düşmez. İstek sınırı dolarsa sınırın sıfırlanma
+  zamanına kadar yeniden denenmez. Aynı sonuç ("güncel" / "internet yok") günlüğe her 5 dakikada bir yazılmaz, yalnızca değişince yazılır.
+- Uygulama **bildirim alanındayken** yeni sürüm bulunursa Windows bildirimi gösterilir (bildirimler açıksa) ve simgenin sağ tık
+  menüsünde yalnızca **"Güncelleme var: vX.Y.Z"** ile **Çıkış** kalır; güncellemeden kısayollarla kullanmaya devam edilemez.
 - Yeni sürüm varsa girişten sonra ekranın önüne **"Yeni sürüm yayınlandı"** penceresi gelir: yeni / yüklü sürüm, yayın tarihi, boyut ve
   sürüm notları (README'deki sürüm geçmişinden). Güncelleme **zorunludur**: arkadaki ekran kullanılamaz; seçenekler **Güncelle** veya
   **Uygulamayı kapat**. Bir kontrol / güncelleme işlemi veya hız testi sürerken pencere beklenir (işlem yarıda bırakılmaz).
@@ -734,14 +742,18 @@ eski klasörlerde kalır (`%LOCALAPPDATA%\E-mre Hub\Logs\`, `%LOCALAPPDATA%\RTX 
   DISM indirme ve açma aşamalarında yüzdeyi uzun süre aynı tutar. Uygulama bu sırada dakikada bir geçen süreyi yazar.
 - Teslim En İyileştirme önbelleğinde Windows'un sabitlediği (bekleyen Windows Update / Store işleri için tutulan) dosyalar
   temizlenmez; bunlar Windows tarafından gerektiğinde kendiliğinden silinir. Hizmet boştayken Windows etkin önbellek kaydı
-  bildirmeyebilir; bu durumda yalnızca diskteki ölçüm gösterilir ve temizlenebilir miktar vaat edilmez.
+  bildirmeyebilir; bu durumda Windows'un bildirdiği önbellek boyutu (`Get-DeliveryOptimizationPerfSnap`) gösterilir ve kaydı
+  olmayan önbellek için temizlenebilir miktar vaat edilmez. `Delete-DeliveryOptimizationCache` silmeyi hizmete bırakır ve
+  dosyalar birkaç saniye içinde kaybolur; uygulama bunu en fazla 60 sn bekler.
+- Kullanımdaki geçici dosyalar (ör. OneDrive'ın açık tuttuğu `wct*.tmp`) silinemez; temizlenebilir sayılmaz, kullanan uygulamayla
+  birlikte "korunan" gösterilir ve uygulama kapandıktan sonraki temizlikte silinir. Uygulamalar kapatılmaz.
 - Çalışan uygulamayı kapatıp yeniden deneme, yalnızca kurulum klasörü Programlar ve Özellikler kaydından güvenle bulunabilen
   paketlerde mümkündür. Bir paketin dosyalarını başka bir uygulama DLL olarak yüklemiş olabilir (ör. OBS Sanal Kamera
   modülünü yükleyen bir tarayıcı/Electron uygulaması); bu durumda o uygulama listelenir ve kapatılması kullanıcıya bırakılır.
 - Windows Geçici Dosyalar kartı, Ayarlar'daki listenin yalnızca güvenli ve dosya sistemi/resmi cmdlet ile doğrulanabilen
   kategorilerini kapsar. Windows Update Temizleme (DISM gerektirir), Küçük resimler (Gezgin kilitler), İndirilenler,
   Windows.old, önceki Windows kurulumu, sürücü paketleri ve Çöp Kutusu bilinçli olarak dahil edilmez. Bu nedenle toplam,
-  Ayarlar ekranındaki değerden farklı olabilir. Son 24 saatte değişen dosyalar sayılmaz ve silinmez.
+  Ayarlar ekranındaki değerden farklı olabilir. Son 24 saatte oluşturulan, değişen veya klasöre taşınan dosyalar sayılmaz ve silinmez.
   `%WINDIR%\Temp` yönetici izni olmadan okunamaz (uygulama kontrolleri zaten yönetici olarak çalıştırır).
 - Winget "kurulum teknolojisi farklı" (0x8A15008E) bildirdiğinde paket otomatik yükseltilemez; paketi kaldırıp yeni sürümü
   kurmak gerekir. Uygulama bunu yalnızca kullanıcı "Otomatik uygulanmayan güncellemeler" penceresinde ilgili paketi ayrıca
@@ -759,6 +771,25 @@ eski klasörlerde kalır (`%LOCALAPPDATA%\E-mre Hub\Logs\`, `%LOCALAPPDATA%\RTX 
   yöneticinin klasörü).
 
 ## Sürüm geçmişi
+
+### v1.8.3
+
+**Yeni: Güncelleme uygulama açıkken de gelir**
+- Yeni sürüm yayınlanınca uygulamayı kapatıp açmak gerekmez: uygulama açıkken 5 dakikada bir denetler ve "Yeni sürüm yayınlandı"
+  penceresi hangi sayfada olursanız olun ekrana gelir (güncelleme zorunludur). Sürmekte olan bir işlem varsa yarıda kesilmez; bitince gelir.
+- Uygulama bildirim alanındayken Windows bildirimi gösterilir; sağ tık menüsünde yalnızca "Güncelleme var" ve "Çıkış" kalır.
+- Denetim GitHub'a koşullu istekle yapılır (yayın değişmediyse istek sınırından düşmez).
+
+**Düzeltme: Geçici dosyalar "kısmen temizlendi" uyarısı**
+- Teslim En İyileştirme önbelleği: Windows silmeyi arka planda yaptığı için uygulama önbelleği hemen ölçüp "temizlenemedi
+  (dosyalar kullanımda veya Windows silmedi)" diyordu; oysa dosyalar birkaç saniye içinde siliniyordu. Artık silinen dosyaların
+  Windows kaydından çıkması en fazla 60 sn beklenir ve doğrulanır.
+- Önbellek boşken "okunamadı" yerine Windows'un bildirdiği boyut (0 bayt → "Temizlenecek dosya yok") gösterilir.
+- Kullanıcı / Windows geçici dosyaları: şu anda bir uygulamanın açık tuttuğu dosyalar temizlenebilir sayılmaz; kullanan
+  uygulamanın adıyla "korunan (kullanımda – Microsoft OneDrive)" olarak gösterilir. Uygulamalar kapatılmaz.
+- Eski tarihiyle Temp'e yeni taşınan dosyalar (ör. OneDrive) artık "eski" sayılıp silinmeye çalışılmaz (NTFS değişim zamanı).
+- Microsoft Edge güncellemesi günlüğünde sunulan sürüm artık yazılıyor; önceki sürümden kalan Edge "kaldır + kur" kaydı Edge
+  güncel olsa da temizlenir.
 
 ### v1.8.2
 

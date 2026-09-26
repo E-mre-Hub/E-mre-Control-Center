@@ -34,6 +34,9 @@ public static class EdgeUpdateService
     public static EdgeApp? Find(string wingetId) =>
         Known.FirstOrDefault(a => a.WingetId.Equals(wingetId, StringComparison.OrdinalIgnoreCase));
 
+    /// <summary>Microsoft Edge Update ile güncellenen winget kimlikleri.</summary>
+    public static IEnumerable<string> WingetIds => Known.Select(a => a.WingetId);
+
     private const string ProgId = "MicrosoftEdgeUpdate.Update3WebMachine";
     private const string ClientsKey = @"SOFTWARE\Microsoft\EdgeUpdate\Clients\";
 
@@ -226,13 +229,13 @@ public static class EdgeUpdateService
             {
                 ct.ThrowIfCancellationRequested();
                 var snapshot = ReadState(a);
+                if (!string.IsNullOrWhiteSpace(snapshot.AvailableVersion)) available = snapshot.AvailableVersion;
                 if (snapshot.State != last)
                 {
                     progress?.Invoke(StateText(snapshot.State, available));
                     last = snapshot.State;
                     lastProgressPercent = -1;
                 }
-                if (!string.IsNullOrWhiteSpace(snapshot.AvailableVersion)) available = snapshot.AvailableVersion;
 
                 switch (snapshot.State)
                 {

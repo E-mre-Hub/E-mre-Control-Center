@@ -22,7 +22,9 @@ public sealed record UpdateInfo(
     string Sha256);
 
 /// <summary>Denetim sonucu: Success=false → denetlenemedi (Message gerçek neden); Update=null → güncel.</summary>
-public sealed record UpdateCheckResult(bool Success, UpdateInfo? Update, string Message);
+/// <param name="NotModified">GitHub "değişmedi" (HTTP 304) dedi; sonuç bir önceki gerçek yanıttan.</param>
+/// <param name="RetryAt">GitHub istek sınırı doldu: bu zamandan önce yeniden denenmemeli.</param>
+public sealed record UpdateCheckResult(bool Success, UpdateInfo? Update, string Message, bool NotModified = false, DateTimeOffset? RetryAt = null);
 
 /// <summary>
 /// Uygulama içi güncelleme. Sürümler herkese açık ana deponun GitHub Releases'ından okunur (<see cref="AppInfo.ReleasesRepository"/>;
@@ -40,16 +42,33 @@ public sealed class UpdateService(Uri latestReleaseUrl, Action<string> log)
     private static readonly Regex SetupAssetName = new(@"^E-mre-Control-Center-Setup-v?\d+\.\d+\.\d+\.exe$", RegexOptions.IgnoreCase);
     private static readonly TimeSpan CheckTimeout = TimeSpan.FromSeconds(15);
 
+    // Koşullu istek: son gerçek yanıtın ETag'i gönderilir; yayın değişmediyse GitHub 304 döner ve bu istek IP başına saatlik
+    // 60 isteklik sınırdan DÜŞMEZ (uygulama açıkken düzenli denetim için). Sonuç, o ETag'e ait gerçek yanıttan üretilmiş sonuçtur.
+    private readonly object _cacheLock = new();
+    private string? _etag;
+    private UpdateCheckResult? _etagResult;
+    private string? _lastLogged;
+
     public async Task<UpdateCheckResult> CheckAsync(Version current, CancellationToken ct = default)
     {
         try
         {
+            string? etag;
+            UpdateCheckResult? cached;
+            lock (_cacheLock)
+            {
+                etag = _etag;
+                cached = _etagResult;
+            }
             using var http = CreateClient(CheckTimeout);
             using var request = new HttpRequestMessage(HttpMethod.Get, latestReleaseUrl);
             request.Headers.Accept.ParseAdd("application/vnd.github+json");
             request.Headers.Add("X-GitHub-Api-Version", "2022-11-28");
+            if (etag is not null && cached is not null) request.Headers.TryAddWithoutValidation("If-None-Match", etag);
             using var response = await http.SendAsync(request, ct);
             var code = (int)response.StatusCode;
+            if (response.StatusCode == HttpStatusCode.NotModified && cached is not null)
+                return cached with { NotModified = true };
             if (response.StatusCode == HttpStatusCode.NotFound)
                 return Fail($"Sürüm deposunda yayımlanmış sürüm bulunamadı (HTTP 404: {AppInfo.ReleasesRepository}).");
             if (code is 403 or 429 && response.Headers.TryGetValues("x-ratelimit-remaining", out var remaining) && remaining.FirstOrDefault() == "0")
@@ -57,7 +76,10 @@ public sealed class UpdateService(Uri latestReleaseUrl, Action<string> log)
                 var reset = response.Headers.TryGetValues("x-ratelimit-reset", out var r) && long.TryParse(r.FirstOrDefault(), out var epoch)
                     ? DateTimeOffset.FromUnixTimeSeconds(epoch).ToLocalTime().ToString("HH:mm")
                     : "bir süre";
-                return Fail($"GitHub istek sınırı doldu (HTTP {code}); {reset} sonra yeniden denenebilir.");
+                return new UpdateCheckResult(false, null, $"GitHub istek sınırı doldu (HTTP {code}); {reset} sonra yeniden denenebilir.",
+                    RetryAt: long.TryParse(response.Headers.TryGetValues("x-ratelimit-reset", out var rr) ? rr.FirstOrDefault() : null, out var at)
+                        ? DateTimeOffset.FromUnixTimeSeconds(at)
+                        : DateTimeOffset.Now.AddMinutes(15));
             }
             if (code != 200) return Fail($"GitHub beklenmeyen yanıt verdi (HTTP {code}).");
 
@@ -68,8 +90,8 @@ public sealed class UpdateService(Uri latestReleaseUrl, Action<string> log)
                 return Fail($"Sürüm etiketi okunamadı: \"{tag}\".");
             if (Normalize(version) <= Normalize(current))
             {
-                log($"Güncelleme denetimi: güncel (yüklü {current.ToString(3)}, son yayın {tag}).");
-                return new UpdateCheckResult(true, null, $"Güncel (son yayın {tag})");
+                LogOnce($"Güncelleme denetimi: güncel (yüklü {current.ToString(3)}, son yayın {tag}).");
+                return Remember(response, new UpdateCheckResult(true, null, $"Güncel (son yayın {tag})"));
             }
 
             var asset = root.TryGetProperty("assets", out var assets) && assets.ValueKind == JsonValueKind.Array
@@ -92,8 +114,8 @@ public sealed class UpdateService(Uri latestReleaseUrl, Action<string> log)
                 DateTimeOffset.TryParse(Str(root, "published_at"), out var published) ? published : null,
                 Uri.TryCreate(Str(root, "html_url"), UriKind.Absolute, out var page) ? page : latestReleaseUrl,
                 Str(asset, "name")!, url, size, digest[7..].ToUpperInvariant());
-            log($"Güncelleme denetimi: yeni sürüm {tag} (yüklü {current.ToString(3)}; {info.SetupName}, {size / 1048576.0:0.0} MB).");
-            return new UpdateCheckResult(true, info, $"Yeni sürüm: {tag}");
+            LogOnce($"Güncelleme denetimi: yeni sürüm {tag} (yüklü {current.ToString(3)}; {info.SetupName}, {size / 1048576.0:0.0} MB).");
+            return Remember(response, new UpdateCheckResult(true, info, $"Yeni sürüm: {tag}"));
         }
         catch (TaskCanceledException) when (!ct.IsCancellationRequested)
         {
@@ -110,6 +132,28 @@ public sealed class UpdateService(Uri latestReleaseUrl, Action<string> log)
 
         // Denetlenemedi sonucunu çağıran taraf günlüğe uyarı olarak yazar (burada yazılırsa satır iki kez görünür).
         static UpdateCheckResult Fail(string message) => new(false, null, message);
+    }
+
+    /// <summary>Başarılı gerçek yanıtın sonucunu ETag'iyle saklar (sonraki koşullu istek için).</summary>
+    private UpdateCheckResult Remember(HttpResponseMessage response, UpdateCheckResult result)
+    {
+        lock (_cacheLock)
+        {
+            _etag = response.Headers.ETag?.ToString();
+            _etagResult = _etag is null ? null : result;
+        }
+        return result;
+    }
+
+    /// <summary>Düzenli denetimde aynı sonuç her seferinde günlüğe yazılmaz; yalnızca değişince yazılır.</summary>
+    private void LogOnce(string line)
+    {
+        lock (_cacheLock)
+        {
+            if (line == _lastLogged) return;
+            _lastLogged = line;
+        }
+        log(line);
     }
 
     /// <summary>

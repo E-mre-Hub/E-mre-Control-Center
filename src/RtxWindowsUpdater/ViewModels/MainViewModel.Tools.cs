@@ -188,6 +188,7 @@ public sealed partial class MainViewModel : IToolHost, ICardResultSource
         _logger.Info(visible ? "Pencere bildirim alanından açıldı." : "Pencere kapatıldı; uygulama bildirim alanında çalışmaya devam ediyor.");
         UpdateDeviceMonitoring();
         UpdateToolActivation();
+        if (visible) Update.CheckIfStale();
     }
 
     public void ReportDiagnostic(string key, CheckResult result)

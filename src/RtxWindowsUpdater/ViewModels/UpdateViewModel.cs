@@ -4,6 +4,7 @@ using System.IO;
 using System.Net.Http;
 using System.Windows;
 using System.Windows.Input;
+using System.Windows.Threading;
 using RtxWindowsUpdater.Core;
 using RtxWindowsUpdater.Services;
 
@@ -16,11 +17,18 @@ public enum UpdateStage { Idle, Checking, UpToDate, CheckFailed, Available, Down
 /// penceresi gelir; seçenek Güncelle (veya uygulamayı kapatmak). Güncelle → kurulum dosyası indirilir ve doğrulanır (boyut, SHA-256,
 /// ürün adı, sürüm) → kurulum başlatılır, uygulama kapanır; kurulum bitince yeni sürüm açılır. Denetlenemezse (internet yok, GitHub
 /// yanıt vermedi) uygulama normal açılır ve nedeni Hakkında'da yazar; denetlenemeyen güncelleme varmış gibi gösterilmez.
+/// Uygulama AÇIKKEN de (KULLANICI İSTEĞİ 2026-09-26: "güncelleme yayınlayınca uygulama kullanılırken hemen ekrana gelsin")
+/// <see cref="RecheckInterval"/> aralıkla yeniden denetlenir (GitHub koşullu istek; değişmediyse 304 – istek sınırından düşmez);
+/// yeni sürüm bulunursa pencere hemen gelir (sistem işlemi / hız testi sürüyorsa bitince), pencere bildirim alanındaysa Windows
+/// bildirimi gösterilir. Bildirim alanından açılınca son denetim 1 dakikadan eskiyse hemen denetlenir.
 /// </summary>
 public sealed class UpdateViewModel : ObservableObject
 {
     /// <summary>Test düzenekleri yansımayla kapatır (gerçek GitHub'a istek gitmesin). Kullanıcının değiştirebileceği bir ayar değildir.</summary>
     internal static bool AutoCheckEnabled = true;
+
+    /// <summary>Uygulama açıkken yeniden denetim aralığı (test düzenekleri yansımayla kısaltır).</summary>
+    internal static TimeSpan RecheckInterval = TimeSpan.FromMinutes(5);
 
     private readonly Logger _logger;
     private UpdateService _service;
@@ -35,6 +43,12 @@ public sealed class UpdateViewModel : ObservableObject
     private string? _errorText;
     private string? _checkMessage;
     private DateTime? _checkedAt;
+    private DispatcherTimer? _recheckTimer;
+    private DateTime _nextAllowedCheck = DateTime.MinValue;
+    private bool _cleanupDone;
+
+    /// <summary>Yeni sürüm uygulama açıkken (düzenli denetimde) bulundu.</summary>
+    public event Action<UpdateInfo>? UpdateFound;
 
     public UpdateViewModel(Logger logger)
     {
@@ -112,18 +126,58 @@ public sealed class UpdateViewModel : ObservableObject
         _ => $"Yeni sürüm yayımlandı: {NewVersionText}"
     };
 
-    /// <summary>Açılışta arka planda bir kez çağrılır (gereksinimler geçtikten sonra).</summary>
-    public async Task CheckAsync()
+    /// <summary>Açılışta arka planda çağrılır (gereksinimler geçtikten sonra) ve Hakkında → "Şimdi denetle".</summary>
+    public Task CheckAsync() => CheckCoreAsync(background: false);
+
+    /// <summary>Uygulama açıkken düzenli yeniden denetimi başlatır (açılıştaki ilk denetimden sonra).</summary>
+    public void StartPeriodicChecks()
+    {
+        if (_recheckTimer is not null) return;
+        _recheckTimer = new DispatcherTimer(DispatcherPriority.Background) { Interval = RecheckInterval };
+        _recheckTimer.Tick += (_, _) => _ = CheckInBackgroundAsync();
+        _recheckTimer.Start();
+    }
+
+    public void StopPeriodicChecks()
+    {
+        _recheckTimer?.Stop();
+        _recheckTimer = null;
+    }
+
+    public bool IsPeriodicCheckRunning => _recheckTimer is not null;
+
+    /// <summary>Pencere bildirim alanından açılınca: son denetim 1 dakikadan eskiyse hemen denetle (düzenli denetim açıksa).</summary>
+    public void CheckIfStale()
+    {
+        if (_recheckTimer is null || _checkedAt is { } at && DateTime.Now - at < TimeSpan.FromMinutes(1)) return;
+        _ = CheckInBackgroundAsync();
+    }
+
+    private Task CheckInBackgroundAsync()
+    {
+        // Yeni sürüm zaten bulunduysa (pencere açık / indiriliyor) ya da GitHub istek sınırı dolduysa denetlenmez.
+        if (IsRequired || IsWorking || Stage == UpdateStage.Checking || DateTime.Now < _nextAllowedCheck) return Task.CompletedTask;
+        return CheckCoreAsync(background: true);
+    }
+
+    private async Task CheckCoreAsync(bool background)
     {
         if (IsWorking || Stage == UpdateStage.Checking) return;
         Stage = UpdateStage.Checking;
-        _ = Task.Run(CleanupDownloads);
+        if (!_cleanupDone)
+        {
+            _cleanupDone = true;
+            _ = Task.Run(CleanupDownloads);
+        }
         var result = await _service.CheckAsync(new Version(AppInfo.Version));
+        var previousMessage = _checkMessage;
         _checkedAt = DateTime.Now;
         _checkMessage = result.Message;
         if (!result.Success)
         {
-            _logger.Warning("Güncelleme denetlenemedi: " + result.Message);
+            if (result.RetryAt is { } retry) _nextAllowedCheck = retry.LocalDateTime;
+            // Düzenli denetimde aynı hata (ör. internet yok) her 5 dakikada bir günlüğe yazılmaz.
+            if (!background || result.Message != previousMessage) _logger.Warning("Güncelleme denetlenemedi: " + result.Message);
             Available = null;
             Stage = UpdateStage.CheckFailed;
             return;
@@ -136,8 +190,10 @@ public sealed class UpdateViewModel : ObservableObject
         }
         Available = result.Update;
         StatusText = "Yeni sürüm yayınlandı";
-        _logger.Info($"Yeni sürüm yayımlandı: {result.Update.Tag} (yüklü v{AppInfo.Version}). Güncelleme penceresi gösteriliyor.");
+        _logger.Info($"Yeni sürüm yayımlandı: {result.Update.Tag} (yüklü v{AppInfo.Version}" +
+                     (background ? ", uygulama açıkken denetlendi" : "") + "). Güncelleme penceresi gösteriliyor.");
         Stage = UpdateStage.Available;
+        if (background) UpdateFound?.Invoke(result.Update);
     }
 
     private async Task UpdateAsync()

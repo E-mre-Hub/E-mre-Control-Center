@@ -55,6 +55,12 @@ public sealed class TrayController : IDisposable
             _icon.SetTooltip(TooltipText());
         };
         _vm.PropertyChanged += OnViewModelChanged;
+        _vm.Update.PropertyChanged += OnUpdateChanged;
+    }
+
+    private void OnUpdateChanged(object? sender, PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName == nameof(UpdateViewModel.IsRequired)) _tooltipTimer.Start();
     }
 
     /// <summary>Simge gerçekten eklendi (eklenemediyse pencere kapatma düğmesi uygulamayı kapatır; arka planda görünmez kalmaz).</summary>
@@ -67,7 +73,9 @@ public sealed class TrayController : IDisposable
     }
 
     private string TooltipText() =>
-        _vm.IsBusy ? $"{AppInfo.Name}\n{_vm.StepText}" : $"{AppInfo.Name}\nArka planda çalışıyor · açmak için çift tıklayın";
+        _vm.IsBusy ? $"{AppInfo.Name}\n{_vm.StepText}"
+        : _vm.Update.IsRequired ? $"{AppInfo.Name}\nYeni sürüm yayınlandı: {_vm.Update.NewVersionText} · güncellemek için açın"
+        : $"{AppInfo.Name}\nArka planda çalışıyor · açmak için çift tıklayın";
 
     /// <summary>Pencere ilk kez bildirim alanına gizlendiğinde bir kez bilgi verir (bildirimler kapalıysa gösterilmez).</summary>
     public void NotifyHidden()
@@ -85,6 +93,14 @@ public sealed class TrayController : IDisposable
     public ContextMenu BuildMenu()
     {
         var menu = new ContextMenu { Style = (Style)Application.Current.FindResource("Tray.Menu") };
+        if (_vm.Update.IsRequired)
+        {
+            // Zorunlu güncelleme: güncellemeden uygulamayı kullanmaya devam etmek için kısayol sunulmaz (yalnızca Güncelle / Çıkış).
+            menu.Items.Add(Item("", $"Güncelleme var: {_vm.Update.NewVersionText}", "Zorunlu", true, () => _window.ShowFromTray(), bold: true));
+            menu.Items.Add(Separator());
+            menu.Items.Add(Item("", "Çıkış", null, true, () => _window.RequestExit()));
+            return menu;
+        }
         var busy = _vm.IsBusy;
         menu.Items.Add(Item("", $"{AppInfo.Name}'ı aç", busy ? "İşlem sürüyor" : null, true, () => _window.ShowFromTray(), bold: true));
         menu.Items.Add(Separator());
@@ -160,6 +176,7 @@ public sealed class TrayController : IDisposable
     public void Dispose()
     {
         _vm.PropertyChanged -= OnViewModelChanged;
+        _vm.Update.PropertyChanged -= OnUpdateChanged;
         _tooltipTimer.Stop();
         _icon.Dispose();
     }
