@@ -866,6 +866,15 @@
                                 </Setter.Value>
                             </Setter>
                         </DataTrigger>
+                        <!-- İnternet yokken arkadaki içerik bulanık ve devre dışı (klavyeyle de ulaşılamaz) -->
+                        <DataTrigger Binding="{Binding ShowOfflineOverlay}" Value="True">
+                            <Setter Property="IsEnabled" Value="False" />
+                            <Setter Property="Effect">
+                                <Setter.Value>
+                                    <BlurEffect Radius="8" />
+                                </Setter.Value>
+                            </Setter>
+                        </DataTrigger>
                         <!-- Zorunlu güncelleme penceresi açıkken arkadaki içerik bulanık ve devre dışı (klavyeyle de ulaşılamaz) -->
                         <DataTrigger Binding="{Binding ShowUpdateOverlay}" Value="True">
                             <Setter Property="IsEnabled" Value="False" />
@@ -909,6 +918,31 @@
                                     </Grid.ColumnDefinitions>
                                     <TextBlock Text="&#xE7BA;" Style="{StaticResource T.Icon}" FontSize="18" Foreground="{StaticResource B.Red}" VerticalAlignment="Top" Margin="0,1,12,0" />
                                     <TextBlock Grid.Column="1" Text="{Binding UnsupportedMessage}" Style="{StaticResource T.Body}" Foreground="{StaticResource B.Text}" />
+                                </Grid>
+                            </Border>
+
+                            <!-- İnternet yok: uygulamaya girilemez (KULLANICI KARARI 2026-09-27) -->
+                            <Border x:Name="NoInternetBox" Visibility="{Binding ShowNoInternet, Converter={StaticResource Visible}}"
+                                    Background="#1FFF4D61" BorderBrush="#66FF4D61" BorderThickness="1" CornerRadius="11" Padding="16,14" Margin="0,6,0,0">
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto" />
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="Auto" />
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Text="&#xE774;" Style="{StaticResource T.Icon}" FontSize="18" Foreground="{StaticResource B.Red}" VerticalAlignment="Top" Margin="0,1,12,0" />
+                                    <StackPanel Grid.Column="1">
+                                        <TextBlock Style="{StaticResource T.Body}" Foreground="{StaticResource B.Text}"
+                                                   Text="İnternet bağlantısı gerekli; bağlantı olmadan uygulamaya girilemez. Wi-Fi veya Ethernet bağlantınızı kontrol edin; bağlantı gelince bu ekran kendiliğinden yenilenir." />
+                                        <TextBlock Text="{Binding OfflineDetailText}" FontSize="12" Foreground="{StaticResource B.Text2}" TextWrapping="Wrap" Margin="0,6,0,0" />
+                                    </StackPanel>
+                                    <Button x:Name="RetryInternetButton" Grid.Column="2" Style="{StaticResource Btn.Secondary}" Height="38" Margin="12,0,0,0"
+                                            VerticalAlignment="Top" Command="{Binding RetryInternetCommand}" AutomationProperties.Name="{Binding RetryInternetText}">
+                                        <StackPanel Orientation="Horizontal">
+                                            <TextBlock Text="&#xE72C;" Style="{StaticResource T.Icon}" FontSize="14" Margin="0,0,8,0" />
+                                            <TextBlock Text="{Binding RetryInternetText}" FontSize="13" />
+                                        </StackPanel>
+                                    </Button>
                                 </Grid>
                             </Border>
 
@@ -3112,6 +3146,51 @@
                         </StackPanel>
                         <TextBlock FontSize="11" Foreground="{StaticResource B.Text3}" TextWrapping="Wrap" TextAlignment="Center" Margin="0,16,0,0"
                                    Text="Bu güncelleme zorunludur; yeni sürüm kurulana kadar uygulama kullanılamaz. İndirilen dosya GitHub'ın bildirdiği SHA-256 özeti, boyutu ve sürümüyle doğrulanır; kurulum bitince yeni sürüm kendiliğinden açılır." />
+                    </StackPanel>
+                </Border>
+            </Grid>
+        </Grid>
+
+        <!-- ================= İnternet bağlantısı yok (KULLANICI KARARI 2026-09-27: internetsiz kullanılamaz) ================= -->
+        <Grid x:Name="OfflineOverlay" Grid.Row="1" Background="#D9020409" Visibility="{Binding ShowOfflineOverlay, Converter={StaticResource Visible}}">
+            <Grid Width="580" HorizontalAlignment="Center" VerticalAlignment="Center" Margin="0,0,0,20">
+                <Border Style="{StaticResource CardShadowLayer}" />
+                <Border Style="{StaticResource Card.Flat}" Padding="36,30,36,26">
+                    <StackPanel>
+                        <Grid Width="150" Height="100" HorizontalAlignment="Center">
+                            <Ellipse IsHitTestVisible="False">
+                                <Ellipse.Fill>
+                                    <RadialGradientBrush>
+                                        <GradientStop Color="#4DFF4D61" Offset="0" />
+                                        <GradientStop Color="#14FF4D61" Offset="0.5" />
+                                        <GradientStop Color="#00FF4D61" Offset="1" />
+                                    </RadialGradientBrush>
+                                </Ellipse.Fill>
+                            </Ellipse>
+                            <Border Width="70" Height="70" CornerRadius="19" BorderThickness="1.5" BorderBrush="{StaticResource B.Red}" Background="#1FFF4D61">
+                                <TextBlock Text="&#xE774;" Style="{StaticResource T.Icon}" FontSize="30" Foreground="{StaticResource B.Red}"
+                                           HorizontalAlignment="Center" VerticalAlignment="Center" />
+                            </Border>
+                        </Grid>
+                        <TextBlock Text="İnternet bağlantısı yok" FontFamily="{StaticResource F.Display}" FontSize="25" FontWeight="SemiBold"
+                                   Foreground="White" HorizontalAlignment="Center" Margin="0,4,0,0" />
+                        <TextBlock FontSize="13" Foreground="{StaticResource B.Text}" TextWrapping="Wrap" TextAlignment="Center" Margin="0,10,0,0"
+                                   Text="Uygulama internet bağlantısı olmadan kullanılamaz. Wi-Fi veya Ethernet bağlantınızı kontrol edin; bağlantı gelince bu ekran kendiliğinden kapanır ve kaldığınız yerden devam edersiniz." />
+                        <TextBlock x:Name="OfflineDetail" Text="{Binding OfflineDetailText}" FontSize="12" Foreground="{StaticResource B.Text2}"
+                                   TextWrapping="Wrap" TextAlignment="Center" Margin="0,10,0,0" />
+                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,22,0,0">
+                            <Button Style="{StaticResource Btn.Secondary}" Content="Uygulamayı kapat" Width="170" Height="48"
+                                    Command="{Binding ExitAppCommand}" Margin="0,0,12,0" />
+                            <Button x:Name="OfflineRetryButton" Style="{StaticResource Btn.Primary}" Width="200" Height="48"
+                                    Command="{Binding RetryInternetCommand}" AutomationProperties.Name="{Binding RetryInternetText}">
+                                <StackPanel Orientation="Horizontal">
+                                    <TextBlock Text="&#xE72C;" Style="{StaticResource T.Icon}" FontSize="15" Margin="0,0,10,0" VerticalAlignment="Center" />
+                                    <TextBlock Text="{Binding RetryInternetText}" VerticalAlignment="Center" />
+                                </StackPanel>
+                            </Button>
+                        </StackPanel>
+                        <TextBlock FontSize="11" Foreground="{StaticResource B.Text3}" TextWrapping="Wrap" TextAlignment="Center" Margin="0,16,0,0"
+                                   Text="Bağlantı Windows'un kendi bağlantı testi adresleriyle denetlenir; internet yokken 15 saniyede bir yeniden denenir." />
                     </StackPanel>
                 </Border>
             </Grid>

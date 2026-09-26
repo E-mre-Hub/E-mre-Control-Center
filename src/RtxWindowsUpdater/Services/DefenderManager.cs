@@ -81,6 +81,7 @@ public sealed class DefenderManager(Logger logger, HttpClient http) : IUpdateMod
         var latest = await FetchLatestAsync(ct);
         bool outOfDate;
         string comparison;
+        string? fallbackNote = null;
         if (latest is not null && Version.TryParse(latest.Signatures, out var lv) &&
             Version.TryParse(local.SignatureVersion, out var cv))
         {
@@ -92,6 +93,7 @@ public sealed class DefenderManager(Logger logger, HttpClient http) : IUpdateMod
         {
             outOfDate = local.OutOfDate.Value;
             comparison = "Microsoft sunucusuyla karşılaştırılamadı; Defender'ın kendi 'güncel değil' bayrağı kullanıldı.";
+            fallbackNote = comparison + " (İnternet bağlantısını kontrol edip yeniden kontrol edebilirsiniz.)";
             logger.Warning(comparison);
         }
         else
@@ -150,9 +152,12 @@ public sealed class DefenderManager(Logger logger, HttpClient http) : IUpdateMod
         {
             Key = Key,
             Status = outOfDate ? ComponentStatus.UpdateAvailable : ComponentStatus.UpToDate,
-            Summary = outOfDate ? "Tanım güncellemesi mevcut" : "Güncel",
+            // Microsoft sunucusuyla karşılaştırılamadıysa sonuç Defender'ın kendi bilgisidir: kartta bu açıkça yazılır.
+            Summary = (outOfDate ? "Tanım güncellemesi mevcut" : "Güncel") + (fallbackNote is null ? "" : " (Defender'ın kendi bilgisine göre)"),
             Details = details,
-            Reason = active ? null : $"Koruma durumu: {protection}",
+            Reason = string.Join("\n", new[] { active ? null : $"Koruma durumu: {protection}", fallbackNote }.Where(l => l is not null)) is { Length: > 0 } why
+                ? why
+                : null,
             Items = items,
             ActionableCount = outOfDate ? 1 : 0
         };

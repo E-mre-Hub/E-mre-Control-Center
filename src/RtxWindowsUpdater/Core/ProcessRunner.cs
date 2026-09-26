@@ -31,6 +31,43 @@ public sealed class ProcessResult
 /// </summary>
 public static class ProcessRunner
 {
+    /// <summary>
+    /// İptal edilebilir belirteçle başlatılmış, hâlâ çalışan süreçler (yalnızca kontrol / okuma araçları: uygulamadaki her kurulum,
+    /// onarım ve silme işlemi süreci CancellationToken.None ile başlatır). Uygulama kapanırken bunlar senkron sonlandırılır.
+    /// </summary>
+    // Anahtar süreç NESNESİ (başvuru eşitliği): PID yeniden kullanılsa bile kayıt karışmaz.
+    private static readonly System.Collections.Concurrent.ConcurrentDictionary<Process, string> Cancellable = new();
+
+    /// <summary>
+    /// Uygulama kapanırken çağrılır: iptal edilebilir (kontrol amaçlı) süreçleri ağaçlarıyla birlikte hemen sonlandırır. İptal
+    /// belirtecinin sonlandırma devamı arka planda koştuğu için kapanışa yetişmeyebilir; bu çağrı onu garanti eder. İptal edilemez
+    /// süreçlere (kurulum / onarım) DOKUNULMAZ. Sonlandırılan süreçlerin adlarını döndürür.
+    /// </summary>
+    public static IReadOnlyList<string> KillCancellableProcesses()
+    {
+        var killed = new List<string>();
+        foreach (var (process, name) in Cancellable.ToArray())
+        {
+            try
+            {
+                if (!process.HasExited)
+                {
+                    var id = process.Id;
+                    process.Kill(entireProcessTree: true);
+                    killed.Add($"{name} (PID {id})");
+                }
+            }
+            catch (Exception ex) when (ex is InvalidOperationException or Win32Exception or NotSupportedException)
+            {
+                // süreç bu arada kapanmış
+            }
+        }
+        return killed;
+    }
+
+    /// <summary>Şu anda çalışan iptal edilebilir süreç sayısı (test / tanı için).</summary>
+    public static int CancellableProcessCount => Cancellable.Keys.Count(p => { try { return !p.HasExited; } catch { return false; } });
+
     /// <param name="displayCommand">
     /// İşlem kaydında (Detaylı Sonuç paneli) gösterilecek komut. Boşsa "dosya argümanlar" kullanılır.
     /// </param>
@@ -144,6 +181,21 @@ public static class ProcessRunner
             return new ProcessResult { StartError = $"'{fileName}' başlatılamadı: {ex.Message}" };
         }
 
+        var tracked = cancellationToken.CanBeCanceled;
+        if (tracked) Cancellable[process] = Path.GetFileName(fileName);
+        try
+        {
+            return await WaitAsync(process, timeout, cancellationToken, stdout, stderr, outClosed, errClosed).ConfigureAwait(false);
+        }
+        finally
+        {
+            if (tracked) Cancellable.TryRemove(process, out _);
+        }
+    }
+
+    private static async Task<ProcessResult> WaitAsync(Process process, TimeSpan timeout, CancellationToken cancellationToken,
+        StringBuilder stdout, StringBuilder stderr, TaskCompletionSource outClosed, TaskCompletionSource errClosed)
+    {
         try { process.StandardInput.Close(); } catch { /* etkileşimli girdi beklenmiyor */ }
         process.BeginOutputReadLine();
         process.BeginErrorReadLine();

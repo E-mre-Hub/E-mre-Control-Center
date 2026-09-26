@@ -55,6 +55,8 @@ temizlenebileceğini ve sistemde bir sorun olup olmadığını listeler; onaylar
 - Windows 11
 - İşlemler için yönetici izni (uygulama açılışta sorar)
 - NVIDIA RTX kart şart değil: kart yoksa yalnızca sürücü güncellemesi kapalı olur, geri kalan her şey çalışır.
+- İnternet bağlantısı (Wi-Fi veya Ethernet): internet yoksa uygulamaya girilemez; kullanırken bağlantı giderse uygulama bağlantı
+  gelene kadar kilitlenir.
 
 ## İndirme ve kurulum
 
@@ -159,7 +161,7 @@ kendi bakım araçlarını (SFC, DISM CheckHealth / onayla RestoreHealth, MRT h�
 6. Yeni sürümler uygulamanın içinden gelir: v1.7.0 ve sonrası uygulama açılırken, v1.8.3 ve sonrası uygulama açıkken de (en geç
    5 dakika içinde) "Yeni sürüm yayınlandı" penceresini gösterir. **Güncelle**'ye basmanız yeterlidir.
 
-Gereksinimler: Windows 11 (derleme 22000+, zorunlu), internet bağlantısı, winget (Windows 11'de hazır gelir).
+Gereksinimler: Windows 11 (derleme 22000+, zorunlu), **internet bağlantısı (zorunlu; yoksa uygulamaya girilemez)**, winget (Windows 11'de hazır gelir).
 NVIDIA GeForce RTX ekran kartı önerilir. Kart yoksa, başka marka bir kart ya da RTX serisi olmayan bir NVIDIA kartı varsa
 uygulama **"Kartsız Devam Et"** ile kullanılabilir; yalnızca NVIDIA Driver kartı kullanım dışı olur (bkz. [Kartsız mod](#kartsız-mod-nvidia-rtx-yoksa)).
 
@@ -299,22 +301,22 @@ tırnak içinde yazılır). Depo: https://github.com/E-mre-Hub/E-mre-Control-Cen
 
 ### Yeni sürüm yayınlama (depo sahibi)
 
-1. `src\RtxWindowsUpdater\RtxWindowsUpdater.csproj` içindeki `<Version>` değerini artırın (ör. `1.8.3`).
+1. `src\RtxWindowsUpdater\RtxWindowsUpdater.csproj` içindeki `<Version>` değerini artırın (ör. `1.8.4`).
 2. Değişiklikleri commit'leyip gönderin, ardından etiket oluşturun:
 
 ```bash
-git tag v1.8.3
+git tag v1.8.4
 ```
 
 ```bash
-git push origin v1.8.3
+git push origin v1.8.4
 ```
 
 3. GitHub Actions (`.github/workflows/release.yml`) EXE'yi Windows sunucusunda derler ve **Releases** sayfasına iki dosya ekler:
-   `E-mre-Control-Center-Setup-v1.8.3.exe` (kurulum) ve `E-mre-Control-Center-v1.8.3.zip` (taşınabilir). Arkadaşlar oradan indirir;
+   `E-mre-Control-Center-Setup-v1.8.4.exe` (kurulum) ve `E-mre-Control-Center-v1.8.4.zip` (taşınabilir). Arkadaşlar oradan indirir;
    yüklü uygulamalar bu yayını "Yeni sürüm yayınlandı" olarak görür (v1.7.2 ve sonrası).
-   Etiketteki sürüm (v1.8.3) EXE'nin sürümü olarak kullanılır; csproj'daki `<Version>` ile aynı olmalıdır. Yayının metni yalnızca
-   README'deki `### v1.8.3` bölümüdür (uygulamadaki güncelleme penceresinde de bu metin görünür); bu bölüm etiketten önce yazılmalıdır.
+   Etiketteki sürüm (v1.8.4) EXE'nin sürümü olarak kullanılır; csproj'daki `<Version>` ile aynı olmalıdır. Yayının metni yalnızca
+   README'deki `### v1.8.4` bölümüdür (uygulamadaki güncelleme penceresinde de bu metin görünür); bu bölüm etiketten önce yazılmalıdır.
 
 Not: Herkese açık depolarda GitHub Actions standart sunucularda ücretsizdir;
 bir derleme yaklaşık 3-5 dakika sürer.
@@ -725,6 +727,35 @@ bağlantısı bulunur.
   "Windows 11 · kartsız mod" yazar. Sistem Bilgileri'nde NVIDIA alanları "NVIDIA ekran kartı yok" gösterir
   (RTX olmayan NVIDIA kartında gerçek model ve sürücü sürümü gösterilir).
 
+### İnternet bağlantısı (zorunlu, v1.8.4)
+
+Gereksinim ekranında dört satır vardır: **Windows 11** (zorunlu), **NVIDIA RTX GPU** (yoksa "Kartsız Devam Et"), **Yönetici yetkisi**
+(yoksa kartlar kullanım dışı) ve **İnternet bağlantısı** (zorunlu).
+
+- Bağlantı, Windows'un kendi bağlantı göstergesinin kullandığı Microsoft test adresleriyle (`msftconnecttest.com`, `msftncsi.com`)
+  gerçekten denetlenir; yalnızca beklenen yanıt gelirse "Bağlı · Wi-Fi / Ethernet" yazar. Ağ yoksa "Ağ bağlantısı yok", bağlantı var ama
+  yanıt farklıysa "İnternet erişimi sınırlı (oturum açma sayfası / proxy)", hiç ulaşılamıyorsa "İnternete erişilemiyor" + gerçek hata.
+  Kablosuz ağın adı okunmaz.
+- İnternet yoksa **Devam Et / Kartsız Devam Et kapalıdır** (uygulamaya girilemez). **Tekrar dene** ile yeniden denetlenir; Wi-Fi /
+  Ethernet bağlanınca ekran kendiliğinden yenilenir. Güncelleme veya yönetici olarak yeniden başlatma sonrası açılışta internet yoksa
+  gereksinim ekranı gösterilir, bağlantı gelince uygulama kendiliğinden açılır.
+- Kullanırken internet giderse **"İnternet bağlantısı yok"** ekranı uygulamayı kilitler (arkadaki ekran kullanılamaz, yeni işlem
+  başlatılamaz, bildirim alanı menüsünde yalnızca Aç / Çıkış kalır). Sürmekte olan bir kontrol / güncelleme / hız testi yarıda kesilmez;
+  ekran işlem bitince gelir. İnternet yokken 15 saniyede bir yeniden denenir; bağlantı gelince ekran kalkar ve kaldığınız yerden
+  devam edersiniz.
+
+### Uygulamadan çıkış (işlem sürerken, v1.8.4)
+
+Bildirim alanındaki **Çıkış** (veya "kapatınca arka planda çalış" kapalıyken kapatma düğmesi), süren işin türüne göre davranır:
+
+- **Kontrol sürüyorsa** ("Kontrol sürüyor – Durdur ve çık"): kontrol durdurulur, çalışan kontrol araçları sonlandırılır ve kapandıkları
+  beklenir, sonra uygulama kapanır. Kontrol sistemde değişiklik yapmadığı için güvenlidir.
+- **Güncelleme / onarım / temizlik sürüyorsa** ("Bitince kapat"): kurulum ve onarımlar **yarıda kesilmez** (yarım kalan bir kurulum
+  programı veya sistemi bozabilir). O adım bitince kalan adımlar atlanır ve uygulama kendiliğinden kapanır.
+- **Hız testi** durdurulur (sonuç kaydedilmez); Speedtest by Ookla aracı kuruluyorsa kurulum bitince kapanır.
+- Uygulama kapanırken, kapanışa yetişmemiş kontrol araçları kesin olarak sonlandırılır; kurulum / onarım süreçlerine hiçbir durumda
+  dokunulmaz (uygulamadaki her kurulum, onarım ve silme işlemi iptal edilemez olarak başlatılır).
+
 ### Yönetici yetkisi olmadan
 
 - Uygulama normal kullanıcı olarak açılır ve yönetici iznini neden istediğini açıklar. İzin verilmezse ana ekrana yine girilebilir,
@@ -798,6 +829,12 @@ eski klasörlerde kalır (`%LOCALAPPDATA%\E-mre Hub\Logs\`, `%LOCALAPPDATA%\RTX 
 
 ## 8. Bilinen sınırlamalar
 
+- İnternet denetimi Microsoft'un bağlantı testi adreslerine ulaşabilmeyi gerektirir. Bu adresleri engelleyen bir ağ / güvenlik
+  duvarı ya da kimlik doğrulama isteyen bir proxy varsa uygulama "İnternete erişilemiyor" der ve açılmaz (gerçek hata mesajı yazar).
+- İnternet bağlantısı kontrol sırasında doğrulanamazsa winget sonucu "Dikkat: güncel görünüyor – internet doğrulanamadı" olarak
+  etiketlenir (winget bu durumda kendi önbelleğindeki paket listesini kullanabilir). Defender tanımları Microsoft sunucusuyla
+  karşılaştırılamazsa sonuç "Güncel (Defender'ın kendi bilgisine göre)" olarak yazılır ve nedeni gösterilir.
+
 - **İşlemci sıcaklığı ve sistem fan hızı** Windows'un standart arayüzlerinde yoktur; bu değerleri üretici yazılımları (ör. dizüstü
   kontrol merkezleri) kendi sürücüleriyle okur. E-mre Control Center sürücü kurmaz: Cihaz Durumu'nda işlemci için ACPI termal bölge
   sıcaklığını (bildiriliyorsa) gösterir, fan hızını bildirilmiyorsa "okunamıyor" olarak açıklar.
@@ -865,6 +902,22 @@ eski klasörlerde kalır (`%LOCALAPPDATA%\E-mre Hub\Logs\`, `%LOCALAPPDATA%\RTX 
   yöneticinin klasörü).
 
 ## Sürüm geçmişi
+
+### v1.8.4
+
+**Yeni: İnternet bağlantısı zorunlu**
+- Gereksinim ekranına "İnternet bağlantısı" eklendi (Windows 11, NVIDIA RTX GPU, yönetici yetkisi ve internet). İnternet yoksa uygulamaya
+  girilemez; "Tekrar dene" ile ya da bağlantı gelince kendiliğinden yeniden denetlenir.
+- Kullanırken internet giderse "İnternet bağlantısı yok" ekranı uygulamayı kilitler; sürmekte olan işlem yarıda kesilmez, bağlantı
+  gelince ekran kalkar ve kaldığınız yerden devam edersiniz.
+
+**Düzeltme: İşlem sürerken çıkış**
+- Kontrol sürerken çıkışta kontrol durdurulur ve araçların kapandığı beklenir; güncelleme / onarım sürerken kurulum yarıda kesilmez,
+  o adım bitince uygulama kendiliğinden kapanır ("Bitince kapat"). Uyarı metni artık gerçek davranışı anlatıyor.
+
+**Düzeltme: Çevrimdışı durumda yanlış "Güncel" yok**
+- İnternet doğrulanamadığında winget sonucu "güncel görünüyor – internet doğrulanamadı" olarak işaretlenir.
+- Defender tanımları Microsoft sunucusuyla karşılaştırılamazsa "Güncel (Defender'ın kendi bilgisine göre)" yazar ve nedeni gösterilir.
 
 ### v1.8.3
 

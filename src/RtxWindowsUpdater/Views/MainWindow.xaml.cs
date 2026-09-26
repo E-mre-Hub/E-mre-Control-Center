@@ -154,8 +154,8 @@ public partial class MainWindow : Window
 
     private void OnPreviewKeyDown(object sender, System.Windows.Input.KeyEventArgs e)
     {
-        // Zorunlu güncelleme penceresi açıkken kısayollar arkadaki sayfada çalışmaz.
-        if (_vm.ShowUpdateOverlay) return;
+        // Zorunlu güncelleme penceresi veya "İnternet bağlantısı yok" ekranı açıkken kısayollar arkadaki sayfada çalışmaz.
+        if (_vm.ShowUpdateOverlay || _vm.ShowOfflineOverlay) return;
         var onHome = _vm.IsDashboard && _vm.IsHome && !_vm.Dialog.IsOpen && !_vm.Detail.IsOpen;
         // Ctrl+F: ana sayfada arama kutusuna odaklan
         if (onHome && e.Key == System.Windows.Input.Key.F && System.Windows.Input.Keyboard.Modifiers == System.Windows.Input.ModifierKeys.Control)
@@ -260,23 +260,30 @@ public partial class MainWindow : Window
         Tray?.NotifyHidden();
     }
 
-    /// <summary>Gerçek çıkış (bildirim alanı "Çıkış", kurulum / kaldırma isteği). İşlem sürüyorsa önce onay istenir.</summary>
+    private bool _exitPending;
+
+    /// <summary>
+    /// Gerçek çıkış (bildirim alanı "Çıkış", kapatma düğmesi, kurulum / kaldırma isteği). Bir iş sürüyorsa gerçek davranışı anlatan
+    /// onay istenir: kontrol / hız testi durdurulup süreçlerinin kapanması beklenir; kurulum / onarım adımı yarıda KESİLMEZ – bitince
+    /// kalan adımlar atlanır ve uygulama kapanır (bkz. <see cref="MainViewModel.StopForExitAsync"/>).
+    /// </summary>
     public async void RequestExit()
     {
-        if (_vm.IsBusy)
+        if (_exitPending || AppLifetime.IsExiting) return;
+        if (_vm.ExitPrompt() is { } prompt)
         {
             ShowFromTray();
-            var exit = await _vm.Dialog.ShowAsync(
-                "İşlem devam ediyor",
-                "Şu anda bir kontrol veya güncelleme işlemi sürüyor. Uygulamadan çıkmak, devam eden kurulumu yarıda bırakabilir.\n\nYine de çıkmak istiyor musunuz?",
-                MainViewModel.Icons.Warning, DialogKind.Warning, "Çıkış", "Devam et");
-            if (!exit) return;
+            var exit = await _vm.Dialog.ShowAsync(prompt.Title, prompt.Message, MainViewModel.Icons.Warning, DialogKind.Warning,
+                prompt.Primary, "Devam et");
+            if (!exit || _exitPending) return;
+            _exitPending = true;
+            await _vm.StopForExitAsync();
         }
         _forceClose = true;
         AppLifetime.Exit();
     }
 
-    private async void OnClosing(object? sender, CancelEventArgs e)
+    private void OnClosing(object? sender, CancelEventArgs e)
     {
         if (_forceClose || AppLifetime.IsExiting) return;
         // Kapatma düğmesi / Alt+F4: tercih açıksa uygulama bildirim alanına gizlenir (Closing içinde Hide çağrılamaz → ertelenir).
@@ -286,18 +293,11 @@ public partial class MainWindow : Window
             _ = Dispatcher.BeginInvoke(HideToTray);
             return;
         }
-        if (!_vm.IsBusy) return;
+        if (_vm.CurrentExitBlocker == ExitBlocker.None) return;
 
+        // Bir iş sürüyor: kapatma, bildirim alanındaki "Çıkış" ile aynı güvenli yoldan yapılır.
         e.Cancel = true;
-        var close = await _vm.Dialog.ShowAsync(
-            "İşlem devam ediyor",
-            "Şu anda bir kontrol veya güncelleme işlemi sürüyor. Uygulamayı kapatmak, devam eden kurulumu yarıda bırakabilir.\n\nYine de kapatmak istiyor musunuz?",
-            MainViewModel.Icons.Warning, DialogKind.Warning, "Kapat", "Devam et");
-        if (close)
-        {
-            _forceClose = true;
-            Close();
-        }
+        _ = Dispatcher.BeginInvoke(RequestExit);
     }
 
     // ----------------------------------------------------------- title bar

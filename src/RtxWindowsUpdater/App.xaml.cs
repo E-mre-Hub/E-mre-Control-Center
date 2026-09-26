@@ -251,6 +251,10 @@ public partial class App : Application
     {
         _tray?.Dispose();
         _viewModel?.Dispose();
+        // Kontrol amaçlı (iptal edilebilir) araç süreçleri kapanışta kesin sonlandırılır; iptalin kendi sonlandırma adımı arka
+        // planda koştuğu için kapanışa yetişmeyebilir. Kurulum / onarım süreçlerine dokunulmaz (hepsi iptal edilemez başlatılır).
+        var killed = ProcessRunner.KillCancellableProcesses();
+        if (killed.Count > 0) _logger?.Info("Kapanışta sonlandırılan kontrol araçları: " + string.Join(", ", killed));
         _logger?.Dispose();
         try { _instanceMutex?.ReleaseMutex(); } catch { /* sahip değilsek sorun değil */ }
         _instanceMutex?.Dispose();

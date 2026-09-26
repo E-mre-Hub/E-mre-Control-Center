@@ -128,7 +128,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         WindowsRow = new RequirementRowViewModel("Windows 11", Icons.Windows);
         GpuRow = new RequirementRowViewModel("NVIDIA RTX GPU", Icons.Gpu);
         AdminRow = new RequirementRowViewModel("Yönetici yetkisi", Icons.Admin);
-        Requirements = [WindowsRow, GpuRow, AdminRow];
+        Requirements = [WindowsRow, GpuRow, AdminRow, InternetRow];
 
         // Tüm kartlar tek "Sistem İşlemleri" kategorisinde, aynı kart yapısıyla gösterilir.
         Cards =
@@ -238,6 +238,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
             RaiseUpdateAvailabilityChanged();
             OnPropertyChanged(nameof(AvailableSummary));
             OnPropertyChanged(nameof(ShowUpdateOverlay));
+            OnPropertyChanged(nameof(ShowOfflineOverlay));
         };
 
         // Uygulama içi güncelleme (zorunlu): yeni sürüm varsa ana ekranın önüne pencere gelir.
@@ -309,8 +310,9 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         LogsView.Filter = o => o is LogEntry e && PassesLogFilter(e);
         RecomputeHealth();
 
-        ContinueCommand = new RelayCommand(GoToDashboard, () => Accepted && IsSupported && HasRtx);
-        ContinueWithoutGpuCommand = new RelayCommand(GoToDashboard, () => Accepted && IsSupported && !HasRtx);
+        ContinueCommand = new RelayCommand(GoToDashboard, () => Accepted && IsSupported && HasRtx && HasInternet);
+        ContinueWithoutGpuCommand = new RelayCommand(GoToDashboard, () => Accepted && IsSupported && !HasRtx && HasInternet);
+        InitializeInternetCommands();
         ElevateCommand = new AsyncCommand(() => PromptElevationAsync(false), () => !IsAdmin && IsSupported, OnCommandError);
         // Yönetici yetkisi yoksa tüm kartlar kullanım dışıdır; toplu kontrol butonları da kapalıdır (yalnızca yeniden başlatma sunulur).
         StartCheckCommand = new AsyncCommand(StartCheckAsync, () => CanStartOperation && IsSupported && IsAdmin, OnCommandError);
@@ -338,7 +340,9 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
     public SpeedTestViewModel SpeedTest { get; }
 
     /// <summary>Yeni bir sistem işlemi (kontrol / güncelleme / kart işlemi) başlatılabilir mi? Hız testi sürerken hayır.</summary>
-    private bool CanStartOperation => !IsBusy && SpeedTest?.IsWorking != true;
+    // İnternet yokken hiçbir işlem başlatılamaz (KULLANICI KARARI 2026-09-27): bildirim alanı menüsü / kısayollar kilit ekranını
+    // (yalnızca işlem sürmüyorken görünür) bir işlem başlatarak gizleyemesin.
+    private bool CanStartOperation => !IsBusy && SpeedTest?.IsWorking != true && HasInternet;
 
     public UpdateViewModel Update { get; }
 
@@ -546,6 +550,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
             OnPropertyChanged(nameof(IsRequirementsPage));
             OnPropertyChanged(nameof(IsHomeScreen));
             OnPropertyChanged(nameof(ShowUpdateOverlay));
+            OnPropertyChanged(nameof(ShowOfflineOverlay));
         }
     }
 
@@ -729,6 +734,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
     public async Task InitializeAsync()
     {
         _logger.Info(AppInfo.Name + " v" + AppInfo.Version + " başlatıldı.");
+        var internetCheck = RefreshInternetAsync(); // gereksinim kontrolüyle aynı anda (ağ isteği beklerken WMI okunur)
         RequirementsResult req;
         try
         {
@@ -741,6 +747,8 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         }
 
         if (!ApplyRequirements(req)) return;
+        await internetCheck;
+        StartInternetMonitoring();
 
         // Sistem bilgileri arka planda okunur; arayüz beklemez.
         _ = RefreshSystemInfoAsync();
@@ -755,21 +763,37 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         if (_argAccepted)
         {
             Accepted = true;
-            GoToDashboard();
-            // Uygulama içi güncellemeden sonraki ilk açılış: güncellemenin gerçekten yapıldığı gösterilir (bir kez).
-            if (DescribeUpdate(UpdatedFrom) is { } updated)
+            if (HasInternet)
             {
-                _logger.Success(updated);
-                await Dialog.ShowAsync("Güncelleme tamamlandı", updated + " Ayarlarınız, geçmişiniz ve günlükleriniz korundu.",
-                    Icons.Check, DialogKind.Info, "Tamam");
+                await EnterAcceptedAsync();
             }
-            if (_argStartCheck && IsAdmin)
-                await StartCheckAsync();
+            else
+            {
+                // İnternet yok: gereksinim sayfası gösterilir; bağlantı gelince giriş kendiliğinden tamamlanır.
+                _pendingAcceptedEntry = true;
+                _logger.Warning("İnternet bağlantısı yok: gereksinim sayfası gösteriliyor; bağlantı gelince uygulama açılacak.");
+            }
             return;
         }
 
         if (!IsAdmin)
             await PromptElevationAsync(false);
+    }
+
+    /// <summary>"--accepted" ile açılışta ana ekrana giriş (güncelleme / UAC sonrası). İnternet varsa hemen, yoksa bağlantı gelince.</summary>
+    private async Task EnterAcceptedAsync()
+    {
+        GoToDashboard();
+        if (!IsDashboard) return;
+        // Uygulama içi güncellemeden sonraki ilk açılış: güncellemenin gerçekten yapıldığı gösterilir (bir kez).
+        if (DescribeUpdate(UpdatedFrom) is { } updated)
+        {
+            _logger.Success(updated);
+            await Dialog.ShowAsync("Güncelleme tamamlandı", updated + " Ayarlarınız, geçmişiniz ve günlükleriniz korundu.",
+                Icons.Check, DialogKind.Info, "Tamam");
+        }
+        if (_argStartCheck && IsAdmin)
+            await StartCheckAsync();
     }
 
     private const string NoAdminReason =
@@ -823,6 +847,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         OnPropertyChanged(nameof(ShowElevate));
         OnPropertyChanged(nameof(ShowNoRtx));
         OnPropertyChanged(nameof(ShowContinue));
+        OnPropertyChanged(nameof(ShowNoInternet));
 
         if (!req.IsSupported)
         {
@@ -840,7 +865,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
 
     private void GoToDashboard()
     {
-        if (!Accepted || !IsSupported) return;
+        if (!Accepted || !IsSupported || !HasInternet) return;
         IsDashboard = true;
         if (HasRtx) _logger.Info("Ana ekran açıldı.");
         else _logger.Warning("Ana ekran kartsız açıldı: NVIDIA RTX ekran kartı yok, NVIDIA Driver kartı kullanım dışı.");
@@ -1671,6 +1696,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         OnPropertyChanged(nameof(IsOperationRunning));
         if (busy) RaiseUpdateAvailabilityChanged();
         OnPropertyChanged(nameof(ShowUpdateOverlay));
+        OnPropertyChanged(nameof(ShowOfflineOverlay));
         SpeedTest.OnSystemBusyChanged();
     }
 
@@ -2117,6 +2143,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
 
     public void Dispose()
     {
+        StopInternetMonitoring();
         Update.StopPeriodicChecks();
         StopDeviceMonitoring();
         _activeTool?.Deactivate();

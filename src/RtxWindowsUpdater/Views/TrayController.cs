@@ -101,6 +101,14 @@ public sealed class TrayController : IDisposable
             menu.Items.Add(Item("", "Çıkış", null, true, () => _window.RequestExit()));
             return menu;
         }
+        if (_vm.InternetChecked && !_vm.HasInternet)
+        {
+            // İnternet yok: uygulama kullanılamaz; kısayol sunulmaz (yalnızca pencereyi aç / Çıkış).
+            menu.Items.Add(Item("", $"{AppInfo.Name}'ı aç", "İnternet yok", true, () => _window.ShowFromTray(), bold: true));
+            menu.Items.Add(Separator());
+            menu.Items.Add(Item("", "Çıkış", null, true, () => _window.RequestExit()));
+            return menu;
+        }
         var busy = _vm.IsBusy;
         menu.Items.Add(Item("", $"{AppInfo.Name}'ı aç", busy ? "İşlem sürüyor" : null, true, () => _window.ShowFromTray(), bold: true));
         menu.Items.Add(Separator());

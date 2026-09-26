@@ -183,10 +183,11 @@ public sealed class UpdateOrchestrator : IDisposable
             }
             // Yönetici yetkisi uygulama açılışında doğrulanıp günlüğe yazıldı; burada yalnızca (önbellekten) denetlenir.
 
+            var network = NetworkState.Verified;
             if (targets.Any(t => OnlineModules.Contains(t.Key)))
             {
                 rep.Step.Report(new StepProgress("İnternet bağlantısı kontrol ediliyor...", 6));
-                await CheckNetworkAsync(ct);
+                network = await CheckNetworkAsync(ct);
             }
 
             if (targets.Any(t => t.Key is ComponentKeys.Sfc or ComponentKeys.Mrt))
@@ -207,8 +208,11 @@ public sealed class UpdateOrchestrator : IDisposable
                 rep.ModuleState.Report(new ModuleResult { Key = m.Key, Status = ComponentStatus.Checking, Summary = RunningText(m.Key, check: true) });
 
                 var r = await SafeRunAsync(() => m.CheckAsync(ct), m, OperationKind.Check, isCheck: true, ct);
-                results[m.Key] = r;
-                rep.ModuleState.Report(r);
+                var labeled = ApplyNetworkCaveat(r, network);
+                if (!ReferenceEquals(labeled, r))
+                    _logger.Warning($"{m.DisplayName}: internet bağlantısı doğrulanamadığı için sonuç \"Dikkat\" olarak işaretlendi (winget önbellekteki listeyi kullanmış olabilir).");
+                results[m.Key] = labeled;
+                rep.ModuleState.Report(labeled);
             }
 
             rep.Step.Report(new StepProgress(ct.IsCancellationRequested ? "Kontrol iptal edildi" : "Kontrol tamamlandı", 100));
@@ -534,12 +538,15 @@ public sealed class UpdateOrchestrator : IDisposable
         state.Report(r);
     }
 
-    private async Task CheckNetworkAsync(CancellationToken ct)
+    internal enum NetworkState { Verified, Limited, NotVerified, NoNetwork }
+
+    /// <summary>Windows'un kendi bağlantı testi adresiyle (msftconnecttest) internet bağlantısını doğrular; sonucu döndürür.</summary>
+    private async Task<NetworkState> CheckNetworkAsync(CancellationToken ct)
     {
         if (!NetworkInterface.GetIsNetworkAvailable())
         {
             _logger.Error("Ağ bağlantısı bulunamadı. Çevrimiçi kontroller başarısız olacaktır.");
-            return;
+            return NetworkState.NoNetwork;
         }
         try
         {
@@ -547,14 +554,56 @@ public sealed class UpdateOrchestrator : IDisposable
             cts.CancelAfter(TimeSpan.FromSeconds(10));
             var text = await _http.GetStringAsync("http://www.msftconnecttest.com/connecttest.txt", cts.Token);
             if (text.Contains("Microsoft Connect Test", StringComparison.Ordinal))
+            {
                 _logger.Success("İnternet bağlantısı doğrulandı.");
-            else
-                _logger.Warning("İnternet bağlantısı sınırlı görünüyor (yakalama portalı / proxy olabilir).");
+                return NetworkState.Verified;
+            }
+            _logger.Warning("İnternet bağlantısı sınırlı görünüyor (yakalama portalı / proxy olabilir).");
+            return NetworkState.Limited;
         }
         catch (Exception ex) when (!ct.IsCancellationRequested)
         {
             _logger.Warning($"İnternet bağlantısı doğrulanamadı: {ex.Message}");
+            return NetworkState.NotVerified;
         }
+    }
+
+    /// <summary>
+    /// İnternet doğrulanamadıysa winget sonucunu dürüstçe etiketler: winget kaynağı güncellenemediğinde kendi ÖNBELLEĞİNDEKİ paket
+    /// listesiyle sonuç verebilir (eski olabilir). "Güncel" böyle bir durumda "Dikkat: güncel görünüyor" olur; neden yazılır. Diğer
+    /// çevrimiçi kartlar (Windows Update, Store, NVIDIA) internetsiz zaten gerçek hatayla "kontrol edilemedi" olur; Defender kendi
+    /// sonucunu ayrıca etiketler. Değişiklik yoksa aynı nesne döner.
+    /// </summary>
+    internal static ModuleResult ApplyNetworkCaveat(ModuleResult r, NetworkState network)
+    {
+        if (network == NetworkState.Verified || r.Key != ComponentKeys.Winget ||
+            r.Status is not (ComponentStatus.UpToDate or ComponentStatus.UpdateAvailable or ComponentStatus.Attention))
+            return r;
+        var why = network switch
+        {
+            NetworkState.NoNetwork => "ağ bağlantısı yok",
+            NetworkState.Limited => "internet bağlantısı sınırlı",
+            _ => "internet bağlantısı doğrulanamadı"
+        };
+        var note = $"Dikkat: {why}. Winget bu durumda kendi önbelleğindeki paket listesini kullanabilir; sonuç güncel olmayabilir. " +
+                   "Bağlantıyı kontrol edip yeniden kontrol edin.";
+        var upToDate = r.Status == ComponentStatus.UpToDate;
+        return new ModuleResult
+        {
+            Key = r.Key,
+            Status = upToDate ? ComponentStatus.Attention : r.Status,
+            Summary = upToDate ? $"Güncel görünüyor – {why}" : r.Summary,
+            Details = r.Details,
+            Reason = string.IsNullOrEmpty(r.Reason) ? note : r.Reason + "\n" + note,
+            Items = r.Items,
+            ActionableCount = r.ActionableCount,
+            RebootRequired = r.RebootRequired,
+            Operation = r.Operation,
+            CompletedAt = r.CompletedAt,
+            Duration = r.Duration,
+            Commands = r.Commands,
+            Notes = r.Notes
+        };
     }
 
     public void Dispose() => _http.Dispose();
