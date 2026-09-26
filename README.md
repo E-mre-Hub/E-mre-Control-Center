@@ -98,7 +98,8 @@ Desktop\E-mre Control Center\        ← Proje klasörü (önceki adları: E-mre
     │   ├── ExecutionTrace.cs        ← İşlem sırasında çalışan komutların gerçek stdout/stderr/çıkış kodu kaydı
     │   ├── Wmi.cs                   ← Ortak WMI sorgusu (zaman aşımı, erişim reddi / desteklenmeyen sınıf → Türkçe gerçek neden)
     │   ├── StorageInfo.cs           ← Fiziksel diskler + güvenilirlik sayaçları (Performans ve Depolama Sağlığı ortak)
-    │   └── IcmpProbe.cs             ← ICMP ping dizisi (hız testi paket kaybı + Ağ Merkezi ortak)
+    │   ├── IcmpProbe.cs             ← ICMP ping dizisi (hız testi paket kaybı + Ağ Merkezi ortak)
+    │   └── AppSignals.cs            ← Çalışan örneğe "göster" / "kapan" iletisi (ikinci örnek, kurulum / kaldırma)
     ├── Models\Models.cs             ← ComponentStatus, ModuleResult, UpdateItem, RequirementsResult
     ├── Services\
     │   ├── IUpdateModule.cs         ← Check / Update + bakım butonu, çalışan uygulamayı kapatıp yeniden deneme, manuel güncelleme ve ilerleme sözleşmeleri
@@ -137,7 +138,7 @@ Desktop\E-mre Control Center\        ← Proje klasörü (önceki adları: E-mre
     │                                  + MainViewModel.Tools (tanılama bölmeleri, Özet tanılama satırları, araç işlem geçmişi), Tools\ (bölme görünüm modelleri)
     ├── Views\                       ← MainWindow.xaml(.cs): giriş sayfası, Kontrol Merkezi ana sayfası, kategori ekranları; RingGauge.cs, SpeedGauge.cs (hız göstergesi), CenteredWrapPanel.cs, WaveBackdrop.cs (ana sayfa dalga zemini, statik); Converters.cs;
     │                                  SetupWindow.xaml (kurulum), UninstallWindow.xaml (kaldırma + geri bildirim), SetupResources.xaml, WindowFrame.cs
-    │                                  Tools\ToolViewsA.xaml / ToolViewsB.xaml (tanılama bölmelerinin şablonları)
+    │                                  Tools\ToolViewsA.xaml / ToolViewsB.xaml (tanılama bölmelerinin şablonları); TrayIcon.cs + TrayController.cs (bildirim alanı simgesi ve menüsü)
     └── Themes\Theme.xaml            ← Renkler, butonlar, kartlar, animasyonlar, ilerleme çubuğu
 ```
 
@@ -484,6 +485,23 @@ Kategori her açılışta ilk bölmesiyle açılır.
   Günlükteki ve Son İşlem kartındaki "Son İşlemler" / "Geçmiş" butonu Özet → İşlem Geçmişi bölmesini açar.
 - Animasyonlar kısa ve tek seferliktir (ekran geçişi, kart üzerine gelme); sürekli animasyon yalnızca bir işlem gerçekten sürerken çalışır.
 
+### Bildirim alanı (arka planda çalışma)
+
+Pencerenin kapatma düğmesi (veya Alt+F4) uygulamayı **kapatmaz**: pencere gizlenir, uygulama görev çubuğunun sağındaki bildirim
+alanında (**^** gizli simgeler) çalışmaya devam eder; süren kontrol / güncelleme / hız testi yarıda kalmaz. İlk seferde Windows bir
+kez "arka planda çalışıyor" bilgisi gösterir (bildirimler kapalıysa gösterilmez).
+
+- **Çift tıklama** (veya simge seçiliyken Enter): pencere **kaldığı yerden** açılır (aynı kategori ve bölme).
+- **Sağ tık:** kısayol menüsü – *E-mre Control Center'ı aç*, *Ana Sayfa*, *Tümünü Kontrol Et* (yönetici yoksa kapalı), *Tek Tıkla Tanıla*,
+  *Hız Testi*, *Performans*, *İşlem Geçmişi*, *Bildirimler* (Açık / Kapalı), *Çıkış*. Menüden seçilen her işlem önce pencereyi açar;
+  onay gerektirenler her zamanki onay penceresini gösterir. **Çıkış** uygulamayı gerçekten kapatır (işlem sürüyorsa önce onay ister).
+- Uygulama zaten çalışırken masaüstü / Başlat menüsü kısayoluyla yeniden açılırsa ikinci bir örnek başlamaz; çalışan pencere öne gelir.
+- Pencere gizliyken canlı ölçümler (Performans, İşlemler) durur; açılınca kaldığı yerden sürer.
+- Simgeyi her zaman görünür yapmak için ^ içinden görev çubuğuna sürükleyin (veya Ayarlar → Kişiselleştirme → Görev çubuğu →
+  Diğer sistem tepsisi simgeleri).
+- Davranış **Genel Ayarlar → Kolay Ayar → "Kapatınca arka planda çalışmaya devam et"** ile kapatılabilir (kapalıyken kapatma
+  düğmesi uygulamayı eskisi gibi kapatır). Kurulum / güncelleme / kaldırma çalışan uygulamayı yine kapatabilir.
+
 ### Sistem Tanılama (v1.8.0)
 
 Yeni bölmelerin hepsi Windows'un kendi kaynaklarından **okur**; tahmin, örnek veya sahte ilerleme yoktur. Okunamayan her değer
@@ -732,6 +750,11 @@ eski klasörlerde kalır (`%LOCALAPPDATA%\E-mre Hub\Logs\`, `%LOCALAPPDATA%\RTX 
 - **Arama:** yeni bölmeler ve "SFC", "DNS", "Wi-Fi", "Başlangıç", "Servis", "Event Log", "BSOD", "Batarya", "Sürücü" gibi terimler.
 - **Sistem Raporu** (TXT / HTML / JSON) ve **Destek Paketi** (ZIP): kişisel bilgiler (bilgisayar / kullanıcı adı, IP, MAC) gizlenir,
   hiçbir yere gönderilmez.
+
+**Yeni: Bildirim alanı**
+- Pencere kapatılınca uygulama bildirim alanında (^ gizli simgeler) çalışmaya devam eder; simgeye çift tıklayınca kaldığı yerden
+  açılır, sağ tıklayınca kısayollar (Ana Sayfa, Tümünü Kontrol Et, Tek Tıkla Tanıla, Hız Testi, Performans, İşlem Geçmişi,
+  Bildirimler, Çıkış). Uygulama yeniden başlatılırsa çalışan pencere öne gelir. Genel Ayarlar → Kolay Ayar'dan kapatılabilir.
 
 **Güvenlik**
 - Değişiklik yapan her işlem onay ister ve sonucu yeniden okunarak doğrulanır: başlangıç kaydı silinmez (yalnızca Görev Yöneticisi

@@ -21,7 +21,7 @@ public sealed partial class MainViewModel
         [SectionKeys.Log] = "işlem günlüğü günlük log kayıt filtre",
         [SectionKeys.Recent] = "işlem geçmişi son işlemler geçmiş kayıt",
         [SectionKeys.Health] = "sağlık özeti durum son işlem",
-        [SectionKeys.Quick] = "kolay ayar bildirim bildirimler çöp kutusu anahtar tercih",
+        [SectionKeys.Quick] = "kolay ayar bildirim bildirimler çöp kutusu anahtar tercih arka plan bildirim alanı tepsi simge kapatınca",
         [SectionKeys.Admin] = "yönetici yetki uac izin",
         [SectionKeys.LogFiles] = "günlük dosyası log klasör dışa aktar veri klasörü",
         [SectionKeys.DeviceInfo] = "işlemci cpu ekran kartı gpu bellek ram disk depolama ssd işletim sistemi windows sürüm donanım",

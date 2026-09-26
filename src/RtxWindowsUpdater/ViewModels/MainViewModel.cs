@@ -866,7 +866,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         {
             case ElevationOutcome.Started:
                 _logger.Success("Uygulama yönetici olarak yeniden başlatılıyor.");
-                Application.Current.Shutdown();
+                AppLifetime.Exit();
                 break;
             case ElevationOutcome.Declined:
                 _logger.Error("Yönetici izni reddedildi. Sistem üzerinde değişiklik yapılmayacak.");
@@ -2103,7 +2103,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
     public void Dispose()
     {
         StopDeviceMonitoring();
-        _currentTool?.Deactivate();
+        _activeTool?.Deactivate();
         _monitorInstance?.Dispose();
         SpeedTest.Dispose();
         _logger.LogAdded -= OnLogAdded;

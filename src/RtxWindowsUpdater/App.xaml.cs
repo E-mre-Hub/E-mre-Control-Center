@@ -21,6 +21,7 @@ public partial class App : Application
 
     private Logger? _logger;
     private MainViewModel? _viewModel;
+    private TrayController? _tray;
     private Mutex? _instanceMutex;
 
     protected override void OnStartup(StartupEventArgs e)
@@ -39,6 +40,12 @@ public partial class App : Application
         var relaunched = e.Args.Contains(AdminPrivilegeManager.ArgElevated, StringComparer.OrdinalIgnoreCase);
         if (!TryAcquireSingleInstance(SingleInstanceMutexName, relaunched ? TimeSpan.FromSeconds(10) : TimeSpan.Zero))
         {
+            // Uygulama zaten çalışıyor (penceresi bildirim alanına gizlenmiş olabilir): o örneğin penceresi öne getirilir.
+            if (!relaunched && AppSignals.Post(AppSignals.ShowMessage))
+            {
+                Shutdown();
+                return;
+            }
             MessageBox.Show(AppInfo.Name + " zaten çalışıyor.", AppInfo.Name,
                 MessageBoxButton.OK, MessageBoxImage.Information);
             Shutdown();
@@ -69,6 +76,10 @@ public partial class App : Application
         if (updatedFrom >= 0 && updatedFrom + 1 < e.Args.Length) _viewModel.UpdatedFrom = e.Args[updatedFrom + 1];
         var window = new MainWindow(_viewModel);
         MainWindow = window;
+        // Bildirim alanı: pencere kapatılınca uygulama arka planda sürer; simge çift tıklamayla açılır, sağ tıkla kısayollar.
+        _tray = new TrayController(window, _viewModel, _logger);
+        window.Tray = _tray;
+        SessionEnding += (_, _) => AppLifetime.MarkExiting(); // Windows kapanırken pencere gizlenmez, uygulama kapanır
         window.Show();
     }
 
@@ -238,6 +249,7 @@ public partial class App : Application
 
     protected override void OnExit(ExitEventArgs e)
     {
+        _tray?.Dispose();
         _viewModel?.Dispose();
         _logger?.Dispose();
         try { _instanceMutex?.ReleaseMutex(); } catch { /* sahip değilsek sorun değil */ }

@@ -168,6 +168,13 @@ public sealed class InstallerService(InstallLayout layout, Action<string> log)
             try
             {
                 if (p.HasExited) continue;
+                // v1.8.0+: pencere bildirim alanına gizlenmiş olabilir (kapatma düğmesi uygulamayı kapatmaz); "kapan" iletisi
+                // uygulamanın bildirim alanı penceresine gider. Eski sürümlerde bu pencere yoktur → ana pencere kapatılır.
+                if (AppSignals.Post(AppSignals.ExitMessage, p.Id))
+                {
+                    log($"Kapatma isteği: PID {p.Id} (bildirim alanı penceresine iletildi)");
+                    continue;
+                }
                 var sent = p.CloseMainWindow();
                 log($"Kapatma isteği: PID {p.Id} ({(sent ? "pencereye iletildi" : "penceresi yok")})");
             }

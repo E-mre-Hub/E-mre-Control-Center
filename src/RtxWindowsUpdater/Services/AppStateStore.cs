@@ -197,6 +197,12 @@ public sealed class SpeedTestRecord
 public sealed class AppState
 {
     public bool NotificationsEnabled { get; set; } = true;
+
+    /// <summary>Pencere kapatılınca uygulama bildirim alanında çalışmaya devam eder (v1.8.0; varsayılan açık).</summary>
+    public bool CloseToTray { get; set; } = true;
+
+    /// <summary>"Arka planda çalışıyor" bilgisi bir kez gösterildi.</summary>
+    public bool TrayHintShown { get; set; }
     public Dictionary<string, CardSnapshot> Cards { get; set; } = new();
     public List<OperationRecord> Recent { get; set; } = [];
 
@@ -322,6 +328,18 @@ public sealed class AppStateStore
     public void SetNotificationsEnabled(bool enabled)
     {
         lock (_lock) State.NotificationsEnabled = enabled;
+        SaveInBackground();
+    }
+
+    public void SetCloseToTray(bool enabled)
+    {
+        lock (_lock) State.CloseToTray = enabled;
+        SaveInBackground();
+    }
+
+    public void MarkTrayHintShown()
+    {
+        lock (_lock) State.TrayHintShown = true;
         SaveInBackground();
     }
 

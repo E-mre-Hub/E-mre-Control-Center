@@ -50,7 +50,7 @@ public sealed partial class MainViewModel
 
     private void UpdateDeviceMonitoring()
     {
-        if (IsDashboard && CurrentSectionKey == SectionKeys.DeviceStatus) StartDeviceMonitoring();
+        if (IsDashboard && CurrentSectionKey == SectionKeys.DeviceStatus && _windowVisible) StartDeviceMonitoring();
         else StopDeviceMonitoring();
     }
 

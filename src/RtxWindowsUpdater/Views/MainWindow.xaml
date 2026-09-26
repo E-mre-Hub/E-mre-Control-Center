@@ -1879,6 +1879,33 @@
                                             </Grid>
                                         </Border>
                                     </Grid>
+
+                                    <!-- Bildirim alanı: pencere kapatılınca arka planda çalışma -->
+                                    <Grid Margin="0,0,0,16">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="96" />
+                                            <ColumnDefinition Width="*" />
+                                        </Grid.ColumnDefinitions>
+                                        <Border Style="{StaticResource IconTile}">
+                                            <TextBlock Text="&#xE7F4;" Style="{StaticResource T.TileIcon}" />
+                                        </Border>
+                                        <Border Grid.Column="1" Style="{StaticResource Card}" Padding="22,16">
+                                            <Grid>
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="*" />
+                                                    <ColumnDefinition Width="Auto" />
+                                                </Grid.ColumnDefinitions>
+                                                <StackPanel>
+                                                    <TextBlock Text="Kapatınca arka planda çalışmaya devam et" Style="{StaticResource T.H2}" FontSize="16" TextWrapping="Wrap" />
+                                                    <TextBlock Style="{StaticResource T.SettingDesc}" Margin="0,6,0,0"
+                                                               Text="Açıkken pencereyi kapatmak uygulamayı kapatmaz: simgesi görev çubuğunun sağındaki bildirim alanında (^ gizli simgeler) kalır, süren işlemler devam eder. Simgeye çift tıklayınca pencere kaldığı yerden açılır; sağ tıklayınca kısayollar ve Çıkış. Simgeyi görev çubuğuna sürükleyerek her zaman görünür yapabilirsiniz." />
+                                                </StackPanel>
+                                                <CheckBox Grid.Column="1" Style="{StaticResource ToggleSwitch}" Margin="24,0,0,0"
+                                                          IsChecked="{Binding CloseToTray}"
+                                                          AutomationProperties.Name="Kapatınca arka planda çalışmaya devam et" />
+                                            </Grid>
+                                        </Border>
+                                    </Grid>
                                 </StackPanel>
                             </Grid>
                         </ScrollViewer>

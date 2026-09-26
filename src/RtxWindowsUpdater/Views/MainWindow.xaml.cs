@@ -237,9 +237,56 @@ public partial class MainWindow : Window
             LogList.ScrollIntoView(LogList.Items[LogList.Items.Count - 1]);
     }
 
+    /// <summary>Bildirim alanı denetleyicisi (App kurar; test düzeneklerinde yoktur → kapatma düğmesi eskisi gibi kapatır).</summary>
+    public TrayController? Tray { get; set; }
+
+    /// <summary>Bildirim alanından (çift tıklama / menü / ikinci örnek): pencere kaldığı yerden, aynı bölmeyle açılır.</summary>
+    public void ShowFromTray()
+    {
+        if (!IsVisible) Show();
+        if (WindowState == WindowState.Minimized) WindowState = WindowState.Normal;
+        _vm.SetWindowVisible(true);
+        Activate();
+        Topmost = true; // bazı durumlarda Windows öne getirmeyi engeller; kısa süreli en üstte ile öne alınır
+        Topmost = false;
+        Focus();
+    }
+
+    /// <summary>Pencereyi gizler; uygulama (süren işlemler, hız testi dahil) arka planda çalışmaya devam eder.</summary>
+    public void HideToTray()
+    {
+        Hide();
+        _vm.SetWindowVisible(false);
+        Tray?.NotifyHidden();
+    }
+
+    /// <summary>Gerçek çıkış (bildirim alanı "Çıkış", kurulum / kaldırma isteği). İşlem sürüyorsa önce onay istenir.</summary>
+    public async void RequestExit()
+    {
+        if (_vm.IsBusy)
+        {
+            ShowFromTray();
+            var exit = await _vm.Dialog.ShowAsync(
+                "İşlem devam ediyor",
+                "Şu anda bir kontrol veya güncelleme işlemi sürüyor. Uygulamadan çıkmak, devam eden kurulumu yarıda bırakabilir.\n\nYine de çıkmak istiyor musunuz?",
+                MainViewModel.Icons.Warning, DialogKind.Warning, "Çıkış", "Devam et");
+            if (!exit) return;
+        }
+        _forceClose = true;
+        AppLifetime.Exit();
+    }
+
     private async void OnClosing(object? sender, CancelEventArgs e)
     {
-        if (_forceClose || !_vm.IsBusy) return;
+        if (_forceClose || AppLifetime.IsExiting) return;
+        // Kapatma düğmesi / Alt+F4: tercih açıksa uygulama bildirim alanına gizlenir (Closing içinde Hide çağrılamaz → ertelenir).
+        if (Tray is { IsAvailable: true } && _vm.CloseToTray)
+        {
+            e.Cancel = true;
+            _ = Dispatcher.BeginInvoke(HideToTray);
+            return;
+        }
+        if (!_vm.IsBusy) return;
 
         e.Cancel = true;
         var close = await _vm.Dialog.ShowAsync(

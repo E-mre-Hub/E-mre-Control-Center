@@ -41,7 +41,7 @@ public sealed class UpdateViewModel : ObservableObject
         _logger = logger;
         _service = new UpdateService(UpdateService.DefaultLatestReleaseUrl, logger.Info);
         _launchSetup = LaunchSetup;
-        _shutdown = () => Application.Current?.Shutdown();
+        _shutdown = AppLifetime.Exit;
         UpdateCommand = new AsyncCommand(UpdateAsync, () => CanUpdate, ex => Fail("Beklenmeyen hata: " + ex.Message));
         CloseAppCommand = new RelayCommand(() => _shutdown(), () => !IsWorking);
         CheckCommand = new AsyncCommand(CheckAsync, () => !IsWorking && Stage != UpdateStage.Checking, ex => _logger.Warning("Güncelleme denetimi hatası: " + ex.Message));

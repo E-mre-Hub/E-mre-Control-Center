@@ -67,6 +67,8 @@ public sealed partial class MainViewModel : IToolHost, ICardResultSource
     private DiagnosticOrchestrator _diagnostics = null!;
     private Dictionary<string, ToolViewModel> _toolBySection = new();
     private ToolViewModel? _currentTool;
+    private ToolViewModel? _activeTool;
+    private bool _windowVisible = true;
     private double _progressScale = 1;
 
     public ToolsViewModel Tools { get; private set; } = null!;
@@ -141,15 +143,51 @@ public sealed partial class MainViewModel : IToolHost, ICardResultSource
         foreach (var r in rows) DiagnosticSummary.Add(new DiagnosticSummaryRowViewModel(r.Key, r.Title, r.Glyph, r.Category, r.Section, OpenSection));
     }
 
-    /// <summary>Bölme değişince: önceki aracı durdur (izleme / süren okuma), yenisini etkinleştir (gerekiyorsa bir kez okur).</summary>
+    /// <summary>
+    /// Bölme değişince: önceki aracı durdur (izleme / süren okuma), yenisini etkinleştir (gerekiyorsa bir kez okur). Pencere bildirim
+    /// alanına gizliyken araç görünümde kalır (açınca kaldığı yerden) ama izleme durur.
+    /// </summary>
     private void UpdateToolActivation()
     {
         var next = IsDashboard && CurrentSectionKey is { } key && _toolBySection.TryGetValue(key, out var t) ? t : null;
-        if (ReferenceEquals(next, _currentTool)) return;
-        _currentTool?.Deactivate();
-        _currentTool = next;
-        OnPropertyChanged(nameof(CurrentTool));
-        next?.Activate();
+        if (!ReferenceEquals(next, _currentTool))
+        {
+            _currentTool = next;
+            OnPropertyChanged(nameof(CurrentTool));
+        }
+        var active = _windowVisible ? next : null;
+        if (ReferenceEquals(active, _activeTool)) return;
+        _activeTool?.Deactivate();
+        _activeTool = active;
+        active?.Activate();
+    }
+
+    // ------------------------------------------------------------------ bildirim alanı (arka planda çalışma)
+
+    /// <summary>Pencere kapatılınca uygulama bildirim alanında çalışmaya devam etsin (Kolay Ayar).</summary>
+    public bool CloseToTray
+    {
+        get => _state.State.CloseToTray;
+        set
+        {
+            if (_state.State.CloseToTray == value) return;
+            _state.SetCloseToTray(value);
+            OnPropertyChanged();
+            _logger.Info(value ? "Pencere kapatılınca uygulama bildirim alanında çalışmaya devam edecek." : "Pencere kapatılınca uygulama kapanacak.");
+        }
+    }
+
+    public bool TrayHintShown => _state.State.TrayHintShown;
+    public void MarkTrayHintShown() => _state.MarkTrayHintShown();
+
+    /// <summary>Pencere gizlendi / açıldı: gizliyken canlı ölçümler (Performans, İşlemler) durur; açılınca aynı bölmeyle sürer.</summary>
+    public void SetWindowVisible(bool visible)
+    {
+        if (_windowVisible == visible) return;
+        _windowVisible = visible;
+        _logger.Info(visible ? "Pencere bildirim alanından açıldı." : "Pencere kapatıldı; uygulama bildirim alanında çalışmaya devam ediyor.");
+        UpdateDeviceMonitoring();
+        UpdateToolActivation();
     }
 
     public void ReportDiagnostic(string key, CheckResult result)
