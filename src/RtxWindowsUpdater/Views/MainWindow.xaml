@@ -2971,7 +2971,7 @@
                                                     </TextBlock>
                                                     <TextBlock FontSize="12" Margin="0,3,0,0" TextWrapping="Wrap" Foreground="{StaticResource B.Text2}"
                                                                Visibility="{Binding HasToolMessage, Converter={StaticResource Visible}}">
-                                                        <Run Text="Winget mesajı: " Foreground="{StaticResource B.Text3}" /><Run Text="{Binding ToolMessageText, Mode=OneWay}" />
+                                                        <Run Text="Araç mesajı: " Foreground="{StaticResource B.Text3}" /><Run Text="{Binding ToolMessageText, Mode=OneWay}" />
                                                     </TextBlock>
                                                     <TextBlock FontSize="12" Margin="0,3,0,0" TextWrapping="Wrap" Foreground="{StaticResource B.Orange}"
                                                                Visibility="{Binding HasBlocking, Converter={StaticResource Visible}}">

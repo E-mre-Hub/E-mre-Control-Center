@@ -1529,7 +1529,10 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         switch (key)
         {
             case ComponentKeys.Winget:
-                return $"Winget: {c.ActionableCount} uygulama güncellenecek.";
+                var edgeApps = c.Items.Where(i => i.UpdateAvailable && i.AutoUpdatable && EdgeUpdateService.Find(i.Id) is not null)
+                    .Select(i => i.Name).ToList();
+                return $"Winget: {c.ActionableCount} uygulama güncellenecek." + (edgeApps.Count == 0 ? ""
+                    : $" {string.Join(", ", edgeApps)} Microsoft'un kendi güncelleyicisiyle (Microsoft Edge Update) güncellenir; kaldırılmaz.");
             case ComponentKeys.WindowsUpdate:
                 return $"Windows Update: {c.ActionableCount} güncelleştirme indirilip kurulacak.";
             case ComponentKeys.Store:

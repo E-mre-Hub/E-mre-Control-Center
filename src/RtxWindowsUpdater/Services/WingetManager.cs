@@ -186,12 +186,18 @@ public sealed class WingetManager(Logger logger, string source, string key, stri
             logger.Warning($"winget uyarı koduyla döndü ({up.ExitCodeHex}); bulunan liste kullanılıyor.");
 
         var items = new List<UpdateItem>();
+        var edgeNotes = new List<string>();
         var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         foreach (var table in tables)
         {
             foreach (var row in table.Rows)
             {
                 if (string.IsNullOrEmpty(row.Available) || !seen.Add(row.Id)) continue;
+                if (IsEdgeManaged(row.Id, out var edge))
+                {
+                    items.Add(await CheckEdgeAsync(edge, row, edgeNotes, ct));
+                    continue;
+                }
                 var mismatch = TechnologyMismatch.TryGetValue(source + "|" + row.Id, out var failedVersion) &&
                                string.Equals(failedVersion, row.Available, StringComparison.OrdinalIgnoreCase);
                 items.Add(new UpdateItem
@@ -260,9 +266,13 @@ public sealed class WingetManager(Logger logger, string source, string key, stri
         // manuel olanlar "güncelleme bulundu" sayısına ve "Tümünü Güncelle"ye dahil edilmez.
         var manual = explicitCount + mismatchCount;
         var details = $"Otomatik uygulanabilir: {actionable}";
+        var edgeCount = items.Count(i => i.UpdateAvailable && IsEdgeManaged(i.Id, out _));
+        if (edgeCount > 0) details += $"\nMicrosoft Edge Update ile güncellenecek: {edgeCount}";
         if (explicitCount > 0) details += $"\nManuel / açık hedefleme gerekli: {explicitCount}";
         if (mismatchCount > 0) details += $"\nManuel – kurulum teknolojisi farklı (0x8A15008E): {mismatchCount}";
         if (upToDate.Count > 0) details += $"\nGüncel paket: {upToDate.Count}";
+        var reasonText = string.Join("\n", new[] { ManualReason(items, mismatchCount, explicitCount) }.Concat(edgeNotes)
+            .Where(l => !string.IsNullOrEmpty(l)));
 
         return new ModuleResult
         {
@@ -273,7 +283,7 @@ public sealed class WingetManager(Logger logger, string source, string key, stri
             Summary = actionable > 0
                 ? (manual > 0 ? $"{actionable} güncelleme mevcut (+{manual} manuel)" : $"{actionable} güncelleme mevcut")
                 : manual > 0 ? $"Dikkat: {manual} güncelleme otomatik uygulanamıyor" : "Güncel",
-            Reason = ManualReason(items, mismatchCount, explicitCount),
+            Reason = reasonText.Length > 0 ? reasonText : null,
             Details = details,
             Items = items.Concat(upToDate).ToList(),
             ActionableCount = actionable
@@ -297,6 +307,149 @@ public sealed class WingetManager(Logger logger, string source, string key, stri
         return lines.Count > 0 ? string.Join("\n", lines) : null;
     }
 
+    // ------------------------------------------------------------------ MICROSOFT EDGE / WEBVIEW2 (Microsoft Edge Update)
+
+    private static readonly TimeSpan EdgeCheckTimeout = TimeSpan.FromMinutes(2);
+    private static readonly TimeSpan EdgeInstallTimeout = TimeSpan.FromMinutes(30);
+
+    /// <summary>Kurulum çağrısı (Harness3, sonuç yorumlamasını gerçek kurulum yapmadan denemek için yansımayla değiştirir).</summary>
+    private static Func<EdgeUpdateService.EdgeApp, Action<string>?, TimeSpan, Task<EdgeUpdateService.EdgeUpdateResult>> _edgeInstall =
+        EdgeUpdateService.InstallAsync;
+
+    /// <summary>
+    /// Microsoft Edge ve WebView2 Çalışma Zamanı winget ile değil Microsoft Edge Update ile güncellenir: Windows 11'de
+    /// kaldırılamazlar (Edge kurulum programı çıkış kodu 93) ve winget yerinde yükseltemez (0x8A15008E).
+    /// </summary>
+    private bool IsEdgeManaged(string id, [System.Diagnostics.CodeAnalysis.NotNullWhen(true)] out EdgeUpdateService.EdgeApp? edge)
+    {
+        edge = source.Equals("winget", StringComparison.OrdinalIgnoreCase) ? EdgeUpdateService.Find(id) : null;
+        return edge is not null;
+    }
+
+    /// <summary>
+    /// winget'in listelediği Edge / WebView2 güncellemesini Microsoft Edge Update'e sorar (yalnızca denetim, sistem değişmez):
+    /// yeni sürüm bu cihaza gerçekten sunuluyorsa güncellenebilir olarak, sunulmuyorsa güncel olarak (nedeniyle) listelenir.
+    /// </summary>
+    private async Task<UpdateItem> CheckEdgeAsync(EdgeUpdateService.EdgeApp edge, WingetRow row, List<string> notes, CancellationToken ct)
+    {
+        // Önceki sürümlerin "kaldır + yeniden kur" kaydı bu paketlerde geçersiz (kaldırılamazlar); kalıcı kayıttan da silinir.
+        TechnologyMismatch.TryRemove(source + "|" + row.Id, out _);
+
+        logger.Info($"{row.Name}: winget {row.Version} → {row.Available} listeliyor; Microsoft Edge Update'e soruluyor...");
+        var r = await EdgeUpdateService.CheckAsync(edge, EdgeCheckTimeout, ct);
+        ExecutionTrace.Note($"{row.Name}: Microsoft Edge Update denetimi – {r.Outcome}" +
+                            (r.AvailableVersion is null ? "" : $", sunulan sürüm {r.AvailableVersion}") +
+                            (r.Outcome is EdgeUpdateService.EdgeUpdateOutcome.Error or EdgeUpdateService.EdgeUpdateOutcome.Unavailable
+                                ? " – " + r.Describe() : ""));
+        switch (r.Outcome)
+        {
+            case EdgeUpdateService.EdgeUpdateOutcome.UpdateAvailable:
+            {
+                var target = string.IsNullOrWhiteSpace(r.AvailableVersion) ? row.Available : r.AvailableVersion;
+                logger.Info($"{row.Name}: Microsoft Edge Update bu cihaza {target} sürümünü sunuyor.");
+                return new UpdateItem
+                {
+                    Name = row.Name, Id = row.Id, CurrentVersion = row.Version, NewVersion = target,
+                    UpdateAvailable = true, AutoUpdatable = true,
+                    StatusText = "Güncelleme mevcut – Microsoft Edge Update ile güncellenecek (Edge Windows bileşenidir; " +
+                                 "kaldırılamaz ve winget yerinde yükseltemez)"
+                };
+            }
+            case EdgeUpdateService.EdgeUpdateOutcome.NoUpdate:
+                logger.Info($"{row.Name}: Microsoft Edge Update bu cihaz için yeni sürüm sunmuyor (winget {row.Available} listeliyor).");
+                notes.Add($"{row.Name}: winget {row.Available} sürümünü listeliyor ancak Microsoft Edge Update bu sürümü bu cihaza henüz " +
+                          "sunmuyor (Microsoft güncellemeleri kademeli dağıtır); sunulduğunda Edge kendini günceller.");
+                return new UpdateItem
+                {
+                    Name = row.Name, Id = row.Id, CurrentVersion = row.Version, NewVersion = row.Version,
+                    UpdateAvailable = false, AutoUpdatable = false,
+                    StatusText = $"Güncel (Microsoft Edge Update'e göre) – winget {row.Available} listeliyor, Microsoft bu cihaza henüz sunmadı"
+                };
+            default:
+            {
+                var reason = r.Describe();
+                logger.Warning($"{row.Name}: Microsoft Edge Update'e sorulamadı: {reason}");
+                return new UpdateItem
+                {
+                    Name = row.Name, Id = row.Id, CurrentVersion = row.Version, NewVersion = row.Available,
+                    UpdateAvailable = true, AutoUpdatable = true,
+                    StatusText = $"Güncelleme mevcut (winget) – Microsoft Edge Update ile güncellenecek; Edge Update denetlenemedi: {reason}"
+                };
+            }
+        }
+    }
+
+    /// <summary>
+    /// Edge / WebView2'yi Microsoft Edge Update ile günceller (Edge'in "Hakkında" sayfasıyla aynı resmi akış) ve sonucu kayıt
+    /// defterindeki kurulu sürümle doğrular. Doğrulanmayan kurulum başarılı sayılmaz. Edge kaldırılmaz, hiçbir işlem kapatılmaz.
+    /// </summary>
+    private async Task UpdateEdgeAsync(EdgeUpdateService.EdgeApp edge, UpdateItem target)
+    {
+        var before = EdgeUpdateService.ReadInstalledVersion(edge) ?? target.CurrentVersion;
+        logger.Info($"{target.Name}: Microsoft Edge Update ile güncelleniyor ({before} → {target.NewVersion})...");
+        var r = await _edgeInstall(edge, line => logger.Output("  Edge Update> " + line), EdgeInstallTimeout);
+        var after = EdgeUpdateService.ReadInstalledVersion(edge);
+
+        target.InUse = false;
+        target.BlockingProcesses = [];
+        target.ResultCode = r.Outcome is EdgeUpdateService.EdgeUpdateOutcome.Error or EdgeUpdateService.EdgeUpdateOutcome.Unavailable &&
+                            r.ErrorCode != 0 ? r.ErrorCodeHex : null;
+        target.InstallerExitCode = r.InstallerResultCode != 0 ? r.InstallerResultCode.ToString() : null;
+        target.ResultSymbol = target.ResultCode is null ? null : "Microsoft Edge Update";
+        target.ToolMessage = string.IsNullOrWhiteSpace(r.Message) ? null : "Microsoft Edge Update: " + r.Message.Trim();
+        ExecutionTrace.Note($"{target.Name}: Microsoft Edge Update – {r.Outcome}, kayıtlı sürüm {before} → {after ?? "okunamadı"}" +
+                            (r.AvailableVersion is null ? "" : $", sunulan {r.AvailableVersion}"));
+
+        var expected = r.AvailableVersion ?? target.NewVersion;
+        switch (r.Outcome)
+        {
+            case EdgeUpdateService.EdgeUpdateOutcome.Installed when EdgeUpdateService.IsAtLeast(after, expected):
+            {
+                var pending = EdgeUpdateService.IsRestartPending(edge);
+                target.Outcome = ItemOutcome.Updated;
+                target.OutcomeText = pending ? $"Güncellendi – {edge.Name} yeniden açılınca etkinleşir" : "Güncellendi (Microsoft Edge Update)";
+                target.StatusText = $"Güncellendi: Microsoft Edge Update {before} → {after} kurdu (kayıt defterinden doğrulandı)" +
+                                    (pending ? $"; {edge.Name} açık olduğu için yeni sürüm uygulama kapatılıp açılınca etkinleşir" : "");
+                logger.Success($"{target.Name} güncellendi: {before} → {after} (Microsoft Edge Update, kayıt defterinden doğrulandı).");
+                if (pending) logger.Info($"{target.Name}: yeni sürüm, uygulama kapatılıp yeniden açılınca etkinleşecek.");
+                return;
+            }
+            case EdgeUpdateService.EdgeUpdateOutcome.Installed:
+                target.Outcome = ItemOutcome.Unverified;
+                target.OutcomeText = "Doğrulanamadı";
+                target.StatusText = after is not null && !string.Equals(after, before, StringComparison.OrdinalIgnoreCase)
+                    ? $"Microsoft Edge Update {before} → {after} kurdu; beklenen {expected} sürümü kayıt defterinde görünmüyor"
+                    : $"Microsoft Edge Update kurulumun tamamlandığını bildirdi ancak kayıtlı sürüm hâlâ {after ?? "okunamadı"}";
+                logger.Warning($"{target.Name}: {target.StatusText}.");
+                return;
+            case EdgeUpdateService.EdgeUpdateOutcome.NoUpdate:
+                target.Outcome = ItemOutcome.Failed;
+                target.OutcomeText = "Microsoft bu cihaza henüz sunmadı";
+                target.StatusText = FailedPrefix + $"Microsoft Edge Update bu cihaz için yeni sürüm sunmuyor (winget {target.NewVersion} " +
+                                    $"listeliyor; Microsoft güncellemeleri kademeli dağıtır). Kurulu sürüm {after ?? before}; " +
+                                    "sürüm sunulduğunda Edge kendini günceller.";
+                logger.Warning($"{target.Name}: Microsoft Edge Update bu cihaz için yeni sürüm sunmuyor; güncellenmedi.");
+                return;
+            default:
+            {
+                var reason = r.Describe();
+                target.Outcome = ItemOutcome.Failed;
+                target.OutcomeText = r.Outcome switch
+                {
+                    EdgeUpdateService.EdgeUpdateOutcome.TimedOut => "Zaman aşımı",
+                    EdgeUpdateService.EdgeUpdateOutcome.Unavailable => "Microsoft Edge Update kullanılamadı",
+                    _ => "Microsoft Edge Update hatası"
+                };
+                target.StatusText = FailedPrefix + reason + $" Kurulu sürüm: {after ?? before}." +
+                                    (r.Outcome == EdgeUpdateService.EdgeUpdateOutcome.TimedOut
+                                        ? " Güncelleme arka planda sürüyor olabilir; bir süre sonra yeniden kontrol edin."
+                                        : " Edge'de Ayarlar → Microsoft Edge hakkında sayfasından da güncellenebilir.");
+                logger.Error($"{target.Name} güncellenemedi: {reason}");
+                return;
+            }
+        }
+    }
+
     public async Task<ModuleResult> UpdateAsync(ModuleResult check, CancellationToken ct)
     {
         var winget = LocateWinget();
@@ -316,6 +469,13 @@ public sealed class WingetManager(Logger logger, string source, string key, stri
         {
             ct.ThrowIfCancellationRequested();
             var target = resultItems.First(r => r.Id == item.Id);
+
+            // Edge / WebView2: Microsoft Edge Update (doğrulaması kayıt defterinden; winget doğrulamasına girmez).
+            if (IsEdgeManaged(item.Id, out var edge))
+            {
+                await UpdateEdgeAsync(edge, target);
+                continue;
+            }
 
             // Çıktı genişliği nedeniyle kısaltılmış ("…") veya cmd.exe'ye güvenle verilemeyecek kimlikler tek tek hedeflenemez.
             if (!SafeId.IsMatch(item.Id))
@@ -455,9 +615,17 @@ public sealed class WingetManager(Logger logger, string source, string key, stri
         }
 
         var notes = new List<string>();
+        var wingetTargets = new List<UpdateItem>();
         foreach (var t in targets)
         {
             ct.ThrowIfCancellationRequested();
+            // Edge / WebView2 kaldırılamaz: hiçbir koşulda "kaldır + kur" yoluna girmez (eski bir kontrol sonucundan gelse bile).
+            if (IsEdgeManaged(t.Id, out var edge))
+            {
+                await UpdateEdgeAsync(edge, t);
+                continue;
+            }
+            wingetTargets.Add(t);
             if (t.Manual == ManualUpdateKind.ExplicitTargeting)
             {
                 logger.Info($"{t.Name} açık hedeflemeyle güncelleniyor ({t.CurrentVersion} → {t.NewVersion})...");
@@ -506,7 +674,7 @@ public sealed class WingetManager(Logger logger, string source, string key, stri
             }
         }
 
-        var verifyNote = await VerifyAsync(winget, targets);
+        var verifyNote = await VerifyAsync(winget, wingetTargets);
         return Summarize(items, verifyNote, notes);
     }
 

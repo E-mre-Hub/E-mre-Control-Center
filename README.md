@@ -25,6 +25,9 @@ kendi bakım araçlarını (SFC, DISM CheckHealth / onayla RestoreHealth, MRT h�
 - **Bildirim alanı (v1.8.1):** pencere kapatılınca uygulama arka planda (görev çubuğunun sağındaki ^ gizli simgelerde) çalışmaya
   devam eder; simgeye çift tıklayınca kaldığı yerden açılır, sağ tıklayınca kısayollar ve Çıkış
   (bkz. [Bildirim alanı](#bildirim-alanı-arka-planda-çalışma-v181)).
+- **Microsoft Edge güncellemesi (v1.8.2):** Edge ve WebView2 Çalışma Zamanı Windows bileşeni olduğu için winget yerine
+  Microsoft'un kendi güncelleyicisiyle (Microsoft Edge Update) güncellenir; kaldırılmaz
+  (bkz. [Microsoft Edge ve WebView2](#microsoft-edge-ve-webview2-microsoft-edge-update-v182)).
 - **Şeffaflık:** Sistem Sağlık Özeti, Sistem Bilgileri, her kartta son çalıştırılma zamanı, Detaylı Sonuç paneli
   (gerçek komut, çıkış kodu, stdout/stderr, süre), Son İşlem özeti, işlem geçmişi, Windows bildirimleri ve Log Yönetimi.
 
@@ -201,22 +204,22 @@ tırnak içinde yazılır). Depo: https://github.com/E-mre-Hub/E-mre-Control-Cen
 
 ### Yeni sürüm yayınlama (depo sahibi)
 
-1. `src\RtxWindowsUpdater\RtxWindowsUpdater.csproj` içindeki `<Version>` değerini artırın (ör. `1.8.1`).
+1. `src\RtxWindowsUpdater\RtxWindowsUpdater.csproj` içindeki `<Version>` değerini artırın (ör. `1.8.2`).
 2. Değişiklikleri commit'leyip gönderin, ardından etiket oluşturun:
 
 ```bash
-git tag v1.8.1
+git tag v1.8.2
 ```
 
 ```bash
-git push origin v1.8.1
+git push origin v1.8.2
 ```
 
 3. GitHub Actions (`.github/workflows/release.yml`) EXE'yi Windows sunucusunda derler ve **Releases** sayfasına iki dosya ekler:
-   `E-mre-Control-Center-Setup-v1.8.1.exe` (kurulum) ve `E-mre-Control-Center-v1.8.1.zip` (taşınabilir). Arkadaşlar oradan indirir;
+   `E-mre-Control-Center-Setup-v1.8.2.exe` (kurulum) ve `E-mre-Control-Center-v1.8.2.zip` (taşınabilir). Arkadaşlar oradan indirir;
    yüklü uygulamalar bu yayını "Yeni sürüm yayınlandı" olarak görür (v1.7.2 ve sonrası).
-   Etiketteki sürüm (v1.8.1) EXE'nin sürümü olarak kullanılır; csproj'daki `<Version>` ile aynı olmalıdır. Yayının metni yalnızca
-   README'deki `### v1.8.1` bölümüdür (uygulamadaki güncelleme penceresinde de bu metin görünür); bu bölüm etiketten önce yazılmalıdır.
+   Etiketteki sürüm (v1.8.2) EXE'nin sürümü olarak kullanılır; csproj'daki `<Version>` ile aynı olmalıdır. Yayının metni yalnızca
+   README'deki `### v1.8.2` bölümüdür (uygulamadaki güncelleme penceresinde de bu metin görünür); bu bölüm etiketten önce yazılmalıdır.
 
 Not: Herkese açık depolarda GitHub Actions standart sunucularda ücretsizdir;
 bir derleme yaklaşık 3-5 dakika sürer.
@@ -315,6 +318,25 @@ hiçbiri seçili değil) tek tek seçerek uygular:
 
 Sonuç her durumda gerçek winget sorgusuyla doğrulanır. Pencere, winget / Store kartının "Kontrol Et" butonundan her
 zaman; "Tümünü Güncelle" / "Seçilenleri Güncelle" sonunda ve (otomatik güncelleme yoksa) kontrol sonunda bir kez sunulur.
+
+### Microsoft Edge ve WebView2 (Microsoft Edge Update, v1.8.2)
+
+Microsoft Edge ve Microsoft Edge WebView2 Çalışma Zamanı Windows 11'de sistem bileşenidir: Edge'in kurulum programı kaldırmayı
+reddeder (`winget uninstall` → kurulum programı çıkış kodu 93, `0x8A150030`) ve winget kurulu sürümü yerinde yükseltemez
+(`0x8A15008E`). Bu yüzden "kaldır + yeniden kur" bu iki pakette hiçbir zaman kullanılmaz; winget bunlarda yalnızca yeni sürümü
+bulmak için kullanılır:
+
+- **Kontrol:** winget Edge / WebView2 için yeni sürüm listelediğinde, Edge'in "Ayarlar → Microsoft Edge hakkında" sayfasının
+  kullandığı resmi arayüzle (Microsoft Edge Update, `MicrosoftEdgeUpdate.Update3WebMachine`) yalnızca **denetim** yapılır; sistem
+  değişmez. Microsoft bu cihaza yeni sürümü sunuyorsa paket "Microsoft Edge Update ile güncellenecek" olarak listelenir ve
+  "Tümünü Güncelle"ye katılır. Sunmuyorsa (Microsoft güncellemeleri kademeli dağıtır) "Güncel (Microsoft Edge Update'e göre)"
+  gösterilir ve nedeni yazılır; Edge sürüm sunulduğunda kendini günceller.
+- **Güncelleme:** yalnızca kullanıcı onayıyla, aynı resmi akışla indirilip kurulur (durum, indirilen bayt ve kurulum yüzdesi Edge
+  Update'in bildirdiği gerçek değerlerdir). Başarı yalnızca kayıt defterindeki kurulu sürüm
+  (`HKLM\SOFTWARE\WOW6432Node\Microsoft\EdgeUpdate\Clients\{uygulama}\pv`) yeni sürüme ulaştıysa gösterilir. Edge açıksa yeni sürüm
+  Edge kapatılıp açılınca etkinleşir (bu açıkça yazılır; Edge kapatılmaz). Edge Update hata bildirirse hata kodu, kurulum
+  programı sonucu ve Edge Update'in kendi mesajı Detaylı Sonuç'ta gösterilir.
+- Önceki sürümlerin Edge için sakladığı "kaldır + yeniden kur" kaydı ilk kontrolde silinir.
 
 ## 6. Entegrasyonlar
 
@@ -737,6 +759,16 @@ eski klasörlerde kalır (`%LOCALAPPDATA%\E-mre Hub\Logs\`, `%LOCALAPPDATA%\RTX 
   yöneticinin klasörü).
 
 ## Sürüm geçmişi
+
+### v1.8.2
+
+**Düzeltme: Microsoft Edge güncellemesi**
+- Microsoft Edge (ve WebView2 Çalışma Zamanı) artık winget'in "kaldır + yeniden kur" yoluyla değil, Microsoft'un kendi
+  güncelleyicisiyle (Microsoft Edge Update) güncellenir. Edge Windows bileşeni olduğu için kaldırılamıyordu (çıkış kodu 93) ve
+  güncelleme her seferinde başarısız oluyordu.
+- Kontrol, yeni sürümün bu cihaza gerçekten sunulup sunulmadığını Edge Update'e sorar; sunulmuyorsa nedeni yazılır.
+- Güncelleme sonrası sürüm kayıt defterinden doğrulanır; Edge açıksa yeni sürümün Edge yeniden açılınca etkinleşeceği yazılır.
+- Detaylı Sonuç'ta paket mesajı etiketi "Araç mesajı" oldu (Edge Update mesajları da gösterilir).
 
 ### v1.8.1
 
