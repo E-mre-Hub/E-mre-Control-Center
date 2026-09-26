@@ -1,5 +1,98 @@
 # E-mre Control Center
 
+**Windows 11 için güncelleme, temizlik, onarım, sistem sağlığı ve hız testini tek ekranda toplayan, onaysız hiçbir şey yapmayan
+bakım uygulaması.**
+
+**[İndir (son sürüm)](https://github.com/E-mre-Hub/E-mre-Control-Center/releases/latest)** ·
+[Hızlı başlangıç](#hızlı-başlangıç-arkadaşlar-için) · [Sürüm geçmişi](#sürüm-geçmişi)
+
+## Ne işe yarar?
+
+Bilgisayarının bakımını tek bir yerden yapman için hazırlandı. Güncellemeler, temizlik, onarım ve sistem kontrolü için ayrı ayrı
+programlarla uğraşmak yerine hepsini tek ekranda toplar. **Tümünü Kontrol Et** dersin, uygulama ne güncelleneceğini, neyin
+temizlenebileceğini ve sistemde bir sorun olup olmadığını listeler; onaylarsan uygular.
+
+## Neler yapar?
+
+**Güncellemeler**
+- Windows Update, winget ile kurulan uygulamalar ve Microsoft Store uygulamaları
+- NVIDIA ekran kartı sürücüsü (resmi NVIDIA kaynağından)
+- Microsoft Defender virüs tanımları
+- Microsoft Edge (Microsoft'un kendi güncelleyicisiyle)
+
+**Temizlik ve onarım**
+- Geçici dosyalar, Windows geçici dosyaları, hata raporları ve önbellekler. Kişisel dosyalara, İndirilenler'e ve Windows.old'a
+  dokunmaz; kullanımdaki dosyaları silmeye çalışmaz.
+- Çöp Kutusu
+- SFC ve DISM ile bozuk sistem dosyalarının kontrolü ve onarımı
+- Microsoft'un Kötü Amaçlı Yazılım Temizleme Aracı ile hızlı tarama
+
+**Sistem araçları**
+- Tek Tıkla Tanıla: sistemin genel sağlık kontrolü
+- Başlangıç uygulamaları, Windows servisleri, çalışan işlemler
+- Güvenlik durumu (virüs koruması, güvenlik duvarı, Güvenli Önyükleme…)
+- Olay günlüğü, çökme analizi, sistem raporu ve destek paketi
+
+**Cihaz bilgileri**
+- İşlemci, ekran kartı, RAM ve disk bilgileri
+- Canlı performans (CPU, GPU, RAM ve disk kullanımı)
+- Disk sağlığı; dizüstü bilgisayarlarda batarya sağlığı
+
+**İnternet**
+- Hız testi (Cloudflare ya da Speedtest by Ookla): indirme, yükleme, ping, paket kaybı ve geçmiş sonuçlar
+- Ağ ve DNS tanılama
+
+## Neden farklı?
+
+- **Sahte sonuç yok:** "Sisteminiz %80 hızlandı" gibi uydurma değerler gösterilmez; her sonuç Windows'un kendi aracından gelen gerçek
+  sonuçtur. Başarısız olan işlem başarılı gösterilmez.
+- **Onayın olmadan hiçbir şey yapmaz:** kurmaz, silmez, değiştirmez. Windows'un güvenlik uyarılarını (UAC) atlatmaz.
+- **Arka planda çalışabilir:** pencereyi kapatınca saatin yanındaki simgede çalışmaya devam eder; çift tıklayınca kaldığın yerden açılır.
+- **Kendini günceller:** yeni sürüm çıkınca uygulamanın içinde "Yeni sürüm yayınlandı" penceresi gelir; Güncelle'ye basman yeterli.
+
+## Gereksinimler
+
+- Windows 11
+- İşlemler için yönetici izni (uygulama açılışta sorar)
+- NVIDIA RTX kart şart değil: kart yoksa yalnızca sürücü güncellemesi kapalı olur, geri kalan her şey çalışır.
+
+## İndirme ve kurulum
+
+1. **[Son sürümün sayfasını](https://github.com/E-mre-Hub/E-mre-Control-Center/releases/latest)** aç ve
+   `E-mre-Control-Center-Setup-vX.Y.Z.exe` dosyasını indir.
+2. Dosyayı çalıştır, **Yükle**'ye bas.
+3. Uygulama henüz dijital imzalı olmadığı için Windows "bilinmeyen yayıncı" uyarısı gösterebilir: **Ek bilgi → Yine de çalıştır**.
+   Kaynak kodun tamamı bu depoda herkese açıktır.
+
+Ayrıntılar için: [Hızlı başlangıç](#hızlı-başlangıç-arkadaşlar-için).
+
+<details>
+<summary><b>Arkadaşlarınla paylaşmak için hazır mesaj</b></summary>
+
+Kısa mesaj:
+
+```text
+Selam! Windows 11 için kendi yaptığım bir bakım uygulaması var: E-mre Control Center.
+
+Tek ekrandan Windows Update, uygulama güncellemeleri (winget, Microsoft Store), NVIDIA sürücüsü, Defender ve Microsoft Edge güncellemelerini kontrol edip kuruyor. Geçici dosyaları güvenli şekilde temizliyor, SFC / DISM ile sistem dosyalarını onarıyor, internet hız testi yapıyor, bilgisayarın sağlık durumunu gösteriyor.
+
+Hiçbir şeyi sana sormadan yapmıyor ve sonuçları süslemeden, Windows'un verdiği gerçek sonuçla gösteriyor. Yeni sürümler uygulamanın içinden kendiliğinden geliyor.
+
+İndir (Setup dosyası): https://github.com/E-mre-Hub/E-mre-Control-Center/releases/latest
+```
+
+Tek cümle:
+
+```text
+E-mre Control Center: Windows 11 için güncelleme, temizlik, onarım, sistem sağlığı ve hız testini tek ekranda toplayan, onaysız hiçbir şey yapmayan bakım uygulaması.
+```
+
+</details>
+
+---
+
+## Genel bakış (teknik)
+
 > v1.4.0 ile uygulamanın adı **E-mre Control Center** oldu (önceki adları: E-mre Hub – v1.3, RTX Windows Updater – v1.0–v1.2).
 
 Windows 11 bilgisayarlar için güncelleme ve bakım merkezi (NVIDIA RTX ekran kartı için sürücü desteğiyle; RTX yoksa
@@ -63,7 +156,8 @@ kendi bakım araçlarını (SFC, DISM CheckHealth / onayla RestoreHealth, MRT h�
 4. Uygulama açılışta yönetici izni isteyecektir; UAC penceresinde **Evet** deyin. (İzin vermezseniz uygulama açılır ama 10 kartın tamamı
    kullanım dışı olur; hiçbir kontrol veya güncelleme yapılamaz. Hız Testi, Cihaz Bilgileri ve arama yine kullanılabilir.)
 5. Kaldırmak için: **Windows Ayarlar → Uygulamalar → Yüklü uygulamalar → E-mre Control Center → Kaldır**.
-6. Yeni sürümler (v1.7.0 ve sonrası) uygulama açılırken kendiliğinden bildirilir: **Güncelle**'ye basmanız yeterlidir.
+6. Yeni sürümler uygulamanın içinden gelir: v1.7.0 ve sonrası uygulama açılırken, v1.8.3 ve sonrası uygulama açıkken de (en geç
+   5 dakika içinde) "Yeni sürüm yayınlandı" penceresini gösterir. **Güncelle**'ye basmanız yeterlidir.
 
 Gereksinimler: Windows 11 (derleme 22000+, zorunlu), internet bağlantısı, winget (Windows 11'de hazır gelir).
 NVIDIA GeForce RTX ekran kartı önerilir. Kart yoksa, başka marka bir kart ya da RTX serisi olmayan bir NVIDIA kartı varsa
