@@ -22,6 +22,9 @@ kendi bakım araçlarını (SFC, DISM CheckHealth / onayla RestoreHealth, MRT h�
   Çökme Analizi, Ağ Merkezi, DNS Tanılama, Gizlilik, Batarya, Performans, Başlangıç Uygulamaları, Windows Servisleri, İşlemler,
   Güvenlik, Sistem Raporu ve Destek Paketi. Tümü gerçek Windows kaynaklarından okur; değişiklik yapan her işlem kullanıcı onayı ister
   (bkz. [Sistem Tanılama](#sistem-tanılama-v180)).
+- **Bildirim alanı (v1.8.1):** pencere kapatılınca uygulama arka planda (görev çubuğunun sağındaki ^ gizli simgelerde) çalışmaya
+  devam eder; simgeye çift tıklayınca kaldığı yerden açılır, sağ tıklayınca kısayollar ve Çıkış
+  (bkz. [Bildirim alanı](#bildirim-alanı-arka-planda-çalışma-v181)).
 - **Şeffaflık:** Sistem Sağlık Özeti, Sistem Bilgileri, her kartta son çalıştırılma zamanı, Detaylı Sonuç paneli
   (gerçek komut, çıkış kodu, stdout/stderr, süre), Son İşlem özeti, işlem geçmişi, Windows bildirimleri ve Log Yönetimi.
 
@@ -198,22 +201,22 @@ tırnak içinde yazılır). Depo: https://github.com/E-mre-Hub/E-mre-Control-Cen
 
 ### Yeni sürüm yayınlama (depo sahibi)
 
-1. `src\RtxWindowsUpdater\RtxWindowsUpdater.csproj` içindeki `<Version>` değerini artırın (ör. `1.8.0`).
+1. `src\RtxWindowsUpdater\RtxWindowsUpdater.csproj` içindeki `<Version>` değerini artırın (ör. `1.8.1`).
 2. Değişiklikleri commit'leyip gönderin, ardından etiket oluşturun:
 
 ```bash
-git tag v1.8.0
+git tag v1.8.1
 ```
 
 ```bash
-git push origin v1.8.0
+git push origin v1.8.1
 ```
 
 3. GitHub Actions (`.github/workflows/release.yml`) EXE'yi Windows sunucusunda derler ve **Releases** sayfasına iki dosya ekler:
-   `E-mre-Control-Center-Setup-v1.8.0.exe` (kurulum) ve `E-mre-Control-Center-v1.8.0.zip` (taşınabilir). Arkadaşlar oradan indirir;
+   `E-mre-Control-Center-Setup-v1.8.1.exe` (kurulum) ve `E-mre-Control-Center-v1.8.1.zip` (taşınabilir). Arkadaşlar oradan indirir;
    yüklü uygulamalar bu yayını "Yeni sürüm yayınlandı" olarak görür (v1.7.2 ve sonrası).
-   Etiketteki sürüm (v1.8.0) EXE'nin sürümü olarak kullanılır; csproj'daki `<Version>` ile aynı olmalıdır. Yayının metni yalnızca
-   README'deki `### v1.8.0` bölümüdür (uygulamadaki güncelleme penceresinde de bu metin görünür); bu bölüm etiketten önce yazılmalıdır.
+   Etiketteki sürüm (v1.8.1) EXE'nin sürümü olarak kullanılır; csproj'daki `<Version>` ile aynı olmalıdır. Yayının metni yalnızca
+   README'deki `### v1.8.1` bölümüdür (uygulamadaki güncelleme penceresinde de bu metin görünür); bu bölüm etiketten önce yazılmalıdır.
 
 Not: Herkese açık depolarda GitHub Actions standart sunucularda ücretsizdir;
 bir derleme yaklaşık 3-5 dakika sürer.
@@ -485,7 +488,7 @@ Kategori her açılışta ilk bölmesiyle açılır.
   Günlükteki ve Son İşlem kartındaki "Son İşlemler" / "Geçmiş" butonu Özet → İşlem Geçmişi bölmesini açar.
 - Animasyonlar kısa ve tek seferliktir (ekran geçişi, kart üzerine gelme); sürekli animasyon yalnızca bir işlem gerçekten sürerken çalışır.
 
-### Bildirim alanı (arka planda çalışma)
+### Bildirim alanı (arka planda çalışma, v1.8.1)
 
 Pencerenin kapatma düğmesi (veya Alt+F4) uygulamayı **kapatmaz**: pencere gizlenir, uygulama görev çubuğunun sağındaki bildirim
 alanında (**^** gizli simgeler) çalışmaya devam eder; süren kontrol / güncelleme / hız testi yarıda kalmaz. İlk seferde Windows bir
@@ -735,6 +738,16 @@ eski klasörlerde kalır (`%LOCALAPPDATA%\E-mre Hub\Logs\`, `%LOCALAPPDATA%\RTX 
 
 ## Sürüm geçmişi
 
+### v1.8.1
+
+**Yeni: Bildirim alanı (arka planda çalışma)**
+- Pencere kapatılınca uygulama bildirim alanında (^ gizli simgeler) çalışmaya devam eder; simgeye çift tıklayınca kaldığı yerden
+  açılır. Uygulama yeniden başlatılırsa çalışan pencere öne gelir. Genel Ayarlar → Kolay Ayar'dan kapatılabilir.
+- Sağ tık menüsü: E-mre Control Center'ı aç, Ana Sayfa, Tümünü Kontrol Et, Tek Tıkla Tanıla, Hız Testi, Performans, İşlem Geçmişi,
+  Bildirimler (Açık / Kapalı), Çıkış. Çıkış uygulamayı gerçekten kapatır; işlem sürüyorsa önce onay ister.
+- Pencere gizliyken canlı ölçümler (Performans, İşlemler) durur; açılınca kaldığı yerden sürer.
+- Kurulum, güncelleme ve kaldırma, pencere gizli olsa da çalışan uygulamayı kapatabilir.
+
 ### v1.8.0
 
 **Yeni: Sistem Tanılama merkezi**
@@ -750,11 +763,6 @@ eski klasörlerde kalır (`%LOCALAPPDATA%\E-mre Hub\Logs\`, `%LOCALAPPDATA%\RTX 
 - **Arama:** yeni bölmeler ve "SFC", "DNS", "Wi-Fi", "Başlangıç", "Servis", "Event Log", "BSOD", "Batarya", "Sürücü" gibi terimler.
 - **Sistem Raporu** (TXT / HTML / JSON) ve **Destek Paketi** (ZIP): kişisel bilgiler (bilgisayar / kullanıcı adı, IP, MAC) gizlenir,
   hiçbir yere gönderilmez.
-
-**Yeni: Bildirim alanı**
-- Pencere kapatılınca uygulama bildirim alanında (^ gizli simgeler) çalışmaya devam eder; simgeye çift tıklayınca kaldığı yerden
-  açılır, sağ tıklayınca kısayollar (Ana Sayfa, Tümünü Kontrol Et, Tek Tıkla Tanıla, Hız Testi, Performans, İşlem Geçmişi,
-  Bildirimler, Çıkış). Uygulama yeniden başlatılırsa çalışan pencere öne gelir. Genel Ayarlar → Kolay Ayar'dan kapatılabilir.
 
 **Güvenlik**
 - Değişiklik yapan her işlem onay ister ve sonucu yeniden okunarak doğrulanır: başlangıç kaydı silinmez (yalnızca Görev Yöneticisi
