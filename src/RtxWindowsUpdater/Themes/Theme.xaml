@@ -660,6 +660,148 @@
     </Style>
 
     <!-- ============================================================ -->
+    <!--  ORTAK SATIR / BAĞLANTI STİLLERİ (ana pencere + araç ekranları)   -->
+    <!-- ============================================================ -->
+    <!-- Kategori ekranı satırları (Cihaz Bilgileri düzeni): solda büyük ikon karosu, sağda geniş kart -->
+    <Style x:Key="IconTile" TargetType="Border">
+        <Setter Property="Width" Value="68" />
+        <Setter Property="Height" Value="68" />
+        <Setter Property="CornerRadius" Value="20" />
+        <Setter Property="Background" Value="#FF0E1A30" />
+        <Setter Property="BorderBrush" Value="#FF1E3A66" />
+        <Setter Property="BorderThickness" Value="1" />
+        <Setter Property="VerticalAlignment" Value="Top" />
+        <Setter Property="HorizontalAlignment" Value="Left" />
+        <Setter Property="Margin" Value="4,4,0,0" />
+    </Style>
+    <Style x:Key="T.TileIcon" TargetType="TextBlock" BasedOn="{StaticResource T.Icon}">
+        <Setter Property="FontSize" Value="30" />
+        <Setter Property="Foreground" Value="{StaticResource B.Neon}" />
+        <Setter Property="Effect" Value="{StaticResource Fx.SoftGlow}" />
+    </Style>
+
+    <!-- Satır kartlarındaki açıklama metni -->
+    <Style x:Key="T.SettingDesc" TargetType="TextBlock">
+        <Setter Property="FontSize" Value="12" />
+        <Setter Property="LineHeight" Value="18" />
+        <Setter Property="TextWrapping" Value="Wrap" />
+        <Setter Property="Foreground" Value="{StaticResource B.Text3}" />
+    </Style>
+
+    <!-- Metin bağlantısı görünümlü düğme ("Otomatik Seç", "Sunucuyu değiştir", koşul bağlantıları) -->
+    <Style x:Key="Btn.Link" TargetType="Button">
+        <Setter Property="Cursor" Value="Hand" />
+        <Setter Property="FocusVisualStyle" Value="{x:Null}" />
+        <Setter Property="Foreground" Value="{StaticResource B.Neon}" />
+        <Setter Property="FontSize" Value="13" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="Button">
+                    <Border x:Name="bg" Background="Transparent" CornerRadius="6" Padding="6,3">
+                        <ContentPresenter VerticalAlignment="Center" HorizontalAlignment="Center" />
+                    </Border>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter TargetName="bg" Property="Background" Value="#FF102038" />
+                            <Setter Property="Foreground" Value="#FF8BDBFF" />
+                        </Trigger>
+                        <Trigger Property="IsKeyboardFocused" Value="True">
+                            <Setter TargetName="bg" Property="Background" Value="#FF102038" />
+                        </Trigger>
+                        <Trigger Property="IsEnabled" Value="False">
+                            <Setter Property="Foreground" Value="{StaticResource B.Text3}" />
+                            <Setter Property="Cursor" Value="Arrow" />
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <!-- Tıklanabilir satır (Özet → Sistem Tanılaması): içerik tüm genişliği kaplar, üzerine gelince neon kenarlık. -->
+    <Style x:Key="Btn.Row" TargetType="Button">
+        <Setter Property="Cursor" Value="Hand" />
+        <Setter Property="FocusVisualStyle" Value="{x:Null}" />
+        <Setter Property="Foreground" Value="{StaticResource B.Text}" />
+        <Setter Property="Padding" Value="10,8" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="Button">
+                    <Border x:Name="bg" CornerRadius="9" Background="#FF0A1222" BorderBrush="#FF16223A" BorderThickness="1" Padding="{TemplateBinding Padding}">
+                        <ContentPresenter HorizontalAlignment="Stretch" VerticalAlignment="Center" />
+                    </Border>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter TargetName="bg" Property="BorderBrush" Value="{StaticResource B.Neon}" />
+                            <Setter TargetName="bg" Property="Background" Value="#FF101C33" />
+                        </Trigger>
+                        <Trigger Property="IsKeyboardFocused" Value="True">
+                            <Setter TargetName="bg" Property="BorderBrush" Value="{StaticResource B.Neon}" />
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <!-- Arama kutusu (araç ekranları). Tag = yer tutucu metin. -->
+    <Style x:Key="Input.Search" TargetType="TextBox">
+        <Setter Property="Foreground" Value="{StaticResource B.Text}" />
+        <Setter Property="CaretBrush" Value="{StaticResource B.Neon}" />
+        <Setter Property="FontSize" Value="13" />
+        <Setter Property="Height" Value="36" />
+        <Setter Property="VerticalContentAlignment" Value="Center" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="TextBox">
+                    <Border x:Name="bd" CornerRadius="18" Background="#FF0A1222" BorderBrush="{StaticResource B.Border}" BorderThickness="1">
+                        <Grid Margin="14,0">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto" />
+                                <ColumnDefinition Width="*" />
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Text="&#xE721;" Style="{StaticResource T.Icon}" FontSize="12" Foreground="{StaticResource B.Text3}" Margin="0,0,9,0" />
+                            <ScrollViewer x:Name="PART_ContentHost" Grid.Column="1" VerticalAlignment="Center" Focusable="False"
+                                          HorizontalScrollBarVisibility="Hidden" VerticalScrollBarVisibility="Hidden" />
+                            <TextBlock x:Name="ph" Grid.Column="1" Text="{TemplateBinding Tag}" Foreground="{StaticResource B.Text3}"
+                                       VerticalAlignment="Center" Margin="3,0,0,0" IsHitTestVisible="False" Visibility="Collapsed"
+                                       TextTrimming="CharacterEllipsis" />
+                        </Grid>
+                    </Border>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="Text" Value="">
+                            <Setter TargetName="ph" Property="Visibility" Value="Visible" />
+                        </Trigger>
+                        <Trigger Property="IsKeyboardFocused" Value="True">
+                            <Setter TargetName="bd" Property="BorderBrush" Value="{StaticResource B.Neon}" />
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <!-- Salt okunur çok satırlı metin (rapor önizlemesi, olay iletisi) -->
+    <Style x:Key="Input.ReadOnly" TargetType="TextBox">
+        <Setter Property="IsReadOnly" Value="True" />
+        <Setter Property="Background" Value="#FF070D19" />
+        <Setter Property="Foreground" Value="{StaticResource B.Text2}" />
+        <Setter Property="BorderBrush" Value="{StaticResource B.Border}" />
+        <Setter Property="BorderThickness" Value="1" />
+        <Setter Property="Padding" Value="10,8" />
+        <Setter Property="FontSize" Value="12" />
+        <Setter Property="TextWrapping" Value="Wrap" />
+        <Setter Property="VerticalScrollBarVisibility" Value="Auto" />
+        <Setter Property="HorizontalScrollBarVisibility" Value="Disabled" />
+    </Style>
+
+    <!-- Araç tabloları: yatay kaydırma yok, sütunlar pencere genişliğine göre paylaşılır -->
+    <Style x:Key="T.Cell" TargetType="TextBlock">
+        <Setter Property="TextTrimming" Value="CharacterEllipsis" />
+        <Setter Property="ToolTip" Value="{Binding Text, RelativeSource={RelativeSource Self}}" />
+    </Style>
+
+    <!-- ============================================================ -->
     <!--  DATAGRID                                                      -->
     <!-- ============================================================ -->
     <Style TargetType="DataGrid">
@@ -680,6 +822,14 @@
         <Setter Property="FontSize" Value="12.5" />
         <Setter Property="VirtualizingPanel.IsVirtualizing" Value="True" />
         <Setter Property="VirtualizingPanel.VirtualizationMode" Value="Recycling" />
+    </Style>
+
+    <Style x:Key="Grid.Tool" TargetType="DataGrid" BasedOn="{StaticResource {x:Type DataGrid}}">
+        <Setter Property="HorizontalScrollBarVisibility" Value="Disabled" />
+        <Setter Property="VerticalScrollBarVisibility" Value="Auto" />
+        <Setter Property="CanUserReorderColumns" Value="False" />
+        <Setter Property="ColumnWidth" Value="*" />
+        <Setter Property="MinRowHeight" Value="30" />
     </Style>
 
     <Style TargetType="DataGridColumnHeader">

@@ -12,9 +12,16 @@ public sealed record DeviceReading(double? Value, string? Note = null)
     public static DeviceReading Missing(string note) => new(null, note);
 }
 
-public sealed record GpuStatus(string Name, DeviceReading Usage, DeviceReading Temperature, DeviceReading MemoryUsage, DeviceReading Fan);
+public sealed record GpuStatus(string Name, DeviceReading Usage, DeviceReading Temperature, DeviceReading MemoryUsage, DeviceReading Fan,
+    ulong? MemoryUsedBytes = null, ulong? MemoryTotalBytes = null);
 
-public sealed record DiskStatus(string Name, DeviceReading Temperature);
+public sealed record DiskStatus(string Id, string Name, DeviceReading Temperature);
+
+/// <summary>Fiziksel diskin anlık etkinliği (Windows "PhysicalDisk" performans sayaçları – Görev Yöneticisi ile aynı kaynak).</summary>
+public sealed record DiskActivity(string Id, string Instance, DeviceReading ActiveTime, DeviceReading ReadBytesPerSec, DeviceReading WriteBytesPerSec);
+
+/// <summary>Bağlı ağ bağdaştırıcılarının toplam anlık aktarımı (NetworkInterface bayt sayaçları farkı).</summary>
+public sealed record NetworkThroughput(DeviceReading ReceiveBytesPerSec, DeviceReading SendBytesPerSec, string Adapters);
 
 public sealed record FanStatus(string Name, DeviceReading Rpm);
 
@@ -31,6 +38,9 @@ public sealed class DeviceStatusSnapshot
     public required IReadOnlyList<DiskStatus> Disks { get; init; }
     public string? DiskNote { get; init; }
     public required IReadOnlyList<FanStatus> Fans { get; init; }
+    public IReadOnlyList<DiskActivity> DiskActivity { get; init; } = [];
+    public string? DiskActivityNote { get; init; }
+    public NetworkThroughput? Network { get; init; }
     public DateTime Time { get; init; } = DateTime.Now;
 }
 
@@ -63,10 +73,13 @@ public sealed class DeviceMonitorService(Logger logger) : IDisposable
     {
         lock (_lock)
         {
+            PrimeRates(); // ilk ölçümde sayaçların başlangıç değeri (işlemci ölçümünün 300 ms beklemesi fark aralığı olur)
             var cpu = ReadCpuUsage();
             var (memory, used, total) = ReadMemory();
             var thermal = ReadThermalZone();
             var (gpus, gpuNote) = ReadGpus();
+            var (activity, activityNote) = ReadDiskActivity();
+            var network = ReadNetwork();
             if (DateTime.UtcNow - _lastSlowRead >= SlowInterval)
             {
                 var (disks, diskNote) = ReadDisks();
@@ -85,7 +98,10 @@ public sealed class DeviceMonitorService(Logger logger) : IDisposable
                 GpuNote = gpuNote,
                 Disks = _slowCache.Disks,
                 DiskNote = _slowCache.DiskNote,
-                Fans = _slowCache.Fans
+                Fans = _slowCache.Fans,
+                DiskActivity = activity,
+                DiskActivityNote = activityNote,
+                Network = network
             };
             LogNotesOnce(snapshot);
             return snapshot;
@@ -105,6 +121,8 @@ public sealed class DeviceMonitorService(Logger logger) : IDisposable
             _nvmlError = null;
             _hasPrev = false;
             _lastSlowRead = DateTime.MinValue;
+            DisposeDiskCounters();
+            _netPrev = null;
         }
     }
 
@@ -232,11 +250,13 @@ public sealed class DeviceMonitorService(Logger logger) : IDisposable
             var mem = memResult == 0 && memory.Total > 0
                 ? new DeviceReading(100.0 * memory.Used / memory.Total)
                 : DeviceReading.Missing($"Bellek okunamadı ({NvmlError(memResult)})");
+            ulong? vramUsed = memResult == 0 && memory.Total > 0 ? memory.Used : null;
+            ulong? vramTotal = memResult == 0 && memory.Total > 0 ? memory.Total : null;
             var fanResult = Nvml.GetFanSpeed(device, out var fan);
             var fanReading = fanResult == 0
                 ? new DeviceReading(fan)
                 : DeviceReading.Missing(fanResult == 3 ? "Bu ekran kartı fan hızını bildirmiyor" : $"Fan hızı okunamadı ({NvmlError(fanResult)})");
-            list.Add(new GpuStatus(name, usage, temp, mem, fanReading));
+            list.Add(new GpuStatus(name, usage, temp, mem, fanReading, vramUsed, vramTotal));
         }
         return list.Count == 0 ? ([], "NVML hiçbir NVIDIA ekran kartı bildirmedi") : (list, null);
     }
@@ -255,52 +275,145 @@ public sealed class DeviceMonitorService(Logger logger) : IDisposable
         _ => $"NVML hata kodu {code}"
     };
 
+    // ------------------------------------------------------------------ Disk etkinliği ve ağ aktarımı (Performans)
+
+    private readonly List<(string Id, string Instance, System.Diagnostics.PerformanceCounter Idle,
+        System.Diagnostics.PerformanceCounter Read, System.Diagnostics.PerformanceCounter Write)> _diskCounters = [];
+    private string? _diskCounterError;
+    private (long Received, long Sent, DateTime Time)? _netPrev;
+
+    /// <summary>Oran sayaçlarının ilk okuması: değer ancak ikinci okumada (aradaki farktan) hesaplanır.</summary>
+    private void PrimeRates()
+    {
+        if (_diskCounters.Count == 0 && _diskCounterError is null)
+        {
+            try
+            {
+                var category = new System.Diagnostics.PerformanceCounterCategory("PhysicalDisk");
+                foreach (var instance in category.GetInstanceNames().Where(i => i != "_Total").OrderBy(i => i, StringComparer.Ordinal))
+                {
+                    var id = instance.Split(' ')[0];
+                    var idle = new System.Diagnostics.PerformanceCounter("PhysicalDisk", "% Idle Time", instance, readOnly: true);
+                    var read = new System.Diagnostics.PerformanceCounter("PhysicalDisk", "Disk Read Bytes/sec", instance, readOnly: true);
+                    var write = new System.Diagnostics.PerformanceCounter("PhysicalDisk", "Disk Write Bytes/sec", instance, readOnly: true);
+                    idle.NextValue();
+                    read.NextValue();
+                    write.NextValue();
+                    _diskCounters.Add((id, instance, idle, read, write));
+                }
+                if (_diskCounters.Count == 0) _diskCounterError = "Windows fiziksel disk performans sayacı bildirmedi";
+            }
+            catch (Exception ex) when (ex is InvalidOperationException or System.ComponentModel.Win32Exception or UnauthorizedAccessException or FormatException)
+            {
+                DisposeDiskCounters();
+                _diskCounterError = "Disk performans sayaçları okunamadı: " + ex.Message;
+            }
+        }
+        if (_netPrev is null)
+        {
+            var (rx, tx, _) = ReadNetworkTotals();
+            _netPrev = (rx, tx, DateTime.UtcNow);
+        }
+    }
+
+    private (IReadOnlyList<DiskActivity> Disks, string? Note) ReadDiskActivity()
+    {
+        if (_diskCounterError is not null) return ([], _diskCounterError);
+        var list = new List<DiskActivity>();
+        try
+        {
+            foreach (var (id, instance, idle, read, write) in _diskCounters)
+            {
+                // Etkin süre = 100 − boşta süre (Görev Yöneticisi "Etkin süre" ile aynı tanım).
+                var active = Math.Clamp(100 - idle.NextValue(), 0, 100);
+                list.Add(new DiskActivity(id, instance, new DeviceReading(active), new DeviceReading(read.NextValue()), new DeviceReading(write.NextValue())));
+            }
+        }
+        catch (Exception ex) when (ex is InvalidOperationException or System.ComponentModel.Win32Exception)
+        {
+            // Disk takıldı / çıkarıldı: sayaçlar bir sonraki ölçümde yeniden oluşturulur.
+            DisposeDiskCounters();
+            return ([], "Disk listesi değişti; sayaçlar yeniden oluşturuluyor (" + ex.Message + ")");
+        }
+        return (list, null);
+    }
+
+    private void DisposeDiskCounters()
+    {
+        foreach (var c in _diskCounters)
+        {
+            c.Idle.Dispose();
+            c.Read.Dispose();
+            c.Write.Dispose();
+        }
+        _diskCounters.Clear();
+        _diskCounterError = null;
+    }
+
+    private NetworkThroughput ReadNetwork()
+    {
+        var (rx, tx, names) = ReadNetworkTotals();
+        var now = DateTime.UtcNow;
+        var prev = _netPrev;
+        _netPrev = (rx, tx, now);
+        if (names.Length == 0)
+            return new NetworkThroughput(DeviceReading.Missing("Bağlı ağ bağdaştırıcısı yok"), DeviceReading.Missing("Bağlı ağ bağdaştırıcısı yok"), string.Empty);
+        var seconds = prev is null ? 0 : (now - prev.Value.Time).TotalSeconds;
+        if (seconds <= 0.05 || rx < prev!.Value.Received || tx < prev.Value.Sent)
+            return new NetworkThroughput(DeviceReading.Missing("Ölçülüyor"), DeviceReading.Missing("Ölçülüyor"), names);
+        return new NetworkThroughput(new DeviceReading((rx - prev.Value.Received) / seconds), new DeviceReading((tx - prev.Value.Sent) / seconds), names);
+    }
+
+    /// <summary>Bağlı (Up) fiziksel / kablosuz bağdaştırıcıların toplam alınan / gönderilen baytı.</summary>
+    private static (long Received, long Sent, string Names) ReadNetworkTotals()
+    {
+        long rx = 0, tx = 0;
+        var names = new List<string>();
+        foreach (var nic in System.Net.NetworkInformation.NetworkInterface.GetAllNetworkInterfaces())
+        {
+            if (nic.OperationalStatus != System.Net.NetworkInformation.OperationalStatus.Up ||
+                nic.NetworkInterfaceType is System.Net.NetworkInformation.NetworkInterfaceType.Loopback or System.Net.NetworkInformation.NetworkInterfaceType.Tunnel)
+                continue;
+            try
+            {
+                var stats = nic.GetIPStatistics();
+                rx += stats.BytesReceived;
+                tx += stats.BytesSent;
+                names.Add(nic.Name);
+            }
+            catch (System.Net.NetworkInformation.NetworkInformationException)
+            {
+                // bu bağdaştırıcının sayacı okunamadı; diğerleri toplanır
+            }
+        }
+        return (rx, tx, string.Join(", ", names));
+    }
+
     // ------------------------------------------------------------------ Diskler (15 sn'de bir)
 
     private static (IReadOnlyList<DiskStatus> Disks, string? Note) ReadDisks()
     {
-        try
-        {
-            var scope = new ManagementScope(@"\\.\root\Microsoft\Windows\Storage");
-            var names = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
-            using (var searcher = new ManagementObjectSearcher(scope, new ObjectQuery("SELECT DeviceId, FriendlyName FROM MSFT_PhysicalDisk")))
-            using (var results = searcher.Get())
-            {
-                foreach (ManagementObject mo in results)
-                    using (mo)
-                        if (mo["DeviceId"]?.ToString() is { } id)
-                            names[id] = mo["FriendlyName"]?.ToString()?.Trim() ?? $"Disk {id}";
-            }
-            if (names.Count == 0) return ([], "Windows fiziksel disk bildirmedi");
+        // Ortak okuma (Core/StorageInfo): Depolama Sağlığı bölmesi de aynı sınıfları kullanır.
+        var timeout = TimeSpan.FromSeconds(10);
+        var (physical, rawDisks) = StorageInfo.ReadPhysicalDisks(timeout);
+        if (!rawDisks.Ok)
+            return ([], rawDisks.AccessDenied ? "Disk sıcaklığı yönetici yetkisi gerektirir" : "Disk sıcaklığı okunamadı: " + rawDisks.Error);
+        if (physical.Count == 0) return ([], "Windows fiziksel disk bildirmedi");
 
-            var disks = new List<DiskStatus>();
-            using (var searcher = new ManagementObjectSearcher(scope, new ObjectQuery("SELECT DeviceId, Temperature FROM MSFT_StorageReliabilityCounter")))
-            using (var results = searcher.Get())
-            {
-                foreach (ManagementObject mo in results)
-                {
-                    using (mo)
-                    {
-                        var id = mo["DeviceId"]?.ToString();
-                        if (id is null || !names.TryGetValue(id, out var name)) continue;
-                        var t = mo["Temperature"] is { } v ? Convert.ToDouble(v) : 0;
-                        disks.Add(new DiskStatus(name, t > 0 ? new DeviceReading(t) : DeviceReading.Missing("Sürücü sıcaklık bildirmedi")));
-                        names.Remove(id);
-                    }
-                }
-            }
-            foreach (var rest in names.Values)
-                disks.Add(new DiskStatus(rest, DeviceReading.Missing("Sürücü güvenilirlik sayacı bildirmedi")));
-            return (disks, null);
-        }
-        catch (ManagementException ex) when (ex.ErrorCode == ManagementStatus.AccessDenied)
+        var (counters, rawCounters) = StorageInfo.ReadReliability(timeout);
+        if (!rawCounters.Ok)
         {
-            return ([], "Disk sıcaklığı yönetici yetkisi gerektirir");
+            // Disk adları yine gösterilir (Performans ekranında etkinlik satırları); sıcaklık gerçek nedenle "okunamıyor".
+            var note = rawCounters.AccessDenied ? "Disk sıcaklığı yönetici yetkisi gerektirir" : "Disk sıcaklığı okunamadı: " + rawCounters.Error;
+            return (physical.Select(d => new DiskStatus(d.DeviceId, d.Name, DeviceReading.Missing(note))).ToList(), note);
         }
-        catch (Exception ex) when (ex is ManagementException or UnauthorizedAccessException or System.Runtime.InteropServices.COMException)
-        {
-            return ([], "Disk sıcaklığı okunamadı: " + ex.Message);
-        }
+
+        var byId = counters.ToDictionary(c => c.DeviceId, StringComparer.OrdinalIgnoreCase);
+        var disks = physical.Select(d => byId.TryGetValue(d.DeviceId, out var c)
+                ? new DiskStatus(d.DeviceId, d.Name, c.Temperature is { } t ? new DeviceReading(t) : DeviceReading.Missing("Sürücü sıcaklık bildirmedi"))
+                : new DiskStatus(d.DeviceId, d.Name, DeviceReading.Missing("Sürücü güvenilirlik sayacı bildirmedi")))
+            .ToList();
+        return (disks, null);
     }
 
     private static IReadOnlyList<FanStatus> ReadFans()

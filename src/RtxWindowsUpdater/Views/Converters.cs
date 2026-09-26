@@ -4,6 +4,7 @@ using System.Windows.Data;
 using System.Windows.Media;
 using RtxWindowsUpdater.Core;
 using RtxWindowsUpdater.Models;
+using RtxWindowsUpdater.Services.Diagnostics;
 using RtxWindowsUpdater.ViewModels;
 
 namespace RtxWindowsUpdater.Views;
@@ -40,6 +41,11 @@ public sealed class StatusToBrushConverter : IValueConverter
         RequirementState.Failed => Palette.Red,
         RequirementState.Warning => Palette.Orange,
         RequirementState.Pending => Palette.Blue,
+        CheckState.Healthy => Palette.Green,
+        CheckState.Warning => Palette.Orange,
+        CheckState.Error => Palette.Red,
+        CheckState.Checking => Palette.Blue,
+        CheckState.Info => Palette.Blue,
         _ => Palette.Gray
     };
 
@@ -79,6 +85,13 @@ public sealed class StatusToGlyphConverter : IValueConverter
         RequirementState.Failed => "",
         RequirementState.Warning => "",
         RequirementState.Pending => "",
+        CheckState.Healthy => "\uE73E",                                     // CheckMark
+        CheckState.Warning => "\uE7BA",                                     // Warning
+        CheckState.Error => "\uE783",                                       // Error
+        CheckState.Unknown => "\uE9CE",                                     // Unknown: kontrol edilemedi
+        CheckState.Skipped => "\uE738",                                     // Remove: atlandı
+        CheckState.Checking => "\uE895",                                    // Sync
+        CheckState.Info => "\uE946",                                        // Info
         _ => "\uE823"                                                        // Saat: henüz çalıştırılmadı
     };
 
@@ -88,7 +101,7 @@ public sealed class StatusToGlyphConverter : IValueConverter
 public sealed class StatusIsBusyConverter : IValueConverter
 {
     public object Convert(object value, Type targetType, object parameter, CultureInfo culture) =>
-        value is ComponentStatus.Checking or ComponentStatus.Updating or RequirementState.Pending;
+        value is ComponentStatus.Checking or ComponentStatus.Updating or RequirementState.Pending or CheckState.Checking;
 
     public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture) => Binding.DoNothing;
 }

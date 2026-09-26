@@ -12,7 +12,7 @@ public sealed class DeviceInfoSectionViewModel(string title, string glyph, IRead
 }
 
 /// <summary>Cihaz Durumu'ndaki halka gösterge (ör. İşlemci kullanımı %, ekran kartı sıcaklığı °C). Değer yoksa "okunamıyor".</summary>
-public sealed class DeviceGaugeViewModel(string caption, string unit, double maximum, bool isTemperature) : ObservableObject
+public sealed class DeviceGaugeViewModel(string caption, string unit, double maximum, bool isTemperature, string format = "0") : ObservableObject
 {
     private double? _value;
     private string? _note;
@@ -29,7 +29,7 @@ public sealed class DeviceGaugeViewModel(string caption, string unit, double max
     /// <summary>Halkanın doluluğu (0-1); değer yoksa 0.</summary>
     public double Ratio => _value is { } v && Maximum > 0 ? Math.Clamp(v / Maximum, 0, 1) : 0;
 
-    public string DisplayValue => _value is { } v ? v.ToString("0") : "—";
+    public string DisplayValue => _value is { } v ? v.ToString(format) : "—";
     public string DisplayUnit => IsAvailable ? Unit : string.Empty;
     public string CaptionText => IsAvailable ? Caption : Caption + " · okunamıyor";
     public string? ToolTipText => IsAvailable ? null : Note;
@@ -37,7 +37,7 @@ public sealed class DeviceGaugeViewModel(string caption, string unit, double max
     /// <summary>Renk seviyesi: sıcaklıkta 80 °C ve üstü "warm", 90 °C ve üstü "hot"; kullanımda %90 ve üstü "warm".</summary>
     public string Level => _value is not { } v ? "none"
         : IsTemperature ? (v >= 90 ? "hot" : v >= 80 ? "warm" : "normal")
-        : v >= 90 ? "warm" : "normal";
+        : Maximum > 0 && v >= 90 ? "warm" : "normal"; // ölçeksiz değerler (RPM, Mbps) renklendirilmez
 
     public void Update(DeviceReading reading)
     {

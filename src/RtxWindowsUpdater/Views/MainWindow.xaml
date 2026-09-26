@@ -7,7 +7,7 @@
         xmlns:views="clr-namespace:RtxWindowsUpdater.Views"
         Title="{x:Static core:AppInfo.Name}"
         Icon="pack://application:,,,/Assets/E-mreLogo.ico"
-        Width="1340" Height="900" MinWidth="1120" MinHeight="760"
+        Width="1340" Height="900" MinWidth="1024" MinHeight="640"
         WindowStartupLocation="CenterScreen"
         WindowStyle="SingleBorderWindow"
         ResizeMode="CanResize"
@@ -23,6 +23,12 @@
     </WindowChrome.WindowChrome>
 
     <Window.Resources>
+        <ResourceDictionary>
+        <!-- v1.8.0 araç ekranlarının şablonları (Sistem Tanılama bölmeleri; ToolViewsA ortak parçaları içerir) -->
+        <ResourceDictionary.MergedDictionaries>
+            <ResourceDictionary Source="Tools/ToolViewsB.xaml" />
+        </ResourceDictionary.MergedDictionaries>
+
         <ImageBrush x:Key="LogoBrush" ImageSource="pack://application:,,,/Assets/E-mreLogo.jpg" Stretch="UniformToFill" />
 
         <!-- Durum ikonu: Tag'e bağlanan durum "meşgul" ise döner -->
@@ -214,23 +220,6 @@
             </Setter>
         </Style>
 
-        <!-- Kategori ekranı satırları (Cihaz Bilgileri düzeni): solda büyük ikon karosu, sağda geniş kart -->
-        <Style x:Key="IconTile" TargetType="Border">
-            <Setter Property="Width" Value="68" />
-            <Setter Property="Height" Value="68" />
-            <Setter Property="CornerRadius" Value="20" />
-            <Setter Property="Background" Value="#FF0E1A30" />
-            <Setter Property="BorderBrush" Value="#FF1E3A66" />
-            <Setter Property="BorderThickness" Value="1" />
-            <Setter Property="VerticalAlignment" Value="Top" />
-            <Setter Property="HorizontalAlignment" Value="Left" />
-            <Setter Property="Margin" Value="4,4,0,0" />
-        </Style>
-        <Style x:Key="T.TileIcon" TargetType="TextBlock" BasedOn="{StaticResource T.Icon}">
-            <Setter Property="FontSize" Value="30" />
-            <Setter Property="Foreground" Value="{StaticResource B.Neon}" />
-            <Setter Property="Effect" Value="{StaticResource Fx.SoftGlow}" />
-        </Style>
 
         <!-- Sistem İşlemleri kartı (10 kartın tamamı aynı yapıyı kullanır): solda büyük ikon karosu, sağda geniş kart.
              Performans: gölge, kartla aynı biçimdeki ayrı ve statik katmandadır. Kart içindeki dönen ikon ve ilerleme
@@ -681,13 +670,6 @@
                 </Border>
             </Grid>
         </DataTemplate>
-        <!-- Satır kartlarındaki açıklama metni -->
-        <Style x:Key="T.SettingDesc" TargetType="TextBlock">
-            <Setter Property="FontSize" Value="12" />
-            <Setter Property="LineHeight" Value="18" />
-            <Setter Property="TextWrapping" Value="Wrap" />
-            <Setter Property="Foreground" Value="{StaticResource B.Text3}" />
-        </Style>
 
         <!-- Seçili bölmenin içeriği: Visibility="{Binding CurrentSectionKey, Converter={StaticResource SectionVisible}, ConverterParameter=anahtar}" -->
         <views:EqualsToVisibilityConverter x:Key="SectionVisible" />
@@ -793,35 +775,6 @@
             </Setter>
         </Style>
 
-        <!-- Metin bağlantısı görünümlü düğme ("Otomatik Seç", "Sunucuyu değiştir", koşul bağlantıları) -->
-        <Style x:Key="Btn.Link" TargetType="Button">
-            <Setter Property="Cursor" Value="Hand" />
-            <Setter Property="FocusVisualStyle" Value="{x:Null}" />
-            <Setter Property="Foreground" Value="{StaticResource B.Neon}" />
-            <Setter Property="FontSize" Value="13" />
-            <Setter Property="Template">
-                <Setter.Value>
-                    <ControlTemplate TargetType="Button">
-                        <Border x:Name="bg" Background="Transparent" CornerRadius="6" Padding="6,3">
-                            <ContentPresenter VerticalAlignment="Center" HorizontalAlignment="Center" />
-                        </Border>
-                        <ControlTemplate.Triggers>
-                            <Trigger Property="IsMouseOver" Value="True">
-                                <Setter TargetName="bg" Property="Background" Value="#FF102038" />
-                                <Setter Property="Foreground" Value="#FF8BDBFF" />
-                            </Trigger>
-                            <Trigger Property="IsKeyboardFocused" Value="True">
-                                <Setter TargetName="bg" Property="Background" Value="#FF102038" />
-                            </Trigger>
-                            <Trigger Property="IsEnabled" Value="False">
-                                <Setter Property="Foreground" Value="{StaticResource B.Text3}" />
-                                <Setter Property="Cursor" Value="Arrow" />
-                            </Trigger>
-                        </ControlTemplate.Triggers>
-                    </ControlTemplate>
-                </Setter.Value>
-            </Setter>
-        </Style>
 
         <!-- Kullanım uygunluğu: ikon + 5 nokta + ad (puan ölçülen değerlerden; eşikler araç ipucunda) -->
         <DataTemplate x:Key="UsageRatingTemplate" DataType="{x:Type vm:UsageRatingViewModel}">
@@ -855,6 +808,7 @@
                            TextAlignment="Center" TextWrapping="Wrap" Margin="0,7,0,0" />
             </StackPanel>
         </DataTemplate>
+        </ResourceDictionary>
     </Window.Resources>
 
     <Grid x:Name="RootGrid">
@@ -1145,7 +1099,7 @@
                                     </Grid>
                                 </Border>
 
-                                <!-- 7 kategori: üstte 4, altta 3 (ortalı) -->
+                                <!-- 8 kategori: üstte 4, altta 4 (ortalı) -->
                                 <ItemsControl x:Name="HomeCategories" ItemsSource="{Binding Categories}" Margin="0,30,0,6" Focusable="False">
                                     <ItemsControl.ItemsPanel>
                                         <ItemsPanelTemplate>
@@ -1403,6 +1357,10 @@
                         <TextBlock Text="{Binding CurrentSection.Title}" FontFamily="{StaticResource F.Display}" FontSize="24"
                                    Foreground="{StaticResource B.Text}" Margin="8,4,8,18" />
 
+                        <!-- ============ v1.8.0 araç bölmeleri (Sistem Sağlığı, Sürücüler, Ağ Merkezi, Servisler…): açık bölmenin aracı, şablonu Tools/ToolViews*.xaml ============ -->
+                        <ContentControl x:Name="ToolHost" Grid.Row="1" Content="{Binding CurrentTool}" Focusable="False"
+                                        Visibility="{Binding CurrentTool, Converter={StaticResource Visible}}" />
+
                         <!-- ============ Kartlar (Güncellemeler / Temizlik / Sağlık Araçları): işlem çubuğu + kart satırları ============ -->
                         <Grid Grid.Row="1" Visibility="{Binding CurrentSectionKey, Converter={StaticResource SectionVisible}, ConverterParameter=cards}">
                             <Grid.RowDefinitions>
@@ -1649,7 +1607,7 @@
                                         <RowDefinition Height="*" />
                                     </Grid.RowDefinitions>
                                     <TextBlock Style="{StaticResource T.SettingDesc}" Margin="2,0,0,12"
-                                               Text="Tamamlanan kontrol ve güncelleme işlemleri (en yenisi üstte). Geçmiş, uygulama kapatılıp açıldığında da korunur." />
+                                               Text="Tamamlanan kontrol, güncelleme ve araç işlemleri (sürücü denetimi, sistem sağlığı, ağ / DNS testi, hizmet ve başlangıç değişiklikleri, rapor…), en yenisi üstte. Başarısız işlem hata metniyle kaydedilir; geçmiş uygulama kapatılıp açıldığında da korunur." />
                                     <DataGrid Grid.Row="1" ItemsSource="{Binding RecentOperations}">
                                         <DataGrid.Columns>
                                             <DataGridTextColumn Header="ZAMAN" Binding="{Binding TimeText}" Width="130" />
@@ -1667,7 +1625,7 @@
                                             <DataGridTemplateColumn Header="SONUÇ" Width="*">
                                                 <DataGridTemplateColumn.CellTemplate>
                                                     <DataTemplate>
-                                                        <TextBlock Text="{Binding SummaryText}" TextTrimming="CharacterEllipsis" ToolTip="{Binding SummaryText}"
+                                                        <TextBlock Text="{Binding ResultText}" TextTrimming="CharacterEllipsis" ToolTip="{Binding ResultText}"
                                                                    Foreground="{StaticResource B.Text2}" />
                                                     </DataTemplate>
                                                 </DataGridTemplateColumn.CellTemplate>
@@ -1737,6 +1695,74 @@
                                                                     </StackPanel>
                                                                 </Grid>
                                                             </Border>
+                                                        </DataTemplate>
+                                                    </ItemsControl.ItemTemplate>
+                                                </ItemsControl>
+                                            </StackPanel>
+                                        </Border>
+                                    </Grid>
+
+                                    <!-- Sistem tanılaması (v1.8.0): her satır son GERÇEK tanılama sonucudur; yapılmadıysa "Henüz kontrol edilmedi" -->
+                                    <Grid Margin="0,0,0,16">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="96" />
+                                            <ColumnDefinition Width="*" />
+                                        </Grid.ColumnDefinitions>
+                                        <Border Style="{StaticResource IconTile}">
+                                            <TextBlock Text="&#xE95E;" Style="{StaticResource T.TileIcon}" />
+                                        </Border>
+                                        <Border Grid.Column="1" Style="{StaticResource Card}" Padding="22,16,22,12">
+                                            <StackPanel>
+                                                <Grid>
+                                                    <Grid.ColumnDefinitions>
+                                                        <ColumnDefinition Width="*" />
+                                                        <ColumnDefinition Width="Auto" />
+                                                    </Grid.ColumnDefinitions>
+                                                    <StackPanel>
+                                                        <TextBlock Text="Sistem Tanılaması" Style="{StaticResource T.H2}" FontSize="16" />
+                                                        <TextBlock FontSize="11.5" Foreground="{StaticResource B.Text3}" Margin="0,3,0,0" TextWrapping="Wrap"
+                                                                   Text="Bu oturumda yapılan gerçek kontrollerin son sonucu (Tek Tıkla Tanıla, Tümünü Kontrol Et veya ilgili ekran). Satıra tıklayınca ayrıntı açılır." />
+                                                    </StackPanel>
+                                                    <Button Grid.Column="1" Style="{StaticResource Btn.Secondary}" Height="36" Padding="14,0" Margin="14,0,0,0"
+                                                            VerticalAlignment="Top" Command="{Binding OpenDiagnoseCommand}">
+                                                        <StackPanel Orientation="Horizontal">
+                                                            <TextBlock Text="&#xE9D9;" Style="{StaticResource T.Icon}" FontSize="12" Margin="0,0,8,0"
+                                                                       Foreground="{StaticResource B.Neon}" />
+                                                            <TextBlock Text="Tek Tıkla Tanıla" FontSize="13" />
+                                                        </StackPanel>
+                                                    </Button>
+                                                </Grid>
+                                                <ItemsControl x:Name="DiagnosticSummaryList" ItemsSource="{Binding DiagnosticSummary}" Margin="0,12,0,0" Focusable="False">
+                                                    <ItemsControl.ItemsPanel>
+                                                        <ItemsPanelTemplate>
+                                                            <UniformGrid Columns="2" />
+                                                        </ItemsPanelTemplate>
+                                                    </ItemsControl.ItemsPanel>
+                                                    <ItemsControl.ItemTemplate>
+                                                        <DataTemplate DataType="{x:Type vm:DiagnosticSummaryRowViewModel}">
+                                                            <Button Style="{StaticResource Btn.Row}" Margin="0,0,8,8"
+                                                                    Command="{Binding OpenCommand}" ToolTip="{Binding Summary}" AutomationProperties.Name="{Binding Title}">
+                                                                <Grid>
+                                                                    <Grid.ColumnDefinitions>
+                                                                        <ColumnDefinition Width="Auto" />
+                                                                        <ColumnDefinition Width="*" />
+                                                                        <ColumnDefinition Width="Auto" />
+                                                                    </Grid.ColumnDefinitions>
+                                                                    <TextBlock Text="{Binding Glyph}" Style="{StaticResource T.Icon}" FontSize="15" Margin="0,0,10,0"
+                                                                               Foreground="{StaticResource B.Neon}" VerticalAlignment="Top" />
+                                                                    <StackPanel Grid.Column="1">
+                                                                        <TextBlock Text="{Binding Title}" FontSize="12.5" FontWeight="SemiBold" Foreground="{StaticResource B.Text}" />
+                                                                        <StackPanel Orientation="Horizontal" Margin="0,2,0,0">
+                                                                            <TextBlock Text="{Binding State, Converter={StaticResource StatusGlyph}}" Style="{StaticResource T.Icon}" FontSize="11"
+                                                                                       Foreground="{Binding State, Converter={StaticResource StatusBrush}}" Margin="0,0,6,0" />
+                                                                            <TextBlock Text="{Binding StateText}" FontSize="11.5" FontWeight="SemiBold"
+                                                                                       Foreground="{Binding State, Converter={StaticResource StatusBrush}}" />
+                                                                        </StackPanel>
+                                                                        <TextBlock Text="{Binding Summary}" FontSize="11.5" Foreground="{StaticResource B.Text2}" TextTrimming="CharacterEllipsis" Margin="0,2,0,0" />
+                                                                    </StackPanel>
+                                                                    <TextBlock Grid.Column="2" Text="{Binding TimeText}" FontSize="11" Foreground="{StaticResource B.Text3}" VerticalAlignment="Top" Margin="8,0,0,0" />
+                                                                </Grid>
+                                                            </Button>
                                                         </DataTemplate>
                                                     </ItemsControl.ItemTemplate>
                                                 </ItemsControl>

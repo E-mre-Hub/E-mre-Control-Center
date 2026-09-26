@@ -98,7 +98,7 @@ public sealed partial class MainViewModel
         }
     }
 
-    private readonly record struct GaugeSpec(string Caption, string Unit, double Maximum, bool IsTemperature, DeviceReading Reading);
+    private readonly record struct GaugeSpec(string Caption, string Unit, double Maximum, bool IsTemperature, DeviceReading Reading, string Format = "0");
 
     private sealed record RowSpec(string Key, string Title, string Subtitle, string? Note, GaugeSpec[] Gauges);
 
@@ -117,7 +117,10 @@ public sealed partial class MainViewModel
             rows.Add(new RowSpec("gpu", "Ekran Kartı", string.Empty, s.GpuNote, []));
         foreach (var g in s.Gpus)
         {
-            rows.Add(new RowSpec("gpu:" + g.Name, "Ekran Kartı", g.Name, null,
+            var vram = g.MemoryTotalBytes is > 0 && g.MemoryUsedBytes is { } used
+                ? $" · VRAM {used / 1073741824.0:0.0} GB / {g.MemoryTotalBytes.Value / 1073741824.0:0.0} GB"
+                : string.Empty;
+            rows.Add(new RowSpec("gpu:" + g.Name, "Ekran Kartı", g.Name + vram, null,
             [
                 new GaugeSpec("Kullanım", "%", 100, false, g.Usage),
                 new GaugeSpec("Sıcaklık", "°C", 100, true, g.Temperature),
@@ -130,10 +133,33 @@ public sealed partial class MainViewModel
             : string.Empty;
         rows.Add(new RowSpec("ram", "Bellek", memoryText, null, [new GaugeSpec("Kullanım", "%", 100, false, s.MemoryUsage)]));
 
-        if (s.Disks.Count == 0)
-            rows.Add(new RowSpec("disk", "Depolama", string.Empty, s.DiskNote ?? "Disk sıcaklığı henüz okunmadı", []));
-        foreach (var d in s.Disks)
-            rows.Add(new RowSpec("disk:" + d.Name, "Depolama", d.Name, null, [new GaugeSpec("Sıcaklık", "°C", 100, true, d.Temperature)]));
+        // Disk: etkin süre + okuma / yazma (PhysicalDisk sayaçları) ve sıcaklık (güvenilirlik sayacı; yönetici gerekir).
+        if (s.DiskActivity.Count == 0 && s.Disks.Count == 0)
+            rows.Add(new RowSpec("disk", "Depolama", string.Empty, s.DiskActivityNote ?? s.DiskNote ?? "Disk bilgisi henüz okunmadı", []));
+        foreach (var a in s.DiskActivity)
+        {
+            var disk = s.Disks.FirstOrDefault(d => d.Id == a.Id);
+            var io = $"Okuma {Services.Diagnostics.Formats.Rate(a.ReadBytesPerSec.Value ?? 0)} · Yazma {Services.Diagnostics.Formats.Rate(a.WriteBytesPerSec.Value ?? 0)}";
+            rows.Add(new RowSpec("disk:" + a.Id, "Depolama", $"{disk?.Name ?? a.Instance} · {io}", null,
+            [
+                new GaugeSpec("Etkin süre", "%", 100, false, a.ActiveTime),
+                new GaugeSpec("Sıcaklık", "°C", 100, true, disk?.Temperature ?? DeviceReading.Missing(s.DiskNote ?? "Disk sıcaklığı okunmadı"))
+            ]));
+        }
+        if (s.DiskActivity.Count == 0)
+            foreach (var d in s.Disks)
+                rows.Add(new RowSpec("disk:" + d.Id, "Depolama", d.Name, s.DiskActivityNote, [new GaugeSpec("Sıcaklık", "°C", 100, true, d.Temperature)]));
+
+        // Ağ: bağlı bağdaştırıcıların toplam anlık aktarımı (Mbps).
+        if (s.Network is { } net)
+        {
+            static DeviceReading Mbps(DeviceReading r) => r.Value is { } v ? new DeviceReading(v * 8 / 1_000_000) : r;
+            rows.Add(new RowSpec("net", "Ağ", net.Adapters, null,
+            [
+                new GaugeSpec("İndirme", "Mbps", 0, false, Mbps(net.ReceiveBytesPerSec), "0.0"),
+                new GaugeSpec("Yükleme", "Mbps", 0, false, Mbps(net.SendBytesPerSec), "0.0")
+            ]));
+        }
 
         var fans = new List<GaugeSpec>();
         foreach (var g in s.Gpus.Where(g => g.Fan.Value is not null))
@@ -155,7 +181,7 @@ public sealed partial class MainViewModel
             foreach (var r in rows)
             {
                 var row = new DeviceStatusRowViewModel(r.Key, r.Title);
-                foreach (var g in r.Gauges) row.Gauges.Add(new DeviceGaugeViewModel(g.Caption, g.Unit, g.Maximum, g.IsTemperature));
+                foreach (var g in r.Gauges) row.Gauges.Add(new DeviceGaugeViewModel(g.Caption, g.Unit, g.Maximum, g.IsTemperature, g.Format));
                 DeviceStatusRows.Add(row);
             }
         }

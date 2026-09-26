@@ -29,11 +29,34 @@ public partial class MainWindow : Window
         vm.Detail.PropertyChanged += OnDetailChanged;
         PreviewKeyDown += OnPreviewKeyDown;
 
-        SourceInitialized += (_, _) => WindowFrame.Apply(this);
+        SourceInitialized += (_, _) =>
+        {
+            WindowFrame.Apply(this);
+            FitToWorkArea();
+        };
         StateChanged += (_, _) => UpdateMaximizeState();
         Loaded += OnLoaded;
         Closing += OnClosing;
         Closed += OnClosed;
+    }
+
+    /// <summary>
+    /// Varsayılan boyut (1340x900) küçük ekranda (ör. 1366x768, görev çubuğuyla ~720 px) ekrandan taşmasın: pencere çalışma alanına
+    /// sığacak kadar küçültülür ve ortalanır. Büyük ekranda değişiklik yapılmaz.
+    /// </summary>
+    private void FitToWorkArea()
+    {
+        var area = SystemParameters.WorkArea;
+        if (area.Width <= 0 || area.Height <= 0) return;
+        var width = Math.Min(Width, area.Width);
+        var height = Math.Min(Height, area.Height);
+        if (width == Width && height == Height) return;
+        MinWidth = Math.Min(MinWidth, width);
+        MinHeight = Math.Min(MinHeight, height);
+        Width = width;
+        Height = height;
+        Left = area.Left + (area.Width - width) / 2;
+        Top = area.Top + (area.Height - height) / 2;
     }
 
     private void OnClosed(object? sender, EventArgs e)

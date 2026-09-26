@@ -22,6 +22,26 @@ public static class SectionKeys
     public const string SpeedServers = "speed-servers";
     public const string SpeedHistory = "speed-history";
     public const string SpeedMethod = "speed-method";
+
+    // v1.8.0 Sistem Tanılama bölmeleri (değerler servis katmanındaki Nav ile aynı)
+    public const string Drivers = global::RtxWindowsUpdater.Services.Diagnostics.Nav.Drivers;
+    public const string Apps = global::RtxWindowsUpdater.Services.Diagnostics.Nav.Apps;
+    public const string StorageAnalysis = global::RtxWindowsUpdater.Services.Diagnostics.Nav.StorageAnalysis;
+    public const string SystemHealth = global::RtxWindowsUpdater.Services.Diagnostics.Nav.SystemHealth;
+    public const string StorageHealth = global::RtxWindowsUpdater.Services.Diagnostics.Nav.StorageHealth;
+    public const string EventLog = global::RtxWindowsUpdater.Services.Diagnostics.Nav.EventLog;
+    public const string Crash = global::RtxWindowsUpdater.Services.Diagnostics.Nav.Crash;
+    public const string Network = global::RtxWindowsUpdater.Services.Diagnostics.Nav.Network;
+    public const string Dns = global::RtxWindowsUpdater.Services.Diagnostics.Nav.Dns;
+    public const string Privacy = global::RtxWindowsUpdater.Services.Diagnostics.Nav.Privacy;
+    public const string Battery = global::RtxWindowsUpdater.Services.Diagnostics.Nav.Battery;
+    public const string Diagnose = global::RtxWindowsUpdater.Services.Diagnostics.Nav.Diagnose;
+    public const string Startup = global::RtxWindowsUpdater.Services.Diagnostics.Nav.Startup;
+    public const string Services = global::RtxWindowsUpdater.Services.Diagnostics.Nav.Services;
+    public const string Processes = global::RtxWindowsUpdater.Services.Diagnostics.Nav.Processes;
+    public const string Security = global::RtxWindowsUpdater.Services.Diagnostics.Nav.Security;
+    public const string Report = global::RtxWindowsUpdater.Services.Diagnostics.Nav.Report;
+    public const string Support = global::RtxWindowsUpdater.Services.Diagnostics.Nav.Support;
 }
 
 /// <summary>
@@ -45,6 +65,7 @@ public static class CategoryKeys
     public const string Summary = "summary";
     public const string Device = "device";
     public const string SpeedTest = "speedtest";
+    public const string SystemTools = global::RtxWindowsUpdater.Services.Diagnostics.Nav.SystemTools;
 }
 
 /// <summary>

@@ -427,36 +427,12 @@ public sealed class SpeedTestService(Logger logger, SpeedTestOptions? options = 
     {
         var count = _options.PacketLossProbes;
         if (count <= 0) return (null, "ölçülmedi");
-        var tasks = new List<Task<PingReply?>>();
-        string? error = null;
-        for (var i = 0; i < count; i++)
-        {
-            ct.ThrowIfCancellationRequested();
-            tasks.Add(SendPingAsync());
-            await Task.Delay(60, ct);
-        }
-        var replies = await Task.WhenAll(tasks);
-        ct.ThrowIfCancellationRequested();
-        var ok = replies.Where(r => r?.Status == IPStatus.Success).Select(r => (double)r!.RoundtripTime).ToList();
-        if (error is not null && ok.Count == 0) return (null, "ICMP gönderilemedi: " + error);
-        if (ok.Count == 0)
+        var probe = await IcmpProbe.RunAsync(address, count, TimeSpan.FromMilliseconds(60), 1000, ct);
+        if (probe.Error is not null) return (null, "ICMP gönderilemedi: " + probe.Error);
+        if (probe.Received == 0)
             return (new PacketLossStats(count, 0, null),
                 "sunucu ICMP yankı isteklerine yanıt vermedi (ağ veya sunucu ICMP'yi engelliyor olabilir); kayıp oranı hesaplanmadı");
-        return (new PacketLossStats(count, ok.Count, SpeedTestMath.Median(ok)), null);
-
-        async Task<PingReply?> SendPingAsync()
-        {
-            try
-            {
-                using var ping = new Ping();
-                return await ping.SendPingAsync(address, 1000);
-            }
-            catch (PingException ex)
-            {
-                error ??= ex.InnerException?.Message ?? ex.Message;
-                return null;
-            }
-        }
+        return (new PacketLossStats(count, probe.Received, SpeedTestMath.Median(probe.RttsMs)), null);
     }
 
     /// <summary>

@@ -121,8 +121,14 @@ public sealed class OperationRecord
     public long DurationMs { get; set; }
     public bool Cancelled { get; set; }
 
+    /// <summary>Başarısız / uyarılı işlemin gerçek hata metni (v1.8.0; eski kayıtlarda boş).</summary>
+    public string? ErrorText { get; set; }
+
     [JsonIgnore] public string TimeText => CompletedAt.ToString("dd.MM.yyyy HH:mm");
     [JsonIgnore] public string DurationText => UpdateOrchestrator.FormatDuration(TimeSpan.FromMilliseconds(DurationMs));
+
+    /// <summary>Sonuç sütunu: özet + (varsa) gerçek hata metni.</summary>
+    [JsonIgnore] public string ResultText => string.IsNullOrEmpty(ErrorText) ? SummaryText : $"{SummaryText} · Hata: {ErrorText}";
 
     /// <summary>Özet rengi için durum (hata > uyarı/güncelleme > başarılı).</summary>
     [JsonIgnore]

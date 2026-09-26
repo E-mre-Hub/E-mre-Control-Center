@@ -19,18 +19,37 @@ public sealed partial class MainViewModel
     {
         [SectionKeys.Found] = "bulunan güncellemeler paket sürüm program",
         [SectionKeys.Log] = "işlem günlüğü günlük log kayıt filtre",
-        [SectionKeys.Recent] = "son işlemler geçmiş",
+        [SectionKeys.Recent] = "işlem geçmişi son işlemler geçmiş kayıt",
         [SectionKeys.Health] = "sağlık özeti durum son işlem",
         [SectionKeys.Quick] = "kolay ayar bildirim bildirimler çöp kutusu anahtar tercih",
         [SectionKeys.Admin] = "yönetici yetki uac izin",
         [SectionKeys.LogFiles] = "günlük dosyası log klasör dışa aktar veri klasörü",
         [SectionKeys.DeviceInfo] = "işlemci cpu ekran kartı gpu bellek ram disk depolama ssd işletim sistemi windows sürüm donanım",
-        [SectionKeys.DeviceStatus] = "canlı sıcaklık kullanım fan cpu gpu bellek termal",
+        [SectionKeys.DeviceStatus] = "performans canlı sıcaklık kullanım fan cpu gpu vram bellek ram disk ağ termal cihaz durumu",
         [SectionKeys.DeviceAbout] = "hakkında sürüm uygulama kurulum yüklü kaldır",
         [SectionKeys.SpeedTest] = "internet hız ping indirme yükleme paket kaybı mbps titreşim",
         [SectionKeys.SpeedServers] = "sunucu ookla speedtest cloudflare turkcell seç otomatik",
         [SectionKeys.SpeedHistory] = "sonuçlar geçmiş hız",
-        [SectionKeys.SpeedMethod] = "yöntem nasıl ölçülür"
+        [SectionKeys.SpeedMethod] = "yöntem nasıl ölçülür",
+        // v1.8.0 Sistem Tanılama bölmeleri
+        [SectionKeys.Drivers] = "sürücü driver aygıt yöneticisi nvidia intel amd yonga seti chipset ağ ses bluetooth usb depolama sürücü güncellemesi",
+        [SectionKeys.Apps] = "uygulamalar program kurulu yüklü yazılım winget microsoft store kaldır güncelleme",
+        [SectionKeys.StorageAnalysis] = "depolama analizi büyük dosyalar en büyük klasörler disk alanı boş alan dosya türü",
+        [SectionKeys.SystemHealth] = "sistem sağlığı sfc dism windows update etkinleştirme aktivasyon lisans sürüm build yeniden başlatma kritik hizmet",
+        [SectionKeys.StorageHealth] = "disk ssd nvme sata smart sıcaklık aşınma güvenilirlik depolama sağlığı",
+        [SectionKeys.EventLog] = "olay günlüğü event log event viewer olay görüntüleyicisi kritik hata uyarı",
+        [SectionKeys.Crash] = "çökme analizi mavi ekran bsod bugcheck minidump dump kernel-power beklenmedik kapanma",
+        [SectionKeys.Network] = "ağ merkezi wi-fi wifi kablosuz ethernet ip ipv4 ipv6 ağ geçidi gateway dhcp mac ping bağlantı internet https paket kaybı gecikme",
+        [SectionKeys.Dns] = "dns dnssec çözümleme ad sunucusu",
+        [SectionKeys.Privacy] = "gizlilik konum kamera mikrofon uygulama izinleri tanılama verisi telemetri reklam kimliği",
+        [SectionKeys.Battery] = "batarya pil şarj kapasite döngü sağlık dizüstü laptop",
+        [SectionKeys.Diagnose] = "tek tıkla tanıla tanılama teşhis sorun giderme sistem kontrolü",
+        [SectionKeys.Startup] = "başlangıç uygulamaları açılış startup otomatik başlatma görev zamanlayıcı",
+        [SectionKeys.Services] = "servis servisler hizmet hizmetler windows servisleri service",
+        [SectionKeys.Processes] = "işlemler process görev yöneticisi task manager cpu bellek sonlandır pid",
+        [SectionKeys.Security] = "güvenlik defender antivirüs virüs güvenlik duvarı firewall güvenli önyükleme secure boot uac",
+        [SectionKeys.Report] = "sistem raporu rapor txt html json dışa aktar",
+        [SectionKeys.Support] = "destek paketi zip tanılama verisi destek günlük"
     };
 
     private List<(SearchResultViewModel Item, string Alias, string Haystack, int Kind)>? _searchIndex;

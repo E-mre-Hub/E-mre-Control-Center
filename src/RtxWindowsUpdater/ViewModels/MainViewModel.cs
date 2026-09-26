@@ -252,30 +252,40 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         ComponentCardViewModel CardOf(string key) => Cards.First(c => c.Key == key);
         SectionViewModel Log() => new(SectionKeys.Log, "İşlem Günlüğü", "");
         SectionViewModel Found() => new(SectionKeys.Found, "Bulunan Güncellemeler", "");
+        InitTools();
         Categories =
         [
             new CategoryViewModel(CategoryKeys.Update, "Güncelleme", "", "Windows ve uygulama güncellemeleri",
                 [CardOf(ComponentKeys.WindowsUpdate), CardOf(ComponentKeys.Winget), CardOf(ComponentKeys.Store),
                  CardOf(ComponentKeys.Nvidia), CardOf(ComponentKeys.Defender)],
-                [new(SectionKeys.Cards, "Güncellemeler", ""), Found(), Log()]),
+                [new(SectionKeys.Cards, "Güncellemeler", ""), new(SectionKeys.Drivers, "Sürücüler", ""),
+                 new(SectionKeys.Apps, "Uygulamalar", ""), Found(), Log()]),
             new CategoryViewModel(CategoryKeys.Cleanup, "Temizleme", "", "Geçici dosyalar ve Çöp Kutusu",
                 [CardOf(ComponentKeys.TempFiles), CardOf(ComponentKeys.RecycleBin)],
-                [new(SectionKeys.Cards, "Temizlik", ""), Log()]),
+                [new(SectionKeys.Cards, "Temizlik", ""), new(SectionKeys.StorageAnalysis, "Depolama Analizi", ""), Log()]),
             new CategoryViewModel(CategoryKeys.Health, "Cihaz Sağlık", "", "Windows sistem sağlık kontrolleri",
                 [CardOf(ComponentKeys.Sfc), CardOf(ComponentKeys.Dism), CardOf(ComponentKeys.Mrt)],
-                [new(SectionKeys.Cards, "Sağlık Araçları", ""), Log()]),
-            new CategoryViewModel(CategoryKeys.SpeedTest, "Hız Testi", "", "İnternet hızı, ping ve paket kaybı", [],
-                [new(SectionKeys.SpeedTest, "Hız Testi", ""), new(SectionKeys.SpeedServers, "Sunucu", ""),
+                [new(SectionKeys.Cards, "Sağlık Araçları", ""), new(SectionKeys.SystemHealth, "Sistem Sağlığı", ""),
+                 new(SectionKeys.StorageHealth, "Depolama Sağlığı", ""), new(SectionKeys.EventLog, "Olay Günlüğü", ""),
+                 new(SectionKeys.Crash, "Çökme Analizi", ""), Log()]),
+            new CategoryViewModel(CategoryKeys.SpeedTest, "Hız Testi", "", "İnternet hızı, ağ bağlantısı ve DNS tanılama", [],
+                [new(SectionKeys.SpeedTest, "Hız Testi", ""), new(SectionKeys.Network, "Ağ Merkezi", ""),
+                 new(SectionKeys.Dns, "DNS Tanılama", ""), new(SectionKeys.SpeedServers, "Sunucu", ""),
                  new(SectionKeys.SpeedHistory, "Sonuçlar", ""),
                  new(SectionKeys.SpeedMethod, "Yöntem", "")]),
             new CategoryViewModel(CategoryKeys.Settings, "Genel Ayarlar", "", "Bildirimler, günlük ve uygulama tercihleri", [],
-                [new(SectionKeys.Quick, "Kolay Ayar", ""), new(SectionKeys.Admin, "Yönetici Yetkisi", ""),
+                [new(SectionKeys.Quick, "Kolay Ayar", ""), new(SectionKeys.Privacy, "Gizlilik", ""), new(SectionKeys.Admin, "Yönetici Yetkisi", ""),
                  new(SectionKeys.LogFiles, "Günlük Dosyaları", "")]),
             new CategoryViewModel(CategoryKeys.Summary, "Özet", "", "Sistem sağlığı, son işlem ve geçmiş", [],
-                [new(SectionKeys.Health, "Sağlık Özeti", ""), new(SectionKeys.Recent, "Son İşlemler", ""), Found(), Log()]),
+                [new(SectionKeys.Health, "Sağlık Özeti", ""), new(SectionKeys.Recent, "İşlem Geçmişi", ""), Found(), Log()]),
             new CategoryViewModel(CategoryKeys.Device, "Cihaz Bilgileri", "", "Donanım, Windows ve sistem durumu", [],
-                [new(SectionKeys.DeviceInfo, "Cihaz Bilgileri", ""), new(SectionKeys.DeviceStatus, "Cihaz Durumu", ""),
-                 new(SectionKeys.DeviceAbout, "Hakkında", "")])
+                [new(SectionKeys.DeviceInfo, "Cihaz Bilgileri", ""), new(SectionKeys.DeviceStatus, "Performans", ""),
+                 new(SectionKeys.Battery, "Batarya", ""), new(SectionKeys.DeviceAbout, "Hakkında", "")]),
+            new CategoryViewModel(CategoryKeys.SystemTools, "Sistem Araçları", "", "Tanılama, başlangıç, servisler ve raporlar", [],
+                [new(SectionKeys.Diagnose, "Tek Tıkla Tanıla", ""), new(SectionKeys.Startup, "Başlangıç Uygulamaları", ""),
+                 new(SectionKeys.Services, "Windows Servisleri", ""), new(SectionKeys.Processes, "İşlemler", ""),
+                 new(SectionKeys.Security, "Güvenlik", ""), new(SectionKeys.Report, "Sistem Raporu", ""),
+                 new(SectionKeys.Support, "Destek Paketi", "")])
         ];
         foreach (var category in Categories)
         {
@@ -467,6 +477,8 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         OnPropertyChanged(nameof(CurrentSectionKey));
         // Cihaz Durumu canlı ölçümü yalnızca o bölme açıkken çalışır.
         UpdateDeviceMonitoring();
+        // Tanılama araçları: yalnızca açık bölmenin aracı etkin (izleme / okuma kapanınca durur).
+        UpdateToolActivation();
         // Sunucu bölmesi (veya Ookla seçiliyken Hız Testi) açılınca Ookla aracı denetlenir; sistemde değişiklik yapmaz.
         if (CurrentSectionKey == SectionKeys.SpeedServers || CurrentSectionKey == SectionKeys.SpeedTest && SpeedTest.IsOoklaProvider)
             _ = SpeedTest.EnsureOoklaAsync();
@@ -511,6 +523,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
                 CategoryKeys.Summary => (HealthStatus, HealthHeadline),
                 CategoryKeys.Device => (ComponentStatus.NotChecked, PlatformText),
                 CategoryKeys.SpeedTest => SpeedTest.Tile,
+                CategoryKeys.SystemTools => DiagnosticTile(),
                 _ => (ComponentStatus.NotChecked, NotificationsEnabled ? "Bildirimler açık" : "Bildirimler kapalı")
             };
         }
@@ -892,12 +905,20 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         RaiseSummaryChanged();
 
         Dictionary<string, ModuleResult>? results = null;
+        string? diagnostics = null;
         var completed = await RunBusyAsync(updatePhase: false,
-            async ct => results = await _orchestrator.RunAllChecksAsync(Reporters(), ct),
+            async ct =>
+            {
+                // Kart kontrolleri ilerlemenin %70'i, ardından güvenli tanılama adımları (yalnızca okuma) kalan %30.
+                _progressScale = 0.7;
+                try { results = await _orchestrator.RunAllChecksAsync(Reporters(), ct); }
+                finally { _progressScale = 1; }
+                diagnostics = await RunQuickDiagnosticsAsync(70, ct);
+            },
             done =>
             {
                 StoreChecks(results);
-                var anyError = FinishOperation("Sistem kontrolü", results, done, updatePhase: false, single: false, NotifyPolicy.Always);
+                var anyError = FinishOperation("Sistem kontrolü", results, done, updatePhase: false, single: false, NotifyPolicy.Always, diagnostics);
                 var ready = _checks.Values.Any(c => c.HasActionableUpdates);
                 return new OperationEnd(anyError,
                     ready ? "Kontrol tamamlandı – işlemler hazır" : "Kontrol tamamlandı – uygulanacak işlem yok",
@@ -1674,7 +1695,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         {
             if (!IsBusy) return;
             StepText = p.Text;
-            Progress = p.Percent;
+            Progress = p.Percent * _progressScale;
         });
         var state = new Progress<ModuleResult>(r =>
         {
@@ -1984,7 +2005,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
     /// gerekiyorsa Windows bildirimi gönderir. Hata varsa true döner.
     /// </summary>
     private bool FinishOperation(string scope, IReadOnlyDictionary<string, ModuleResult>? results, bool completed,
-        bool updatePhase, bool single, NotifyPolicy notify)
+        bool updatePhase, bool single, NotifyPolicy notify, string? extraSummary = null)
     {
         var all = results?.Values.Where(r => r.Status is not (ComponentStatus.Checking or ComponentStatus.Updating)).ToList() ?? [];
         var anyError = all.Any(IsErrorResult);
@@ -2046,6 +2067,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
             if (recycle is not null) parts.Add($"çöp kutusunda {recycle.ActionableCount} öğe");
             var temp = all.FirstOrDefault(r => r.Key == ComponentKeys.TempFiles && r.Status == ComponentStatus.UpdateAvailable);
             if (temp is not null) parts.Add($"Geçici dosyalar: {temp.Summary}");
+            if (extraSummary is not null) parts.Add(extraSummary);
             parts.Add($"Süre: {durationText}");
             rec.SummaryText = string.Join(" · ", parts);
         }
@@ -2081,6 +2103,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
     public void Dispose()
     {
         StopDeviceMonitoring();
+        _currentTool?.Deactivate();
         _monitorInstance?.Dispose();
         SpeedTest.Dispose();
         _logger.LogAdded -= OnLogAdded;

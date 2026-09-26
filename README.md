@@ -11,13 +11,17 @@ kendi bakım araçlarını (SFC, DISM CheckHealth / onayla RestoreHealth, MRT h�
 - **İki çalışma şekli:** "Tümünü Kontrol Et / Tümünü Güncelle" veya kartları seçerek "Seçilenleri Kontrol Et /
   Seçilenleri Güncelle-Çalıştır". Seçilmeyen karta hiçbir şekilde dokunulmaz. Güncelleme butonları ancak gerçek bir
   kontrol işlem gerektiren bir sonuç bulduğunda etkinleşir.
-- **Kontrol Merkezi:** ana sayfada 7 kategori (üstte 4, altta 3): **Güncelleme**, **Temizleme**, **Cihaz Sağlık**, **Hız Testi**,
-  **Genel Ayarlar**, **Özet**, **Cihaz Bilgileri**. Her kategori ekranında solda bölmeler (alt menü), sağda seçili bölmenin içeriği bulunur. Ana sayfadaki **Ara** kutusu
+- **Kontrol Merkezi:** ana sayfada 8 kategori (üstte 4, altta 4): **Güncelleme**, **Temizleme**, **Cihaz Sağlık**, **Hız Testi**,
+  **Genel Ayarlar**, **Özet**, **Cihaz Bilgileri**, **Sistem Araçları**. Her kategori ekranında solda bölmeler (alt menü), sağda seçili bölmenin içeriği bulunur. Ana sayfadaki **Ara** kutusu
   (Ctrl+F) kategori, bölme ve kart adlarında arar. 10 kartın tamamı
   aynı yapıda (solda büyük ikon, sağda geniş kart): açıklama, gerçek durum, "?" bilgi kutusu, seçim kutusu ve kartın kendi
   işlem butonu ("Kontrol Et", "Tarama Başlat", "Kontrolü Başlat", "Hızlı Taramayı Başlat").
 - **Hız Testi:** gerçek ölçümle indirme / yükleme hızı, ping (boşta ve yük altında), titreşim, paket kaybı, ISS ve test sunucusu;
   canlı gösterge, kullanım uygunluğu ve sonuç geçmişi (bkz. Hız Testi).
+- **Sistem Tanılama (v1.8.0):** Tek Tıkla Tanıla, Sistem Sağlığı, Sürücüler, Uygulamalar, Depolama Sağlığı ve Analizi, Olay Günlüğü,
+  Çökme Analizi, Ağ Merkezi, DNS Tanılama, Gizlilik, Batarya, Performans, Başlangıç Uygulamaları, Windows Servisleri, İşlemler,
+  Güvenlik, Sistem Raporu ve Destek Paketi. Tümü gerçek Windows kaynaklarından okur; değişiklik yapan her işlem kullanıcı onayı ister
+  (bkz. [Sistem Tanılama](#sistem-tanılama-v180)).
 - **Şeffaflık:** Sistem Sağlık Özeti, Sistem Bilgileri, her kartta son çalıştırılma zamanı, Detaylı Sonuç paneli
   (gerçek komut, çıkış kodu, stdout/stderr, süre), Son İşlem özeti, işlem geçmişi, Windows bildirimleri ve Log Yönetimi.
 
@@ -91,7 +95,10 @@ Desktop\E-mre Control Center\        ← Proje klasörü (önceki adları: E-mre
     │   ├── RestartManager.cs        ← Windows Restart Manager API (dosyaları kullanan işlemlerin tespiti)
     │   ├── PowerShellRunner.cs      ← PowerShell 5.1 betikleri (##LOG / ##RESULT JSON protokolü)
     │   ├── SystemMessages.cs        ← Windows araçlarının mesajlarını sistem dilinde yükler (SFC sonuç tanıma)
-    │   └── ExecutionTrace.cs        ← İşlem sırasında çalışan komutların gerçek stdout/stderr/çıkış kodu kaydı
+    │   ├── ExecutionTrace.cs        ← İşlem sırasında çalışan komutların gerçek stdout/stderr/çıkış kodu kaydı
+    │   ├── Wmi.cs                   ← Ortak WMI sorgusu (zaman aşımı, erişim reddi / desteklenmeyen sınıf → Türkçe gerçek neden)
+    │   ├── StorageInfo.cs           ← Fiziksel diskler + güvenilirlik sayaçları (Performans ve Depolama Sağlığı ortak)
+    │   └── IcmpProbe.cs             ← ICMP ping dizisi (hız testi paket kaybı + Ağ Merkezi ortak)
     ├── Models\Models.cs             ← ComponentStatus, ModuleResult, UpdateItem, RequirementsResult
     ├── Services\
     │   ├── IUpdateModule.cs         ← Check / Update + bakım butonu, çalışan uygulamayı kapatıp yeniden deneme, manuel güncelleme ve ilerleme sözleşmeleri
@@ -118,12 +125,19 @@ Desktop\E-mre Control Center\        ← Proje klasörü (önceki adları: E-mre
     │   ├── InstallerService.cs      ← Kurulum / güncelleme / kaldırma (Program Files, kısayollar, Uninstall kaydı, doğrulama, geri alma)
     │   ├── FeedbackService.cs       ← Kaldırma geri bildirimi → Google Formu (yanıtlar Google E-Tablolar'da)
     │   ├── UpdateService.cs         ← Uygulama içi güncelleme: ana deponun GitHub Releases'ı (API) denetimi, indirme + doğrulama (boyut, SHA-256, ürün, sürüm)
+    │   ├── Diagnostics\            ← v1.8.0 Sistem Tanılama servisleri (yalnızca okuma; değişiklik yapanlar onayla):
+    │   │     DiagnosticTypes (CheckState, Nav), WindowsHealthService, DriverService, ApplicationService, StorePackages,
+    │   │     StorageHealthService, LargeFileAnalyzer, EventLogService, CrashAnalysisService, NetworkDiagnosticsService, WlanApi,
+    │   │     DnsDiagnosticsService, PrivacyService, BatteryService, SecurityStatusService, ProcessService, StartupService,
+    │   │     WindowsServiceManager, SystemReportService (+ PersonalDataMask), SupportPackageService, DiagnosticOrchestrator
     │   └── UpdateOrchestrator.cs    ← Güvenli sıra, Tümü / Seçilenler akışları, modül izolasyonu, iptal
-    ├── ViewModels\                  ← MainViewModel (bölme gezinmesi; + MainViewModel.Device: Cihaz bölmeleri, canlı ölçüm; + MainViewModel.Search: ana sayfa araması), TextSearch (Türkçe harf duyarsız arama), SpeedTestViewModel, DeviceViewModels, CategoryViewModel (7 kategori + bölmeler; yalnızca
+    ├── ViewModels\                  ← MainViewModel (bölme gezinmesi; + MainViewModel.Device: Cihaz bölmeleri, canlı ölçüm; + MainViewModel.Search: ana sayfa araması), TextSearch (Türkçe harf duyarsız arama), SpeedTestViewModel, DeviceViewModels, CategoryViewModel (8 kategori + bölmeler; yalnızca
     │                                  arayüz düzeni), DialogViewModel, DetailViewModel, ThrottledProgress, kart/satır modelleri, komutlar;
     │                                  SetupViewModels (kurulum ve kaldırma ekranları), UpdateViewModel (zorunlu güncelleme penceresi)
+    │                                  + MainViewModel.Tools (tanılama bölmeleri, Özet tanılama satırları, araç işlem geçmişi), Tools\ (bölme görünüm modelleri)
     ├── Views\                       ← MainWindow.xaml(.cs): giriş sayfası, Kontrol Merkezi ana sayfası, kategori ekranları; RingGauge.cs, SpeedGauge.cs (hız göstergesi), CenteredWrapPanel.cs, WaveBackdrop.cs (ana sayfa dalga zemini, statik); Converters.cs;
     │                                  SetupWindow.xaml (kurulum), UninstallWindow.xaml (kaldırma + geri bildirim), SetupResources.xaml, WindowFrame.cs
+    │                                  Tools\ToolViewsA.xaml / ToolViewsB.xaml (tanılama bölmelerinin şablonları)
     └── Themes\Theme.xaml            ← Renkler, butonlar, kartlar, animasyonlar, ilerleme çubuğu
 ```
 
@@ -183,22 +197,22 @@ tırnak içinde yazılır). Depo: https://github.com/E-mre-Hub/E-mre-Control-Cen
 
 ### Yeni sürüm yayınlama (depo sahibi)
 
-1. `src\RtxWindowsUpdater\RtxWindowsUpdater.csproj` içindeki `<Version>` değerini artırın (ör. `1.7.3`).
+1. `src\RtxWindowsUpdater\RtxWindowsUpdater.csproj` içindeki `<Version>` değerini artırın (ör. `1.8.0`).
 2. Değişiklikleri commit'leyip gönderin, ardından etiket oluşturun:
 
 ```bash
-git tag v1.7.3
+git tag v1.8.0
 ```
 
 ```bash
-git push origin v1.7.3
+git push origin v1.8.0
 ```
 
 3. GitHub Actions (`.github/workflows/release.yml`) EXE'yi Windows sunucusunda derler ve **Releases** sayfasına iki dosya ekler:
-   `E-mre-Control-Center-Setup-v1.7.3.exe` (kurulum) ve `E-mre-Control-Center-v1.7.3.zip` (taşınabilir). Arkadaşlar oradan indirir;
+   `E-mre-Control-Center-Setup-v1.8.0.exe` (kurulum) ve `E-mre-Control-Center-v1.8.0.zip` (taşınabilir). Arkadaşlar oradan indirir;
    yüklü uygulamalar bu yayını "Yeni sürüm yayınlandı" olarak görür (v1.7.2 ve sonrası).
-   Etiketteki sürüm (v1.7.3) EXE'nin sürümü olarak kullanılır; csproj'daki `<Version>` ile aynı olmalıdır. Yayının metni yalnızca
-   README'deki `### v1.7.3` bölümüdür (uygulamadaki güncelleme penceresinde de bu metin görünür); bu bölüm etiketten önce yazılmalıdır.
+   Etiketteki sürüm (v1.8.0) EXE'nin sürümü olarak kullanılır; csproj'daki `<Version>` ile aynı olmalıdır. Yayının metni yalnızca
+   README'deki `### v1.8.0` bölümüdür (uygulamadaki güncelleme penceresinde de bu metin görünür); bu bölüm etiketten önce yazılmalıdır.
 
 Not: Herkese açık depolarda GitHub Actions standart sunucularda ücretsizdir;
 bir derleme yaklaşık 3-5 dakika sürer.
@@ -435,8 +449,8 @@ taşınabilir mi olduğu yazar.
 
 ### Kontrol Merkezi (ana sayfa ve kategoriler)
 
-Ana ekran bir **Kontrol Merkezi**'dir: koyu (neredeyse siyah) zeminde ortada parlayan logo ve ad, altında **Ara** kutusu ve 7 kategori
-(üstte 4, altta ortalı 3). Her kategoride parlak neon simge, kalın başlık, kısa açıklama ve mevcut gerçek durumdan bir durum satırı
+Ana ekran bir **Kontrol Merkezi**'dir: koyu (neredeyse siyah) zeminde ortada parlayan logo ve ad, altında **Ara** kutusu ve 8 kategori
+(üstte 4, altta 4). Her kategoride parlak neon simge, kalın başlık, kısa açıklama ve mevcut gerçek durumdan bir durum satırı
 bulunur (ör. "3 işlem · kontrol edilmedi", "1 işlemde hata var", "Kullanım dışı"). Kategoriler çerçevesizdir; üzerine gelince hafifçe
 aydınlanır, klavyeyle seçilince neon çerçeve alır. Alttaki ince dalga çizgileri yalnızca süsdür ve hareketsizdir (animasyon yok).
 Karta tıklamak ilgili ekranı açar; sol üstteki **Ana Sayfa** butonu veya **Esc** ile geri dönülür.
@@ -452,22 +466,61 @@ Kategori her açılışta ilk bölmesiyle açılır.
 
 | Kategori | Bölmeler |
 |---|---|
-| **Güncelleme** | **Güncellemeler** (Windows Update, Winget, Microsoft Store, NVIDIA Driver, Microsoft Defender kartları + işlem çubuğu) · **Bulunan Güncellemeler** · **İşlem Günlüğü** |
-| **Temizleme** | **Temizlik** (Windows Geçici Dosyalar, Çöp Kutusu kartları + işlem çubuğu) · **İşlem Günlüğü** |
-| **Cihaz Sağlık** | **Sağlık Araçları** (SFC, DISM, MRT kartları + işlem çubuğu) · **İşlem Günlüğü** |
-| **Hız Testi** | **Hız Testi** (BAŞLAT, seçili sunucu, canlı gösterge, indirme / yükleme, ping, titreşim, paket kaybı, kullanım uygunluğu, ISS ve sunucu, Ookla sonuç sayfası) · **Sunucu** (Speedtest by Ookla sunucu listesi: Otomatik Seç, arama, en yakın sunucular; veya Cloudflare) · **Sonuçlar** (geçmiş) · **Yöntem** (nasıl ölçüldüğü) |
-| **Genel Ayarlar** | **Kolay Ayar** (açık / kapalı anahtarları: Windows bildirimleri, "Tümünü Güncelle ile Çöp Kutusu'nu boşalt") · **Yönetici Yetkisi** (gerçek durum + yeniden başlatma) · **Günlük Dosyaları** (oturum günlüğü: aç / klasör / dışa aktar; uygulama veri klasörü) |
-| **Özet** | **Sağlık Özeti** (10 kartın durumu + Son İşlem) · **Son İşlemler** · **Bulunan Güncellemeler** · **İşlem Günlüğü** |
-| **Cihaz Bilgileri** | **Cihaz Bilgileri** (İşlemci / Ekran Kartı / Bellek / Depolama / İşletim Sistemi kartları + Uyumluluk) · **Cihaz Durumu** (canlı kullanım ve sıcaklık göstergeleri) · **Hakkında** |
+| **Güncelleme** | **Güncellemeler** (Windows Update, Winget, Microsoft Store, NVIDIA Driver, Microsoft Defender kartları + işlem çubuğu) · **Sürücüler** · **Uygulamalar** · **Bulunan Güncellemeler** · **İşlem Günlüğü** |
+| **Temizleme** | **Temizlik** (Windows Geçici Dosyalar, Çöp Kutusu kartları + işlem çubuğu) · **Depolama Analizi** · **İşlem Günlüğü** |
+| **Cihaz Sağlık** | **Sağlık Araçları** (SFC, DISM, MRT kartları + işlem çubuğu) · **Sistem Sağlığı** · **Depolama Sağlığı** · **Olay Günlüğü** · **Çökme Analizi** · **İşlem Günlüğü** |
+| **Hız Testi** | **Hız Testi** (BAŞLAT, seçili sunucu, canlı gösterge, indirme / yükleme, ping, titreşim, paket kaybı, kullanım uygunluğu, ISS ve sunucu, Ookla sonuç sayfası) · **Ağ Merkezi** · **DNS Tanılama** · **Sunucu** (Speedtest by Ookla sunucu listesi: Otomatik Seç, arama, en yakın sunucular; veya Cloudflare) · **Sonuçlar** (geçmiş) · **Yöntem** (nasıl ölçüldüğü) |
+| **Genel Ayarlar** | **Kolay Ayar** (açık / kapalı anahtarları: Windows bildirimleri, "Tümünü Güncelle ile Çöp Kutusu'nu boşalt") · **Gizlilik** · **Yönetici Yetkisi** (gerçek durum + yeniden başlatma) · **Günlük Dosyaları** (oturum günlüğü: aç / klasör / dışa aktar; uygulama veri klasörü) |
+| **Özet** | **Sağlık Özeti** (10 kartın durumu + Sistem Tanılaması + Son İşlem) · **İşlem Geçmişi** · **Bulunan Güncellemeler** · **İşlem Günlüğü** |
+| **Cihaz Bilgileri** | **Cihaz Bilgileri** (İşlemci / Ekran Kartı / Bellek / Depolama / İşletim Sistemi kartları + Uyumluluk) · **Performans** (canlı kullanım, sıcaklık, disk etkinliği ve ağ göstergeleri) · **Batarya** · **Hakkında** |
+| **Sistem Araçları** | **Tek Tıkla Tanıla** · **Başlangıç Uygulamaları** · **Windows Servisleri** · **İşlemler** · **Güvenlik** · **Sistem Raporu** · **Destek Paketi** |
 
 - Kart bölmelerinin üstündeki **işlem çubuğunda** Tümünü / Seçilenleri Kontrol Et, Tümünü / Seçilenleri Güncelle, İptal, seçim durumu
   ("N işlem seçildi", Seçimi Temizle) ve uygulanabilir işlem özeti bulunur; bu butonlar kategoriden bağımsız olarak tüm kartlar /
   seçilen kartlar için çalışır. Seçimler kategoriler arasında korunur.
 - **İlerleme** kartı Güncelleme, Temizleme, Cihaz Sağlık ve Özet ekranlarının sol menüsünde, bölmelerin altındadır.
 - Ana sayfanın altında **Tümünü Kontrol Et / Tümünü Güncelle** ve işlem durumu (gerçek adım ve yüzde) gösterilir.
-- İşlem Günlüğü, Bulunan Güncellemeler ve Son İşlemler tam boy bölmelerdir (eski alt panel ve sekmeler bölmelere taşındı; içerik aynı).
-  Günlükteki ve Son İşlem kartındaki "Son İşlemler" / "Geçmiş" butonu Özet → Son İşlemler bölmesini açar.
+- İşlem Günlüğü, Bulunan Güncellemeler ve İşlem Geçmişi tam boy bölmelerdir (eski alt panel ve sekmeler bölmelere taşındı; içerik aynı).
+  Günlükteki ve Son İşlem kartındaki "Son İşlemler" / "Geçmiş" butonu Özet → İşlem Geçmişi bölmesini açar.
 - Animasyonlar kısa ve tek seferliktir (ekran geçişi, kart üzerine gelme); sürekli animasyon yalnızca bir işlem gerçekten sürerken çalışır.
+
+### Sistem Tanılama (v1.8.0)
+
+Yeni bölmelerin hepsi Windows'un kendi kaynaklarından **okur**; tahmin, örnek veya sahte ilerleme yoktur. Okunamayan her değer
+"Bildirilmedi / okunamadı" + gerçek neden olarak gösterilir. Sistemde değişiklik yapan her işlem (başlangıç kaydı, hizmet, işlem
+sonlandırma, dosyayı Geri Dönüşüm Kutusu'na gönderme) **ayrıca onay** ister ve sonucu yeniden okunarak doğrulanır; hepsi
+**İşlem Geçmişi**'ne gerçek sonucu (başarısızsa hata metniyle) yazılır. Bölmeler yalnızca açıldıklarında okunur; canlı izleme
+(İşlemler, Performans) yalnızca ekran açıkken çalışır, ekran kapanınca durur.
+
+| Bölme | Ne yapar | Kaynak |
+|---|---|---|
+| **Tek Tıkla Tanıla** (Sistem Araçları) | 10 kontrolü sırayla çalıştırır: sistem gereksinimleri, Windows sağlığı, sürücüler, ağ, DNS, depolama, güvenlik, olay günlüğü, çökme geçmişi, anlık performans. Her adım "Bekliyor → Kontrol ediliyor → gerçek sonuç"; sonunda toplam / başarılı / uyarı / hata / atlanan sayıları. Satıra tıklayınca ayrıntı ekranı açılır. | aşağıdaki servislerin tamamı |
+| **Sistem Sağlığı** (Cihaz Sağlık) | Windows sürümü / derleme, etkinleştirme, bekleyen yeniden başlatma, 14 çekirdek hizmet, güncelleme hizmetleri, çalışma süresi; SFC / DISM / Windows Update kartlarının son gerçek sonucu (yoksa "Henüz kontrol edilmedi"; yönetici ise "Taramayı başlat" DISM /CheckHealth'i salt okunur çalıştırır), disk, sürücü, kritik olaylar, çökmeler | kayıt defteri, SoftwareLicensingProduct, Win32_Service, mevcut kartlar |
+| **Sürücüler** (Güncelleme) | Tüm aygıt sürücüleri (ad, kategori, üretici, sürüm, tarih, imza, durum, Aygıt Yöneticisi hata kodu). "Windows Update'te sürücü ara" yalnızca **arar** (Microsoft'un resmî sürücü kataloğu); kurulum Windows'un İsteğe bağlı güncellemeler sayfasından yapılır. NVIDIA ekran sürücüsü mevcut NVIDIA kartıyla denetlenir. | Win32_PnPSignedDriver, Win32_PnPEntity, Windows Update Agent |
+| **Uygulamalar** (Güncelleme) | Kurulu masaüstü ve Microsoft Store uygulamaları (ad, yayıncı, sürüm, konum, kurulum tarihi, boyut). "Winget ile güncelleme denetle" mevcut Winget kartını çalıştırır (yalnızca kontrol). Sessiz kaldırma yoktur: "Kaldır…" Windows'un Uygulamalar sayfasını açar. | Uninstall kayıtları, PackageManager, winget |
+| **Depolama Analizi** (Temizleme) | Seçilen sürücü / klasörde en büyük 100 dosya, 40 klasör ve 20 dosya türü; gerçek dosya ve bayt sayısı (yüzde tahmini yok), bağlantılar izlenmez. Seçilen tek dosya ad / boyut / konum gösterilerek onayla **Geri Dönüşüm Kutusu'na** gönderilir (Windows klasörleri korunur; dosya kutuya sığmıyorsa Windows kalıcı silineceğini ayrıca söyler). | dosya sistemi, SHFileOperation |
+| **Depolama Sağlığı** (Cihaz Sağlık) | Fiziksel diskler (model, NVMe / SATA / USB, kapasite, Windows sağlık durumu), sıcaklık, aşınma, okuma / yazma hataları, çalışma saati (yönetici gerekir), bölümlerin doluluğu; eşik uyarıları (%10'dan az boş alan, aşınma ≥ %90, ≥ 70 °C, düzeltilemeyen hata) | MSFT_PhysicalDisk, MSFT_StorageReliabilityCounter |
+| **Olay Günlüğü** (Cihaz Sağlık) | Sistem / Uygulama günlüklerinden kritik, hata, uyarı kayıtları; son 1 saat / 24 saat / 7 gün / 30 gün; arama; seçilen kaydın Windows iletisi değiştirilmeden | EventLogReader |
+| **Çökme Analizi** (Cihaz Sağlık) | Mavi ekran (BugCheck), Kernel-Power 41, beklenmedik kapanma (6008), ekran sürücüsü sıfırlama (4101), WHEA; minidump başlığından hata kodu ve parametreler (yönetici). Neden **kesin olarak belirtilmez**: kod için "ilişkili olabilir" açıklaması verilir. | Sistem günlüğü, %SystemRoot%\Minidump |
+| **Ağ Merkezi** (Hız Testi) | Bağdaştırıcılar (Ethernet / Wi-Fi, hız, IPv4 / IPv6, ağ geçidi, DNS, DHCP, MAC, durum), Wi-Fi sinyali / standardı; "Testleri çalıştır": ağ geçidi ping, 1.1.1.1 gecikme + paket kaybı, Windows internet değerlendirmesi, DNS çözümleme, HTTPS | NetworkInterface, WLAN API, NCSI, ICMP |
+| **DNS Tanılama** (Hız Testi) | Yapılandırılmış her DNS sunucusuna doğrudan sorgu: yanıt süresi, başarı, IPv4 / IPv6, DNSSEC doğrulaması. DNS ayarı **değiştirilmez**. | UDP 53 (RFC 1035 / 6891) |
+| **Gizlilik** (Genel Ayarlar) | Konum, kamera, mikrofon ve diğer uygulama izinleri, ilke zorlamaları, tanılama verisi, reklam kimliği, kamera / mikrofon / konuma son erişen uygulamalar. Değişiklik için ilgili Windows Ayarlar sayfası açılır. | CapabilityAccessManager, kayıt defteri |
+| **Batarya** (Cihaz Bilgileri) | Şarj, durum, kalan / tam şarj / tasarım kapasitesi, sağlık (tam ÷ tasarım), döngü sayısı, güç kaynağı. Masaüstünde "Bu sistemde batarya bulunamadı." | Win32_Battery, root\wmi Battery*, GetSystemPowerStatus |
+| **Performans** (Cihaz Bilgileri; eski adı Cihaz Durumu) | CPU, RAM, GPU, VRAM, sıcaklıklar + disk etkin süresi / okuma / yazma ve ağ indirme / yükleme (2 saniyede bir, yalnızca ekran açıkken) | GetSystemTimes, NVML, PhysicalDisk sayaçları |
+| **Başlangıç Uygulamaları** (Sistem Araçları) | Çalıştır anahtarları, Başlangıç klasörleri, oturum açılışı görevleri, Store başlangıç görevleri; ad, konum, kaynak, durum, yayıncı, komut. Devre dışı bırakma / etkinleştirme onayla ve Görev Yöneticisi'nin yöntemiyle yapılır; **kayıt silinmez**, Windows bileşenleri korunur. | kayıt defteri, StartupApproved, Görev Zamanlayıcı |
+| **Windows Servisleri** (Sistem Araçları) | Tüm hizmetler; arama ve filtre (çalışan / durdurulmuş / Microsoft dışı). Başlat / Durdur / Yeniden başlat onayla ve yönetici yetkisiyle; kritik Windows hizmetleri durdurulamaz, başlangıç türü değiştirilmez. | Win32_Service |
+| **İşlemler** (Sistem Araçları) | Çalışan işlemler: ad, PID, CPU, bellek (özel çalışma kümesi), GPU, konum, yayıncı; arama / sıralama. "İşlemi sonlandır…" onayla; önce normal kapatma, Windows / hizmet / kritik işlemler korunur. | NtQuerySystemInformation, GPU Engine sayaçları |
+| **Güvenlik** (Sistem Araçları) | Virüsten koruma, Defender (gerçek zamanlı koruma, tanımlar, son tarama), güvenlik duvarı profilleri, Güvenli Önyükleme, UAC, çekirdek yalıtımı. **Yalnızca bilgi**; hiçbir ayar değiştirilmez. | SecurityCenter2, Get-MpComputerStatus, Get-NetFirewallProfile |
+| **Sistem Raporu** (Sistem Araçları) | Seçilen bölümlerle rapor (Windows, donanım, depolama, ağ, sürücüler, güvenlik, hizmetler, başlangıç, olay hataları, çökmeler, batarya); TXT / HTML / JSON olarak kaydedilir. Bilgisayar adı, kullanıcı adı / klasörü, IP ve MAC adresleri gizlenir. | yukarıdaki servisler |
+| **Destek Paketi** (Sistem Araçları) | Oluşturmadan önce içeriği gösterir ve seçtirir (sistem raporu, uygulama günlükleri, sürücü listesi, önemli olaylar, ağ tanılaması, güncelleme geçmişi, hata bilgileri); tek ZIP olarak seçilen konuma kaydedilir, yeniden açılarak doğrulanır, **hiçbir yere gönderilmez**. | yukarıdaki servisler |
+
+- **Özet → Sağlık Özeti → Sistem Tanılaması:** Sistem Sağlığı, Ağ, DNS, Depolama, Güvenlik, Sürücüler, Olay Günlüğü ve Çökme Geçmişi için
+  bu oturumdaki son gerçek sonuç ve saat; kontrol yapılmadıysa "Henüz kontrol edilmedi". Satıra tıklayınca ilgili bölme açılır.
+- **Tümünü Kontrol Et:** kart kontrollerinden sonra hızlı ve güvenli tanılama (Windows sağlığı, sürücüler, ağ, DNS, depolama, güvenlik)
+  da çalışır; ilerleme gerçek adım sayısından hesaplanır. Dosya silme, sürücü kurma, uygulama kaldırma, hizmet durdurma, kayıt veya
+  DNS değişikliği **yapılmaz**.
+- **Ara:** "SFC", "DNS", "Wi-Fi", "Başlangıç", "Servis", "GPU", "RAM", "Disk", "Event Log", "BSOD", "Batarya", "Sürücü" gibi aramalar
+  ilgili bölmeyi açar.
 
 ### Hız Testi
 
@@ -611,6 +664,18 @@ eski klasörlerde kalır (`%LOCALAPPDATA%\E-mre Hub\Logs\`, `%LOCALAPPDATA%\RTX 
   gösterilir. Ookla aracı ve ürettiği bilgiler Ookla'nın koşullarına göre yalnızca kişisel, ticari olmayan kullanım içindir; Ookla'nın
   Windows aracı dijital olarak imzalı değildir (winget özet doğrulamasıyla kurulur).
 
+- **Sistem Tanılama (v1.8.0):**
+  - Disk sıcaklığı / aşınma / hata sayaçları, minidump dosyaları ve DISM /CheckHealth **yönetici yetkisi** gerektirir; yetki yoksa
+    "yönetici gerekli" olarak açıkça yazılır. Güvenlik günlüğü okunmaz (yalnızca Sistem ve Uygulama).
+  - Windows 11, bağlı Wi-Fi ağının adını ve sinyalini WLAN arayüzünden ancak **Konum** izni (Ayarlar → Gizlilik ve güvenlik → Konum →
+    "Masaüstü uygulamalarının konumunuza erişmesine izin ver") açıksa verir; kapalıysa bu gerekçe gösterilir. Bağlantı profili adı yine görünür.
+  - Çökme Analizi hata denetimi kodunu ve olay kayıtlarını gösterir; yığın analizi yapmaz. Kesin neden için döküm dosyası WinDbg ile
+    incelenmelidir (uygulama "ilişkili olabilir" der).
+  - Sürücü güncellemesi yalnızca Windows Update kataloğunda **aranır**; kurulum Windows'un İsteğe bağlı güncellemeler sayfasından yapılır.
+    Üretici sitelerindeki (Intel, AMD vb.) daha yeni sürücüler bu listede görünmeyebilir.
+  - DNS sunucusu değiştirme özelliği bilinçli olarak eklenmedi (yalnızca tanılama). İşlem başına GPU kullanımı Windows'un "GPU Engine"
+    sayaçlarından okunur (Görev Yöneticisi ile aynı); sayaç yoksa sütun "—" olur.
+  - Pil döngü sayısını birçok dizüstü bildirmez ("Bildirilmedi"); sağlık, sürücünün bildirdiği tam şarj / tasarım kapasitesinden hesaplanır.
 - **NVIDIA App'in herkese açık bir API/komut satırı arayüzü yoktur.** Bu nedenle kontrol NVIDIA'nın resmi sürücü
   servisiyle yapılır; NVIDIA App yalnızca "kurulu / bulunamadı" olarak raporlanır.
 - NVIDIA sessiz kurulum parametreleri (`-s -noreboot`) NVIDIA tarafından resmi olarak belgelenmemiştir.
@@ -651,6 +716,30 @@ eski klasörlerde kalır (`%LOCALAPPDATA%\E-mre Hub\Logs\`, `%LOCALAPPDATA%\RTX 
   yöneticinin klasörü).
 
 ## Sürüm geçmişi
+
+### v1.8.0
+
+**Yeni: Sistem Tanılama merkezi**
+- Ana sayfaya **Sistem Araçları** kategorisi eklendi (8 kategori, üstte 4 · altta 4): **Tek Tıkla Tanıla**, **Başlangıç Uygulamaları**,
+  **Windows Servisleri**, **İşlemler**, **Güvenlik**, **Sistem Raporu**, **Destek Paketi**.
+- Mevcut kategorilere yeni bölmeler: Güncelleme → **Sürücüler**, **Uygulamalar** · Temizleme → **Depolama Analizi** · Cihaz Sağlık →
+  **Sistem Sağlığı**, **Depolama Sağlığı**, **Olay Günlüğü**, **Çökme Analizi** · Hız Testi → **Ağ Merkezi**, **DNS Tanılama** ·
+  Genel Ayarlar → **Gizlilik** · Cihaz Bilgileri → **Batarya**; Cihaz Durumu **Performans** oldu (disk etkinliği ve ağ aktarımı eklendi).
+- **Tek Tıkla Tanıla:** 10 gerçek kontrol, adım adım durum (yüzde uydurulmaz), sonuç sayıları ve ayrıntı ekranına geçiş.
+- **Özet:** Sistem Tanılaması satırları (son gerçek sonuç veya "Henüz kontrol edilmedi"); **İşlem Geçmişi** artık araç işlemlerini de
+  (sürücü denetimi, ağ / DNS testi, hizmet ve başlangıç değişiklikleri, rapor, destek paketi) gerçek sonucu ve hata metniyle kaydeder.
+- **Tümünü Kontrol Et:** kart kontrollerinden sonra güvenli tanılama adımları da çalışır (yalnızca okuma).
+- **Arama:** yeni bölmeler ve "SFC", "DNS", "Wi-Fi", "Başlangıç", "Servis", "Event Log", "BSOD", "Batarya", "Sürücü" gibi terimler.
+- **Sistem Raporu** (TXT / HTML / JSON) ve **Destek Paketi** (ZIP): kişisel bilgiler (bilgisayar / kullanıcı adı, IP, MAC) gizlenir,
+  hiçbir yere gönderilmez.
+
+**Güvenlik**
+- Değişiklik yapan her işlem onay ister ve sonucu yeniden okunarak doğrulanır: başlangıç kaydı silinmez (yalnızca Görev Yöneticisi
+  durumu), kritik hizmetler durdurulamaz, Windows / hizmet / kritik işlemler sonlandırılamaz, dosya yalnızca Geri Dönüşüm Kutusu'na
+  gönderilir. Sürücü, uygulama, DNS ve güvenlik ayarları bu uygulamadan değiştirilmez.
+
+**İyileştirme**
+- Pencere küçük ekranlarda (ör. 1366x768) çalışma alanına sığar; yeni ekranlarda yatay kaydırma yoktur.
 
 ### v1.7.3
 
