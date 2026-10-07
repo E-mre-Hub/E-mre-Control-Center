@@ -388,7 +388,7 @@ public sealed class WingetManager(Logger logger, string source, string key, stri
                     Id = row.Id,
                     CurrentVersion = row.Version,
                     NewVersion = row.Available,
-                    UpdateAvailable = true,
+                    UpdateAvailable = !noChange, // sürümü değiştirmeyen kurulum güncelleme sayılmaz (yalnızca bilgi)
                     AutoUpdatable = !table.RequiresExplicitTargeting && !mismatch && !noChange,
                     Manual = mismatch ? ManualUpdateKind.TechnologyMismatch
                         : noChange ? ManualUpdateKind.NoVersionChange
@@ -397,7 +397,7 @@ public sealed class WingetManager(Logger logger, string source, string key, stri
                     StatusText = mismatch
                         ? "Güncelleme mevcut – winget otomatik yükseltemiyor (kurulum teknolojisi farklı, 0x8A15008E); paketi kaldırıp yeni sürümü kurun"
                         : noChange
-                            ? $"Güncelleme listeleniyor – önceki güncellemede winget başarı bildirdi ama kurulu sürüm değişmedi ({row.Version}); otomatik denenmez"
+                            ? $"Winget {row.Available} sürümünü listeliyor ama kurulumu sürümü değiştirmiyor (kurulu {row.Version} kaldı) – winget ile güncellenemiyor, güncelleme sayılmadı"
                             : table.RequiresExplicitTargeting
                                 ? "Güncelleme mevcut (açık hedefleme gerekli – otomatik güncellenmez)"
                                 : "Güncelleme mevcut"
@@ -453,17 +453,18 @@ public sealed class WingetManager(Logger logger, string source, string key, stri
             logger.Warning($"{displayName}: {mismatchCount} paket bu oturumda kurulum teknolojisi uyuşmazlığı (0x8A15008E) bildirdiği için " +
                            "otomatik güncellemeye alınmadı; bu paketler kaldırılıp yeni sürüm kurularak güncellenebilir.");
         if (noChangeCount > 0)
-            logger.Info($"{displayName}: {noChangeCount} paket önceki güncellemede sürüm değiştirmediği için otomatik denenmeyecek (manuel olarak yeniden denenebilir).");
+            logger.Info($"{displayName}: winget'te güncellenebilir görünen ama kurulumu sürümü değiştirmeyen {noChangeCount} paket güncelleme sayılmadı: " +
+                        string.Join(", ", items.Where(i => i.Manual == ManualUpdateKind.NoVersionChange).Select(i => i.Name)) + ".");
 
         // Otomatik uygulanabilir ve manuel (açık hedefleme / teknoloji uyuşmazlığı) güncellemeler ayrı sayılır;
         // manuel olanlar "güncelleme bulundu" sayısına ve "Tümünü Güncelle"ye dahil edilmez.
-        var manual = explicitCount + mismatchCount + noChangeCount;
+        var manual = explicitCount + mismatchCount;
         var details = $"Otomatik uygulanabilir: {actionable}";
         var edgeCount = items.Count(i => i.UpdateAvailable && IsEdgeManaged(i.Id, out _));
         if (edgeCount > 0) details += $"\nMicrosoft Edge Update ile güncellenecek: {edgeCount}";
         if (explicitCount > 0) details += $"\nManuel / açık hedefleme gerekli: {explicitCount}";
         if (mismatchCount > 0) details += $"\nManuel – kurulum teknolojisi farklı (0x8A15008E): {mismatchCount}";
-        if (noChangeCount > 0) details += $"\nManuel – önceki güncellemede sürüm değişmedi: {noChangeCount}";
+        if (noChangeCount > 0) details += $"\nWinget ile güncellenemeyen (kurulum sürümü değiştirmiyor): {noChangeCount}";
         if (upToDate.Count > 0) details += $"\nGüncel paket: {upToDate.Count}";
         var reasonText = string.Join("\n", new[] { ManualReason(items, mismatchCount, explicitCount, noChangeCount) }.Concat(edgeNotes)
             .Where(l => !string.IsNullOrEmpty(l)));
@@ -476,7 +477,8 @@ public sealed class WingetManager(Logger logger, string source, string key, stri
                 : manual > 0 ? ComponentStatus.Attention : ComponentStatus.UpToDate,
             Summary = actionable > 0
                 ? (manual > 0 ? $"{actionable} güncelleme mevcut (+{manual} manuel)" : $"{actionable} güncelleme mevcut")
-                : manual > 0 ? $"Dikkat: {manual} güncelleme otomatik uygulanamıyor" : "Güncel",
+                : manual > 0 ? $"Dikkat: {manual} güncelleme otomatik uygulanamıyor"
+                : noChangeCount > 0 ? $"Güncel ({noChangeCount} paket winget ile güncellenemiyor – bilgi)" : "Güncel",
             Reason = reasonText.Length > 0 ? reasonText : null,
             Details = details,
             Items = items.Concat(upToDate).ToList(),
@@ -489,11 +491,12 @@ public sealed class WingetManager(Logger logger, string source, string key, stri
     {
         var lines = new List<string>();
         if (noChangeCount > 0)
-            lines.Add("Önceki güncellemede winget kurulumun başarılı olduğunu bildirdi ama kurulu sürüm değişmedi; bu paketler otomatik denenmiyor: " +
+            lines.Add("Winget ile güncellenemeyen paketler (güncelleme sayılmadı): " +
                       string.Join(", ", items.Where(i => i.Manual == ManualUpdateKind.NoVersionChange)
-                                             .Select(i => $"{i.Name} ({i.CurrentVersion} → {i.NewVersion})")) +
-                      ". Winget kataloğundaki sürüm numarası uygulamanın kendi bildirdiği sürümden farklı olabilir (ör. kurulum programı yalnızca " +
-                      "uygulamanın güncelleyicisini çalıştırıyor). Uygulama kendini güncelliyorsa ek işlem gerekmez; isterseniz manuel olarak yeniden deneyebilirsiniz.");
+                                             .Select(i => $"{i.Name} (kurulu {i.CurrentVersion}, winget {i.NewVersion})")) +
+                      ". Winget kurulumu çalıştırıp başarı bildiriyor ama kurulu sürüm değişmiyor: winget kataloğundaki sürüm numarası uygulamanın " +
+                      "kendi sürüm numarasıyla uyuşmuyor (ör. Google Play Games'te katalogdaki numara Google güncelleyicisine ait). Winget ile tekrar " +
+                      "denemek sonucu değiştirmez; uygulamanın kendi güncelleme seçeneği varsa onu kullanın.");
         if (mismatchCount > 0)
             lines.Add("Kurulum teknolojisi farklı olduğu için winget bu paketleri yerinde yükseltemiyor (0x8A15008E): " +
                       string.Join(", ", items.Where(i => i.Manual == ManualUpdateKind.TechnologyMismatch)
@@ -849,11 +852,9 @@ public sealed class WingetManager(Logger logger, string source, string key, stri
                 continue;
             }
             wingetTargets.Add(t);
-            if (t.Manual is ManualUpdateKind.ExplicitTargeting or ManualUpdateKind.NoVersionChange)
+            if (t.Manual == ManualUpdateKind.ExplicitTargeting)
             {
-                logger.Info(t.Manual == ManualUpdateKind.NoVersionChange
-                    ? $"{t.Name} yeniden deneniyor ({t.CurrentVersion} → {t.NewVersion}; önceki denemede kurulu sürüm değişmemişti)..."
-                    : $"{t.Name} açık hedeflemeyle güncelleniyor ({t.CurrentVersion} → {t.NewVersion})...");
+                logger.Info($"{t.Name} açık hedeflemeyle güncelleniyor ({t.CurrentVersion} → {t.NewVersion})...");
                 var r = await RunWingetAsync(winget, UpgradeArgs(t.Id), PackageTimeout, CancellationToken.None, forward: true);
                 Evaluate(r, t);
                 if (t.InUse) DetectBlockers(t);
@@ -977,8 +978,8 @@ public sealed class WingetManager(Logger logger, string source, string key, stri
                     NoVersionChange[source + "|" + o.Id] = NoChangeValue(row.Version, row.Available);
                     o.OutcomeText = "Doğrulanamadı – kurulu sürüm değişmedi";
                     o.StatusText += $"; kurulu sürüm hiç değişmedi ({row.Version}). Winget kataloğundaki sürüm numarası uygulamanın kendi " +
-                                    "sürümünden farklı olabilir; bu sürüm bir dahaki kontrolde otomatik denenmez (manuel olarak yeniden denenebilir)";
-                    logger.Info($"{o.Name}: kurulu sürüm değişmedi ({row.Version}); {row.Available} bir dahaki kontrolde otomatik denenmeyecek.");
+                                    "sürüm numarasıyla uyuşmuyor olabilir; bir dahaki kontrolde bu paket güncelleme sayılmaz (yeniden kurulmaz)";
+                    logger.Info($"{o.Name}: kurulu sürüm değişmedi ({row.Version}); winget'in {row.Available} sürümü bir dahaki kontrolde güncelleme sayılmayacak.");
                 }
             }
         }

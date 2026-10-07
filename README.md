@@ -325,22 +325,22 @@ tırnak içinde yazılır). Depo: https://github.com/E-mre-Hub/E-mre-Control-Cen
 
 ### Yeni sürüm yayınlama (depo sahibi)
 
-1. `src\RtxWindowsUpdater\RtxWindowsUpdater.csproj` içindeki `<Version>` değerini artırın (ör. `1.9.2`).
+1. `src\RtxWindowsUpdater\RtxWindowsUpdater.csproj` içindeki `<Version>` değerini artırın (ör. `1.9.3`).
 2. Değişiklikleri commit'leyip gönderin, ardından etiket oluşturun:
 
 ```bash
-git tag v1.9.2
+git tag v1.9.3
 ```
 
 ```bash
-git push origin v1.9.2
+git push origin v1.9.3
 ```
 
 3. GitHub Actions (`.github/workflows/release.yml`) EXE'yi Windows sunucusunda derler ve **Releases** sayfasına iki dosya ekler:
-   `E-mre-Control-Center-Setup-v1.9.2.exe` (kurulum) ve `E-mre-Control-Center-v1.9.2.zip` (taşınabilir). Arkadaşlar oradan indirir;
+   `E-mre-Control-Center-Setup-v1.9.3.exe` (kurulum) ve `E-mre-Control-Center-v1.9.3.zip` (taşınabilir). Arkadaşlar oradan indirir;
    yüklü uygulamalar bu yayını "Yeni sürüm yayınlandı" olarak görür (v1.7.2 ve sonrası).
-   Etiketteki sürüm (v1.9.2) EXE'nin sürümü olarak kullanılır; csproj'daki `<Version>` ile aynı olmalıdır. Yayının metni yalnızca
-   README'deki `### v1.9.2` bölümüdür (uygulamadaki güncelleme penceresinde de bu metin görünür); bu bölüm etiketten önce yazılmalıdır.
+   Etiketteki sürüm (v1.9.3) EXE'nin sürümü olarak kullanılır; csproj'daki `<Version>` ile aynı olmalıdır. Yayının metni yalnızca
+   README'deki `### v1.9.3` bölümüdür (uygulamadaki güncelleme penceresinde de bu metin görünür); bu bölüm etiketten önce yazılmalıdır.
 
 Not: Herkese açık depolarda GitHub Actions standart sunucularda ücretsizdir;
 bir derleme yaklaşık 3-5 dakika sürer.
@@ -946,6 +946,16 @@ eski klasörlerde kalır (`%LOCALAPPDATA%\E-mre Hub\Logs\`, `%LOCALAPPDATA%\RTX 
   yöneticinin klasörü).
 
 ## Sürüm geçmişi
+
+### v1.9.3
+
+**Düzeltme: Google Play Games her kontrolde yeniden "güncelleme var / doğrulanamadı"**
+- Winget, Google Play Games için 156.0.8067.0 sürümünü listeliyor; bu numara uygulamanın değil Google güncelleyicisinin sürümü.
+  Uygulamanın kendi sürümü (26.9.555.1) Google'ın güncelleme kaydında da aynı: uygulama güncel, winget kataloğu yanlış numara gösteriyor.
+  Kurulum kaç kez çalıştırılırsa çalıştırılsın sürüm değişmeyeceği için v1.9.2'deki "manuel yeniden dene" seçeneği işe yaramıyordu.
+- Artık winget'in başarı bildirdiği ama kurulu sürümü hiç değiştirmeyen bir paket, sonraki kontrollerde **güncelleme sayılmaz**:
+  ne otomatik ne manuel sunulur; Winget kartında "Güncel (1 paket winget ile güncellenemiyor – bilgi)" yazar ve nedeni ayrıntıda
+  açıklanır. Paketin kurulu ya da sunulan sürümü değişirse yeniden normal güncelleme olarak değerlendirilir.
 
 ### v1.9.2
 

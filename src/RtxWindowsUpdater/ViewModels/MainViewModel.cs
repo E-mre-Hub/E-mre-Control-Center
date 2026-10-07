@@ -1380,12 +1380,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
                 $"{g.Result.Key}|{i.Id}",
                 $"{i.Name}   {i.CurrentVersion} → {i.NewVersion}",
                 0,
-                i.Manual switch
-                {
-                    ManualUpdateKind.TechnologyMismatch => "kaldır + yeni sürümü kur",
-                    ManualUpdateKind.NoVersionChange => "yeniden dene (önceki denemede sürüm değişmedi)",
-                    _ => "açık hedeflemeyle güncelle"
-                },
+                i.Manual == ManualUpdateKind.TechnologyMismatch ? "kaldır + yeni sürümü kur" : "açık hedeflemeyle güncelle",
                 isChecked: false)))
             .ToList();
 
@@ -1396,9 +1391,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
             "hedeflenerek winget ile güncellenir.\n" +
             "• Kaldır + yeni sürümü kur: mevcut sürüm farklı bir kurulum türüyle (ör. MSI) kurulmuş; winget yerinde yükseltemez " +
             "(0x8A15008E). Seçerseniz mevcut sürüm KALDIRILIR ve yeni sürüm kurulur. Kaldırma başarısız olursa hiçbir şey değişmez; " +
-            "kurulum başarısız olursa paket kurulu olmadan kalabilir ve bu açıkça bildirilir.\n" +
-            "• Yeniden dene: önceki güncellemede winget başarı bildirdi ama kurulu sürüm değişmedi (winget'in sürüm numarası uygulamanın " +
-            "kendi sürümünden farklı olabilir). Seçerseniz paket yeniden kurulur; sürüm yine değişmezse bu açıkça bildirilir.",
+            "kurulum başarısız olursa paket kurulu olmadan kalabilir ve bu açıkça bildirilir.",
             Icons.Winget, DialogKind.Question, "Seçilenleri uygula", "Şimdi değil",
             choices: choices, choicesTitle: "OTOMATİK UYGULANMAYAN GÜNCELLEMELER", choicesAreSizes: false);
         var selected = choices.Where(c => c.IsChecked).Select(c => c.Id).ToList();

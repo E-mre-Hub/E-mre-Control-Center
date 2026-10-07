@@ -103,8 +103,9 @@ public enum ManualUpdateKind
     TechnologyMismatch,
     /// <summary>
     /// Önceki güncellemede winget başarı bildirdi ama kurulu sürüm HİÇ değişmedi ve dosyaları kullanan açık uygulama yoktu (ör. Google
-    /// Play Games: winget kataloğundaki 156.0.8067.0 Google güncelleyicisinin sürümü, uygulama 26.9.x bildiriyor). Aynı sürüm çifti
-    /// otomatik denenmez; kullanıcı isterse manuel olarak yeniden denenir.
+    /// Play Games: winget kataloğundaki 156.0.8067.0 Google güncelleyicisinin sürümü; Google'ın kendi kaydı da uygulamayı 26.9.555.1
+    /// gösteriyor). Aynı sürüm çifti GÜNCELLEME SAYILMAZ (UpdateAvailable=false): ne otomatik ne manuel sunulur, kartta bilgi notu olarak
+    /// açıklanır; kurulu ya da sunulan sürüm değişince kayıt silinir ve paket yeniden normal değerlendirilir.
     /// </summary>
     NoVersionChange
 }
