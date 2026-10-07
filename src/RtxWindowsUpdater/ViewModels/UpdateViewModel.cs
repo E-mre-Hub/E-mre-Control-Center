@@ -238,7 +238,35 @@ public sealed class UpdateViewModel : ObservableObject
 
         StatusText = "Doğrulandı (SHA-256, sürüm). Kurulum başlatılıyor…";
         Stage = UpdateStage.Launching;
-        var (started, error) = _launchSetup(setup);
+        bool started;
+        string? error;
+        // Yönetici değilken dosya kullanıcının %TEMP% klasöründedir: doğrulama ile başlatma arasında başka bir program dosyayı
+        // değiştirip UAC onayını kendi dosyasına aldıramasın diye dosya yazma / silme paylaşımı kapalı olarak açık tutulur ve özet bu
+        // tanıtıcıdan yeniden okunur. Kurulum süreci oluşunca dosya eşlenmiş olur (artık değiştirilemez), tanıtıcı kapatılır.
+        FileStream? guard = null;
+        try
+        {
+            if (!elevated)
+            {
+                guard = new FileStream(setup, FileMode.Open, FileAccess.Read, FileShare.Read);
+                var sha = Convert.ToHexString(await System.Security.Cryptography.SHA256.HashDataAsync(guard));
+                if (!string.Equals(sha, info.Sha256, StringComparison.OrdinalIgnoreCase))
+                {
+                    Fail("Kurulum dosyası doğrulamadan sonra değişti; güncelleme başlatılmadı.");
+                    return;
+                }
+            }
+            (started, error) = _launchSetup(setup);
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            Fail("Kurulum dosyası açılamadı: " + ex.Message);
+            return;
+        }
+        finally
+        {
+            guard?.Dispose();
+        }
         if (!started)
         {
             Fail(error ?? "Kurulum başlatılamadı.");

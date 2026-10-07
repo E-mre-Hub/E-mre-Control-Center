@@ -252,7 +252,9 @@ public sealed class ServicesViewModel : ToolViewModel
         try
         {
             var mmc = Path.Combine(Environment.SystemDirectory, "mmc.exe");
-            var psi = new System.Diagnostics.ProcessStartInfo(mmc) { UseShellExecute = true };
+            // Yönetici olarak çalışırken doğrudan CreateProcess (ShellExecute'un kullanıcı kayıt defterindeki ilişkilendirmelerine
+            // bakılmaz); yönetici değilken ShellExecute, mmc'nin kendi yükseltme isteğini (UAC) gösterebilsin.
+            var psi = new System.Diagnostics.ProcessStartInfo(mmc) { UseShellExecute = !AdminPrivilegeManager.IsElevated };
             psi.ArgumentList.Add(Path.Combine(Environment.SystemDirectory, "services.msc"));
             System.Diagnostics.Process.Start(psi)?.Dispose();
         }

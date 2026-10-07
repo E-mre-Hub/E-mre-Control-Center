@@ -223,8 +223,10 @@ public static class RunningAppManager
             : p.Type == RestartManager.AppType.Explorer ? "Windows Gezgini – otomatik kapatılmaz"
             : p.Type == RestartManager.AppType.Critical ? "kritik sistem işlemi – kapatılmaz"
             : p.ProcessId == Environment.ProcessId ? "bu uygulama"
+            // Bilgisi okunamayan işlem önce ayırt edilir: Restart Manager listesi alındıktan hemen sonra kapanan bir işlem
+            // (ör. arka planda kurulumu biten Squirrel Update.exe) yanlışlıkla "başka bir oturumda" diye etiketlenmesin.
+            : exe is null ? (IsRunning(p.ProcessId, p.StartTime) ? "işlem bilgisi okunamadı – kapatılmaz" : "işlem bu arada kapandı")
             : p.SessionId != (uint)mySession ? "başka bir kullanıcı oturumunda – kapatılmaz"
-            : exe is null ? "işlem bilgisi okunamadı – kapatılmaz"
             : exe.StartsWith(windows, StringComparison.OrdinalIgnoreCase) ? "Windows bileşeni – kapatılmaz"
             : null;
 
@@ -328,6 +330,31 @@ public static class RunningAppManager
             }
         }
         return report;
+    }
+
+    /// <summary>
+    /// Restart Manager'ın bildirdiği işlem hâlâ çalışıyor mu? PID başka bir işleme geçmiş olabilir: oluşturulma zamanı da karşılaştırılır.
+    /// Oluşturulma zamanı okunamıyorsa (erişim reddi) işlem çalışıyor sayılır (yanlışlıkla "kapandı" denmesin).
+    /// </summary>
+    private static bool IsRunning(int pid, long startTime)
+    {
+        try
+        {
+            using var proc = Process.GetProcessById(pid);
+            if (SafeHasExited(proc)) return false;
+            try
+            {
+                return Math.Abs(proc.StartTime.ToFileTime() - startTime) <= TimeSpan.TicksPerSecond;
+            }
+            catch (Exception ex) when (ex is Win32Exception or InvalidOperationException or NotSupportedException)
+            {
+                return true;
+            }
+        }
+        catch (ArgumentException)
+        {
+            return false; // bu PID ile çalışan işlem yok
+        }
     }
 
     private static bool SafeHasExited(Process p)

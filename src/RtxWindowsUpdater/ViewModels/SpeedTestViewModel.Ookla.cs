@@ -1,7 +1,7 @@
 using System.Collections.ObjectModel;
-using System.Diagnostics;
 using System.Globalization;
 using System.Windows.Input;
+using RtxWindowsUpdater.Core;
 using RtxWindowsUpdater.Services;
 
 namespace RtxWindowsUpdater.ViewModels;
@@ -375,13 +375,8 @@ public sealed partial class SpeedTestViewModel
     private void OpenUrl(string? url)
     {
         if (url is null || !url.StartsWith("https://www.speedtest.net/", StringComparison.Ordinal)) return;
-        try
-        {
-            Process.Start(new ProcessStartInfo(url) { UseShellExecute = true });
-        }
-        catch (Exception ex)
-        {
-            _logger.Warning($"Bağlantı açılamadı ({url}): {ex.Message}");
-        }
+        // Gezgin üzerinden: uygulama yönetici olarak çalışsa da tarayıcı normal yetkiyle açılır.
+        if (ShellOpen.OpenUrl(url) is { } error)
+            _logger.Warning($"Bağlantı açılamadı ({url}): {error}");
     }
 }

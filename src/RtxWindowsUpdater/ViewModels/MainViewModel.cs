@@ -284,7 +284,8 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
                  new(SectionKeys.SpeedMethod, "Yöntem", "")]),
             new CategoryViewModel(CategoryKeys.Settings, "Genel Ayarlar", "", "Bildirimler, günlük ve uygulama tercihleri", [],
                 [new(SectionKeys.Quick, "Kolay Ayar", ""), new(SectionKeys.Privacy, "Gizlilik", ""), new(SectionKeys.Admin, "Yönetici Yetkisi", ""),
-                 new(SectionKeys.LogFiles, "Günlük Dosyaları", "")]),
+                 new(SectionKeys.LogFiles, "Günlük Dosyaları", ""),
+                 new(SectionKeys.Legal, "Yasal ve Gizlilik", "")]),
             new CategoryViewModel(CategoryKeys.Summary, "Özet", "", "Sistem sağlığı, son işlem ve geçmiş", [],
                 [new(SectionKeys.Health, "Sağlık Özeti", ""), new(SectionKeys.Recent, "İşlem Geçmişi", ""), Found(), Log()]),
             new CategoryViewModel(CategoryKeys.Device, "Cihaz Bilgileri", "", "Donanım, Windows ve sistem durumu", [],
@@ -310,9 +311,11 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         LogsView.Filter = o => o is LogEntry e && PassesLogFilter(e);
         RecomputeHealth();
 
-        ContinueCommand = new RelayCommand(GoToDashboard, () => Accepted && IsSupported && HasRtx && HasInternet);
-        ContinueWithoutGpuCommand = new RelayCommand(GoToDashboard, () => Accepted && IsSupported && !HasRtx && HasInternet);
+        ContinueCommand = new RelayCommand(EnterFromRequirements, () => Accepted && IsSupported && HasRtx && HasInternet);
+        ContinueWithoutGpuCommand = new RelayCommand(EnterFromRequirements, () => Accepted && IsSupported && !HasRtx && HasInternet);
         InitializeInternetCommands();
+        InitializeLogArchive();
+        InitializeLegal();
         ElevateCommand = new AsyncCommand(() => PromptElevationAsync(false), () => !IsAdmin && IsSupported, OnCommandError);
         // Yönetici yetkisi yoksa tüm kartlar kullanım dışıdır; toplu kontrol butonları da kapalıdır (yalnızca yeniden başlatma sunulur).
         StartCheckCommand = new AsyncCommand(StartCheckAsync, () => CanStartOperation && IsSupported && IsAdmin, OnCommandError);
@@ -494,6 +497,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         // Sunucu bölmesi (veya Ookla seçiliyken Hız Testi) açılınca Ookla aracı denetlenir; sistemde değişiklik yapmaz.
         if (CurrentSectionKey == SectionKeys.SpeedServers || CurrentSectionKey == SectionKeys.SpeedTest && SpeedTest.IsOoklaProvider)
             _ = SpeedTest.EnsureOoklaAsync();
+        if (CurrentSectionKey == SectionKeys.LogFiles) RefreshLogArchive();
     }
 
     /// <summary>Belirtilen kategoriyi açar ve bölmesini seçer (ör. "Geçmiş" → Özet / Son İşlemler).</summary>
@@ -735,6 +739,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
     {
         _logger.Info(AppInfo.Name + " v" + AppInfo.Version + " başlatıldı.");
         var internetCheck = RefreshInternetAsync(); // gereksinim kontrolüyle aynı anda (ağ isteği beklerken WMI okunur)
+        AutoDeleteOldLogsAtStartup();
         RequirementsResult req;
         try
         {
@@ -760,7 +765,14 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
             Update.StartPeriodicChecks(); // uygulama açıkken de: yeni sürüm yayınlanınca yeniden başlatmayı beklemeden gelir
         }
 
-        if (_argAccepted)
+        if (_argAccepted && !IsLegalAccepted)
+        {
+            // Güncellemeden sonra ilk açılış ve yasal belgeler yeni / değişmiş: giriş kendiliğinden yapılmaz, kullanıcı gereksinim
+            // sayfasındaki kutuyla Kullanım Koşulları ve Gizlilik Politikası'nı kabul eder (bir kez).
+            _logger.Info($"Kullanım Koşulları ve Gizlilik Politikası (sürüm {AppInfo.LegalVersion}) bu bilgisayarda henüz kabul edilmedi: " +
+                         "gereksinim sayfası gösteriliyor.");
+        }
+        else if (_argAccepted)
         {
             Accepted = true;
             if (HasInternet)
@@ -785,15 +797,28 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
     {
         GoToDashboard();
         if (!IsDashboard) return;
-        // Uygulama içi güncellemeden sonraki ilk açılış: güncellemenin gerçekten yapıldığı gösterilir (bir kez).
-        if (DescribeUpdate(UpdatedFrom) is { } updated)
-        {
-            _logger.Success(updated);
-            await Dialog.ShowAsync("Güncelleme tamamlandı", updated + " Ayarlarınız, geçmişiniz ve günlükleriniz korundu.",
-                Icons.Check, DialogKind.Info, "Tamam");
-        }
+        await ShowUpdatedOnceAsync();
         if (_argStartCheck && IsAdmin)
             await StartCheckAsync();
+    }
+
+    /// <summary>Gereksinim sayfasındaki "Devam Et" / "Kartsız Devam Et".</summary>
+    private void EnterFromRequirements()
+    {
+        GoToDashboard();
+        if (IsDashboard) _ = ShowUpdatedOnceAsync();
+    }
+
+    private bool _updatedShown;
+
+    /// <summary>Uygulama içi güncellemeden sonraki ilk açılış: güncellemenin gerçekten yapıldığı gösterilir (bir kez).</summary>
+    private async Task ShowUpdatedOnceAsync()
+    {
+        if (_updatedShown || DescribeUpdate(UpdatedFrom) is not { } updated) return;
+        _updatedShown = true;
+        _logger.Success(updated);
+        await Dialog.ShowAsync("Güncelleme tamamlandı", updated + " Ayarlarınız, geçmişiniz ve günlükleriniz korundu.",
+            Icons.Check, DialogKind.Info, "Tamam");
     }
 
     private const string NoAdminReason =
@@ -866,6 +891,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
     private void GoToDashboard()
     {
         if (!Accepted || !IsSupported || !HasInternet) return;
+        RecordLegalAcceptance();
         IsDashboard = true;
         if (HasRtx) _logger.Info("Ana ekran açıldı.");
         else _logger.Warning("Ana ekran kartsız açıldı: NVIDIA RTX ekran kartı yok, NVIDIA Driver kartı kullanım dışı.");
@@ -892,6 +918,8 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         }
 
         _logger.Info("Windows UAC onayı isteniyor...");
+        // Kutu işaretliyse kabul yeni örnekten önce kaydedilir (yeni örnek "--accepted" ile gereksinim sayfasını atlar).
+        if (Accepted) RecordLegalAcceptance();
         var args = Accepted || IsDashboard
             ? (startCheckAfter
                 ? new[] { AdminPrivilegeManager.ArgAccepted, AdminPrivilegeManager.ArgStartCheck }
@@ -1852,10 +1880,11 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         try
         {
             await Task.Run(() => _logger.Flush(TimeSpan.FromSeconds(2)));
-            if (File.Exists(_logger.LogFilePath))
-                Process.Start(new ProcessStartInfo(_logger.LogFilePath) { UseShellExecute = true });
-            else
+            if (!File.Exists(_logger.LogFilePath))
                 _logger.Warning("Log dosyası henüz oluşturulmadı.");
+            // Gezgin üzerinden: metin düzenleyici yönetici yetkisi olmadan açılır (".log" ilişkilendirmesi kullanıcı kayıt defterindedir).
+            else if (ShellOpen.OpenFile(_logger.LogFilePath) is { } error)
+                _logger.Error("Log dosyası açılamadı: " + error);
         }
         catch (Exception ex)
         {
@@ -1868,10 +1897,13 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         try
         {
             await Task.Run(() => _logger.Flush(TimeSpan.FromSeconds(2)));
+            // Gezgin Windows klasöründeki tam yoluyla başlatılır (adıyla aranırsa yönetici olarak çalışırken çalışma klasöründeki /
+            // PATH'teki aynı adlı bir program öne geçebilirdi).
+            var explorer = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "explorer.exe");
             if (File.Exists(_logger.LogFilePath))
-                Process.Start(new ProcessStartInfo("explorer.exe", $"/select,\"{_logger.LogFilePath}\"") { UseShellExecute = true });
+                Process.Start(new ProcessStartInfo(explorer, $"/select,\"{_logger.LogFilePath}\"") { UseShellExecute = false })?.Dispose();
             else if (Directory.Exists(_logger.LogDirectory))
-                Process.Start(new ProcessStartInfo("explorer.exe", $"\"{_logger.LogDirectory}\"") { UseShellExecute = true });
+                Process.Start(new ProcessStartInfo(explorer, $"\"{_logger.LogDirectory}\"") { UseShellExecute = false })?.Dispose();
             else
                 _logger.Warning("Log klasörü henüz oluşturulmadı.");
         }

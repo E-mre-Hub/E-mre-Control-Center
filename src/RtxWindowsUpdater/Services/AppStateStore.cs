@@ -201,6 +201,13 @@ public sealed class AppState
     /// <summary>Pencere kapatılınca uygulama bildirim alanında çalışmaya devam eder (v1.8.0; varsayılan açık).</summary>
     public bool CloseToTray { get; set; } = true;
 
+    /// <summary>Açılışta 30 günden eski oturum günlükleri silinir (v1.9.0; varsayılan KAPALI – kullanıcı açar).</summary>
+    public bool AutoDeleteOldLogs { get; set; }
+
+    /// <summary>Kabul edilen Kullanım Koşulları / Gizlilik Politikası sürümü ve zamanı (v1.9.0; yalnızca yerel kayıt).</summary>
+    public string? LegalAcceptedVersion { get; set; }
+    public DateTime? LegalAcceptedAt { get; set; }
+
     /// <summary>"Arka planda çalışıyor" bilgisi bir kez gösterildi.</summary>
     public bool TrayHintShown { get; set; }
     public Dictionary<string, CardSnapshot> Cards { get; set; } = new();
@@ -242,7 +249,9 @@ public sealed class AppStateStore
     private readonly Logger _logger;
     private readonly object _lock = new();
     private readonly string _path;
+    private readonly object _writeLock = new();
     private int _saveVersion;
+    private int _writtenVersion;
 
     public AppState State { get; }
 
@@ -337,6 +346,22 @@ public sealed class AppStateStore
         SaveInBackground();
     }
 
+    public void SetAutoDeleteOldLogs(bool enabled)
+    {
+        lock (_lock) State.AutoDeleteOldLogs = enabled;
+        SaveInBackground();
+    }
+
+    public void MarkLegalAccepted(string version, DateTime at)
+    {
+        lock (_lock)
+        {
+            State.LegalAcceptedVersion = version;
+            State.LegalAcceptedAt = at;
+        }
+        SaveInBackground();
+    }
+
     public void MarkTrayHintShown()
     {
         lock (_lock) State.TrayHintShown = true;
@@ -397,19 +422,36 @@ public sealed class AppStateStore
         {
             await Task.Delay(300); // art arda gelen değişiklikleri tek yazıma topla
             if (version != Volatile.Read(ref _saveVersion)) return;
+            WriteIfChanged();
+        });
+    }
+
+    /// <summary>
+    /// Bekleyen değişikliği hemen yazar (uygulama kapanırken). Arka plan yazımı 300 ms toplama bekler; kapanışta beklenmezse son
+    /// değişiklik (ör. yönetici olarak yeniden başlatmadan hemen önceki kabul kaydı) kaybolurdu.
+    /// </summary>
+    public void Flush() => WriteIfChanged();
+
+    private void WriteIfChanged()
+    {
+        lock (_writeLock)
+        {
+            var version = Volatile.Read(ref _saveVersion);
+            if (version == _writtenVersion) return;
             try
             {
                 string json;
                 lock (_lock) json = JsonSerializer.Serialize(State, JsonOptions);
                 Directory.CreateDirectory(Path.GetDirectoryName(_path)!);
                 var tmp = _path + ".tmp";
-                await File.WriteAllTextAsync(tmp, json);
+                File.WriteAllText(tmp, json);
                 File.Move(tmp, _path, overwrite: true);
+                _writtenVersion = version;
             }
             catch (Exception ex)
             {
                 _logger.Warning($"İşlem geçmişi kaydedilemedi: {ex.Message}");
             }
-        });
+        }
     }
 }

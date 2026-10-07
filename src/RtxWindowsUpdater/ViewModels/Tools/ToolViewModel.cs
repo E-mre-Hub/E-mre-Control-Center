@@ -147,16 +147,9 @@ public abstract class ToolViewModel : ObservableObject
     /// <summary>Windows'un kendi Ayarlar / Güvenlik sayfasını açar (yalnızca sabit, uygulamanın tanıdığı adresler).</summary>
     protected void OpenWindowsUri(string uri)
     {
-        if (!(uri.StartsWith("ms-settings:", StringComparison.Ordinal) || uri == "windowsdefender:")) return;
-        try
-        {
-            Process.Start(new ProcessStartInfo(uri) { UseShellExecute = true })?.Dispose();
-            Logger.Info("Windows ayar sayfası açıldı: " + uri);
-        }
-        catch (Exception ex) when (ex is System.ComponentModel.Win32Exception or InvalidOperationException)
-        {
-            Logger.Warning($"Ayar sayfası açılamadı ({uri}): {ex.Message}");
-        }
+        // Gezgin üzerinden: uygulama yönetici olarak çalışsa da sayfa normal yetkiyle açılır (HKCU ilişkilendirmesi yönetici olarak çalışmaz).
+        if (ShellOpen.OpenWindowsUri(uri) is { } error) Logger.Warning($"Ayar sayfası açılamadı ({uri}): {error}");
+        else Logger.Info("Windows ayar sayfası açıldı: " + uri);
     }
 
     /// <summary>Dosyayı Gezgin'de seçili gösterir (yalnızca var olan dosya; argüman tırnaklanır, komut birleştirilmez).</summary>

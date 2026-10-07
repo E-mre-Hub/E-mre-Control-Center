@@ -94,12 +94,13 @@ public sealed class TemporaryFilesManager(Logger logger) : IUpdateModule, IProgr
         var errors = new List<string>();
         var protectedWhy = new List<string>();
 
+        var checkCutoff = DateTime.UtcNow - MinimumAge;
         for (var i = 0; i < categories.Count; i++)
         {
             ct.ThrowIfCancellationRequested();
             var c = categories[i];
             Report($"{c.Label} ölçülüyor...", 100.0 * i / categories.Count);
-            var m = await MeasureAsync(c, ct);
+            var m = await MeasureAsync(c, checkCutoff, ct);
             if (m.Error is not null)
             {
                 errors.Add($"{c.Label}: {m.Error}");
@@ -193,12 +194,17 @@ public sealed class TemporaryFilesManager(Logger logger) : IUpdateModule, IProgr
 
         var categories = Categories();
 
+        // Önce / temizlik / sonra ölçümleri TEK bir "24 saatten eski" sınırı kullanır. NEDEN (2026-09-30 günlüğü): Teslim En İyileştirme
+        // beklemesi 52 sn sürdü; bu sırada Windows Temp'teki bir dosya 24 saat sınırını geçip yalnızca SON ölçümde "temizlenebilir" oldu ve
+        // sonuç yanlışlıkla "151 KB kullanımda olduğu için kaldı – kısmen temizlendi" çıktı (dosya 3 dk sonra sorunsuz silindi).
+        var cutoff = DateTime.UtcNow - MinimumAge;
+
         // 1) Temizlikten hemen önce GERÇEK ölçüm (kontrolden bu yana değişmiş olabilir).
         var before = new Dictionary<string, Measurement>();
         for (var i = 0; i < categories.Count; i++)
         {
             Report($"{categories[i].Label} ölçülüyor...", 5.0 * i / categories.Count);
-            before[categories[i].Id] = await MeasureAsync(categories[i], CancellationToken.None);
+            before[categories[i].Id] = await MeasureAsync(categories[i], cutoff, CancellationToken.None);
         }
 
         // 2) Yalnızca seçilen kategorileri temizle.
@@ -211,7 +217,7 @@ public sealed class TemporaryFilesManager(Logger logger) : IUpdateModule, IProgr
             logger.Info($"Temizleniyor: {c.Label}...");
             skipped[c.Id] = c.IsDeliveryOptimization
                 ? await CleanDeliveryOptimizationAsync(before[c.Id].Error is null ? before[c.Id].CleanableIds : [])
-                : await Task.Run(() => CleanFolders(c));
+                : await Task.Run(() => CleanFolders(c, cutoff));
         }
 
         // 3) Temizlikten sonra TÜM kategoriler dosya sisteminden yeniden ölçülür (gerçek yeniden kontrol).
@@ -219,7 +225,7 @@ public sealed class TemporaryFilesManager(Logger logger) : IUpdateModule, IProgr
         logger.Info("Temizlik sonrası geçici dosyalar yeniden ölçülüyor...");
         var after = new Dictionary<string, Measurement>();
         foreach (var c in categories)
-            after[c.Id] = await MeasureAsync(c, CancellationToken.None);
+            after[c.Id] = await MeasureAsync(c, cutoff, CancellationToken.None);
 
         // Teslim En İyileştirme: Windows'un silmediği "temizlenebilir" dosyalar bir daha temizlenebilir gösterilmez.
         var doBefore = before["delivery-optimization"];
@@ -398,19 +404,18 @@ public sealed class TemporaryFilesManager(Logger logger) : IUpdateModule, IProgr
 
     // ------------------------------------------------------------------ ölçüm
 
-    private async Task<Measurement> MeasureAsync(Category c, CancellationToken ct)
+    private async Task<Measurement> MeasureAsync(Category c, DateTime cutoffUtc, CancellationToken ct)
     {
         if (c.IsDeliveryOptimization) return await MeasureDeliveryOptimizationAsync(ct);
-        return await Task.Run(() => MeasureFolders(c, ct), ct);
+        return await Task.Run(() => MeasureFolders(c, cutoffUtc, ct), ct);
     }
 
-    private static Measurement MeasureFolders(Category c, CancellationToken ct)
+    private static Measurement MeasureFolders(Category c, DateTime cutoff, CancellationToken ct)
     {
         long measured = 0, cleanable = 0, recent = 0, readOnlyOrSystem = 0, inUse = 0, denied = 0;
         int measuredFiles = 0, cleanableFiles = 0;
         var inUsePaths = new List<string>();
         string? error = null;
-        var cutoff = DateTime.UtcNow - MinimumAge;
         foreach (var root in c.Roots)
         {
             if (!Directory.Exists(root)) continue;
@@ -537,13 +542,12 @@ public sealed class TemporaryFilesManager(Logger logger) : IUpdateModule, IProgr
     /// Temizlenebilir dosyaları siler (kullanımdaki, yeni gelen, salt okunur dosyalar denenmez – ölçümde korunan sayılırlar).
     /// Silinebilir görünüp silme anında silinemeyenlerin sayısı, boyutu ve (Restart Manager ile) onları kullanan uygulamalar döner.
     /// </summary>
-    private (int Files, long Bytes, string? Error, string? Note) CleanFolders(Category c)
+    private (int Files, long Bytes, string? Error, string? Note) CleanFolders(Category c, DateTime cutoff)
     {
         var lockedFiles = 0;
         long lockedBytes = 0;
         var lockedPaths = new List<string>();
         string? error = null;
-        var cutoff = DateTime.UtcNow - MinimumAge;
         foreach (var root in c.Roots)
         {
             if (!Directory.Exists(root) || ProbeRoot(root) is not null) continue;

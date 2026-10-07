@@ -19,6 +19,10 @@ public sealed class WingetManager(Logger logger, string source, string key, stri
     private static readonly TimeSpan ListTimeout = TimeSpan.FromMinutes(4);
     private static readonly TimeSpan PackageTimeout = TimeSpan.FromMinutes(30);
 
+    /// <summary>Doğrulamada hâlâ görünen paket için ek doğrulama sayısı ve aralığı (arka planda kuran programlar; test kısaltır).</summary>
+    internal static int VerifyRetries = 4;
+    internal static TimeSpan VerifyRetryDelay = TimeSpan.FromSeconds(15);
+
     public string Key => key;
     public string DisplayName => displayName;
     public string Source => source;
@@ -113,22 +117,52 @@ public sealed class WingetManager(Logger logger, string source, string key, stri
         [0x8A150010] = new("NO_APPLICABLE_INSTALLER", "Bu sistem için uygun kurulum programı yok.", "Uygun kurulum programı yok")
     };
 
+    private static string? _packagedWinget;
+
+    /// <summary>
+    /// winget'in yolu. Önce App Installer paketinin KORUMALI kurulum klasörü (C:\Program Files\WindowsApps\…; yalnızca TrustedInstaller
+    /// yazabilir; yer Windows'un paket API'sinden okunur), olmazsa Windows'un standart uygulama yürütme takma adı
+    /// (%LOCALAPPDATA%\Microsoft\WindowsApps\winget.exe). PATH'teki diğer klasörler ARANMAZ: uygulama yönetici olarak çalışırken
+    /// kullanıcının yazabildiği bir klasöre konmuş sahte bir "winget.exe" yönetici yetkisiyle çalıştırılmasın.
+    /// </summary>
     public static string? LocateWinget()
     {
-        foreach (var dir in (Environment.GetEnvironmentVariable("PATH") ?? string.Empty).Split(';'))
+        var cached = _packagedWinget;
+        if (cached is not null && File.Exists(cached)) return cached;
+        var packaged = PackagedWingetPath();
+        if (packaged is not null)
         {
-            if (string.IsNullOrWhiteSpace(dir)) continue;
-            try
-            {
-                var p = Path.Combine(dir.Trim(), "winget.exe");
-                if (File.Exists(p)) return p;
-            }
-            catch { /* geçersiz PATH girdisi */ }
+            _packagedWinget = packaged;
+            return packaged;
         }
         var alias = Path.Combine(
             Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
             "Microsoft", "WindowsApps", "winget.exe");
         return File.Exists(alias) ? alias : null;
+    }
+
+    /// <summary>winget korumalı paket klasöründen mi bulundu (günlük için).</summary>
+    public static bool IsPackagedPath(string path) =>
+        path.StartsWith(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles), "WindowsApps") + "\\",
+            StringComparison.OrdinalIgnoreCase);
+
+    private static string? PackagedWingetPath()
+    {
+        try
+        {
+            var manager = new Windows.Management.Deployment.PackageManager();
+            var best = manager.FindPackagesForUser(string.Empty, "Microsoft.DesktopAppInstaller_8wekyb3d8bbwe")
+                .Where(p => !p.IsFramework && !p.IsResourcePackage)
+                .OrderByDescending(p => new Version(p.Id.Version.Major, p.Id.Version.Minor, p.Id.Version.Build, p.Id.Version.Revision))
+                .FirstOrDefault();
+            if (best is null) return null;
+            var exe = Path.Combine(best.InstalledPath, "winget.exe");
+            return IsPackagedPath(exe) && File.Exists(exe) ? exe : null;
+        }
+        catch (Exception)
+        {
+            return null; // paket API'si okunamadı: standart takma ada düşülür
+        }
     }
 
     private static string[] Args(params string[] args) => [.. args, .. CommonArgs];
@@ -163,7 +197,7 @@ public sealed class WingetManager(Logger logger, string source, string key, stri
             version = ver.StdOut.Trim();
             lock (VersionLock) _cachedVersion = version;
         }
-        logger.Success($"Winget bulundu ({version}).");
+        logger.Success($"Winget bulundu ({version}; {(IsPackagedPath(winget) ? "korumalı paket klasörü" : "Windows uygulama takma adı")}).");
 
         logger.Info($"{displayName}: '{source}' kaynağında güncellemeler aranıyor...");
         var up = await RunWingetAsync(winget, Args("upgrade", "--source", source), ListTimeout, ct);
@@ -694,17 +728,33 @@ public sealed class WingetManager(Logger logger, string source, string key, stri
         if (claimed.Count == 0) return null;
 
         logger.Info($"{displayName}: güncelleme sonrası doğrulama yapılıyor (winget upgrade)...");
-        var verify = await RunWingetAsync(winget, Args("upgrade", "--source", source), ListTimeout, CancellationToken.None);
-        if (!verify.Started || verify.TimedOut || verify.Cancelled)
-        {
-            var note = "Güncelleme sonrası doğrulama yapılamadı: " + ProcessRunner.Describe(verify, "winget");
-            logger.Warning(note);
-            return note;
-        }
-
         var stillPending = new Dictionary<string, WingetRow>(StringComparer.OrdinalIgnoreCase);
-        foreach (var row in WingetTableParser.Parse(verify.StdOut).SelectMany(t => t.Rows).Where(r => !string.IsNullOrEmpty(r.Available)))
-            stillPending.TryAdd(row.Id, row);
+        bool Pending(UpdateItem o) => stillPending.TryGetValue(o.Id, out var r) &&
+                                      string.Equals(r.Available, o.NewVersion, StringComparison.OrdinalIgnoreCase);
+
+        // Bazı kurulum programları (ör. Discord / Squirrel) "başarılı" deyip kurulumu ARKA PLANDA sürdürür (2026-09-30: Discord
+        // kurulum programı 1 sn'de 0 döndürdü, sürüm ~2 dk içinde yükseldi; anında yapılan doğrulama "doğrulanamadı" deyip uygulamayı
+        // gereksiz yere kapattırmıştı). Hâlâ görünen paketler için doğrulama VerifyRetryDelay arayla en fazla VerifyRetries kez tekrarlanır.
+        for (var attempt = 0; ; attempt++)
+        {
+            var verify = await RunWingetAsync(winget, Args("upgrade", "--source", source), ListTimeout, CancellationToken.None);
+            if (!verify.Started || verify.TimedOut || verify.Cancelled)
+            {
+                var note = "Güncelleme sonrası doğrulama yapılamadı: " + ProcessRunner.Describe(verify, "winget");
+                logger.Warning(note);
+                return note;
+            }
+
+            stillPending.Clear();
+            foreach (var row in WingetTableParser.Parse(verify.StdOut).SelectMany(t => t.Rows).Where(r => !string.IsNullOrEmpty(r.Available)))
+                stillPending.TryAdd(row.Id, row);
+
+            var waiting = claimed.Where(Pending).ToList();
+            if (waiting.Count == 0 || attempt >= VerifyRetries) break;
+            logger.Info($"{string.Join(", ", waiting.Select(o => o.Name))}: kurulum programı arka planda sürüyor olabilir; doğrulama " +
+                        $"{VerifyRetryDelay.TotalSeconds:0} sn sonra tekrarlanacak ({attempt + 1}/{VerifyRetries}).");
+            await Task.Delay(VerifyRetryDelay);
+        }
 
         foreach (var o in claimed)
         {

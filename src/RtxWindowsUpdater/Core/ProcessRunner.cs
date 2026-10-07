@@ -36,7 +36,9 @@ public static class ProcessRunner
     /// onarım ve silme işlemi süreci CancellationToken.None ile başlatır). Uygulama kapanırken bunlar senkron sonlandırılır.
     /// </summary>
     // Anahtar süreç NESNESİ (başvuru eşitliği): PID yeniden kullanılsa bile kayıt karışmaz.
-    private static readonly System.Collections.Concurrent.ConcurrentDictionary<Process, string> Cancellable = new();
+    private static readonly System.Collections.Concurrent.ConcurrentDictionary<object, Tracked> Cancellable = new();
+
+    private sealed record Tracked(string Name, int ProcessId, Func<bool> HasExited, Action Kill);
 
     /// <summary>
     /// Uygulama kapanırken çağrılır: iptal edilebilir (kontrol amaçlı) süreçleri ağaçlarıyla birlikte hemen sonlandırır. İptal
@@ -46,15 +48,14 @@ public static class ProcessRunner
     public static IReadOnlyList<string> KillCancellableProcesses()
     {
         var killed = new List<string>();
-        foreach (var (process, name) in Cancellable.ToArray())
+        foreach (var (_, entry) in Cancellable.ToArray())
         {
             try
             {
-                if (!process.HasExited)
+                if (!entry.HasExited())
                 {
-                    var id = process.Id;
-                    process.Kill(entireProcessTree: true);
-                    killed.Add($"{name} (PID {id})");
+                    entry.Kill();
+                    killed.Add($"{entry.Name} (PID {entry.ProcessId})");
                 }
             }
             catch (Exception ex) when (ex is InvalidOperationException or Win32Exception or NotSupportedException)
@@ -66,7 +67,7 @@ public static class ProcessRunner
     }
 
     /// <summary>Şu anda çalışan iptal edilebilir süreç sayısı (test / tanı için).</summary>
-    public static int CancellableProcessCount => Cancellable.Keys.Count(p => { try { return !p.HasExited; } catch { return false; } });
+    public static int CancellableProcessCount => Cancellable.Values.Count(e => { try { return !e.HasExited(); } catch { return false; } });
 
     /// <param name="displayCommand">
     /// İşlem kaydında (Detaylı Sonuç paneli) gösterilecek komut. Boşsa "dosya argümanlar" kullanılır.
@@ -79,13 +80,16 @@ public static class ProcessRunner
         Action<string>? onStdOut = null,
         Action<string>? onStdErr = null,
         Encoding? outputEncoding = null,
-        string? displayCommand = null)
+        string? displayCommand = null,
+        bool dropElevation = false)
     {
         var startedAt = DateTime.Now;
         var watch = System.Diagnostics.Stopwatch.StartNew();
         var command = displayCommand ?? $"{Path.GetFileName(fileName)} {arguments}".Trim();
-        var result = await RunCoreAsync(fileName, arguments, timeout, cancellationToken, onStdOut, onStdErr, outputEncoding)
-            .ConfigureAwait(false);
+        if (dropElevation) command += " (yönetici yetkisi olmadan)";
+        var result = dropElevation
+            ? await RunUnelevatedCoreAsync(fileName, arguments, timeout, cancellationToken, onStdOut, onStdErr, outputEncoding).ConfigureAwait(false)
+            : await RunCoreAsync(fileName, arguments, timeout, cancellationToken, onStdOut, onStdErr, outputEncoding).ConfigureAwait(false);
         ExecutionTrace.Record(command, startedAt, watch.Elapsed, result);
         return result;
     }
@@ -170,7 +174,7 @@ public static class ProcessRunner
         {
             return new ProcessResult
             {
-                StartError = ex.NativeErrorCode == 2
+                StartError = ex.NativeErrorCode is 2 or 3
                     ? $"'{fileName}' sistemde bulunamadı."
                     : $"'{fileName}' başlatılamadı: {ex.Message}",
                 StartErrorCode = ex.NativeErrorCode
@@ -182,7 +186,8 @@ public static class ProcessRunner
         }
 
         var tracked = cancellationToken.CanBeCanceled;
-        if (tracked) Cancellable[process] = Path.GetFileName(fileName);
+        if (tracked) Cancellable[process] = new Tracked(Path.GetFileName(fileName), process.Id, () => process.HasExited,
+            () => process.Kill(entireProcessTree: true));
         try
         {
             return await WaitAsync(process, timeout, cancellationToken, stdout, stderr, outClosed, errClosed).ConfigureAwait(false);
@@ -235,6 +240,99 @@ public static class ProcessRunner
             TimedOut = timedOut,
             Cancelled = cancelled
         };
+    }
+
+    /// <summary>
+    /// Kullanıcının yazabildiği konumdaki bir programı YÖNETİCİ YETKİSİ OLMADAN çalıştırır (bkz. <see cref="UnelevatedLauncher"/>).
+    /// Çıktı, zaman aşımı, iptal ve kapanışta sonlandırma davranışı <see cref="RunCoreAsync"/> ile aynıdır.
+    /// </summary>
+    private static async Task<ProcessResult> RunUnelevatedCoreAsync(
+        string fileName,
+        string arguments,
+        TimeSpan timeout,
+        CancellationToken cancellationToken,
+        Action<string>? onStdOut,
+        Action<string>? onStdErr,
+        Encoding? outputEncoding)
+    {
+        UnelevatedLauncher launched;
+        try
+        {
+            launched = UnelevatedLauncher.Start(fileName, arguments, Environment.SystemDirectory);
+        }
+        catch (Win32Exception ex)
+        {
+            return new ProcessResult
+            {
+                StartError = ex.NativeErrorCode is 2 or 3
+                    ? $"'{fileName}' sistemde bulunamadı."
+                    : $"'{fileName}' yönetici yetkisi olmadan başlatılamadı: {ex.Message}",
+                StartErrorCode = ex.NativeErrorCode
+            };
+        }
+
+        using (launched)
+        {
+            var tracked = cancellationToken.CanBeCanceled;
+            if (tracked) Cancellable[launched] = new Tracked(Path.GetFileName(fileName), launched.ProcessId, () => launched.HasExited, launched.Kill);
+            try
+            {
+                var encoding = outputEncoding ?? Encoding.UTF8;
+                var stdout = new StringBuilder();
+                var stderr = new StringBuilder();
+                var outPump = Task.Run(() => Pump(launched.StdOut, encoding, stdout, onStdOut));
+                var errPump = Task.Run(() => Pump(launched.StdErr, encoding, stderr, onStdErr));
+
+                using var timeoutCts = new CancellationTokenSource(timeout);
+                using var linked = CancellationTokenSource.CreateLinkedTokenSource(timeoutCts.Token, cancellationToken);
+                var exited = launched.WaitForExitAsync();
+                var timedOut = false;
+                var cancelled = false;
+                if (await Task.WhenAny(exited, Task.Delay(Timeout.Infinite, linked.Token)).ConfigureAwait(false) != exited)
+                {
+                    timedOut = timeoutCts.IsCancellationRequested && !cancellationToken.IsCancellationRequested;
+                    cancelled = !timedOut;
+                    launched.Kill();
+                    await Task.WhenAny(exited, Task.Delay(5000)).ConfigureAwait(false);
+                }
+
+                await Task.WhenAny(Task.WhenAll(outPump, errPump), Task.Delay(3000)).ConfigureAwait(false);
+                string o, e2;
+                lock (stdout) o = stdout.ToString();
+                lock (stderr) e2 = stderr.ToString();
+                return new ProcessResult
+                {
+                    ExitCode = launched.HasExited ? launched.ExitCode : -1,
+                    StdOut = o,
+                    StdErr = e2,
+                    TimedOut = timedOut,
+                    Cancelled = cancelled
+                };
+            }
+            finally
+            {
+                if (tracked) Cancellable.TryRemove(launched, out _);
+            }
+        }
+    }
+
+    /// <summary>Borudan satır satır okur (anonim borular eşzamansız G/Ç desteklemez; arka plan iş parçacığında çalışır).</summary>
+    private static void Pump(Stream stream, Encoding encoding, StringBuilder buffer, Action<string>? callback)
+    {
+        try
+        {
+            using var reader = new StreamReader(stream, encoding, detectEncodingFromByteOrderMarks: false, bufferSize: 4096, leaveOpen: true);
+            string? line;
+            while ((line = reader.ReadLine()) is not null)
+            {
+                lock (buffer) buffer.AppendLine(line);
+                SafeInvoke(callback, line);
+            }
+        }
+        catch (Exception ex) when (ex is IOException or ObjectDisposedException)
+        {
+            // boru kapandı
+        }
     }
 
     private static void KillTree(Process process)

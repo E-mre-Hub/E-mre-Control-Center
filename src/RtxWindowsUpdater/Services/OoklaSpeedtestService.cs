@@ -73,7 +73,7 @@ public sealed class OoklaSpeedtestService(Logger logger)
         foreach (var path in Candidates().Distinct(StringComparer.OrdinalIgnoreCase))
         {
             if (!File.Exists(path)) continue;
-            var r = await ProcessRunner.RunAsync(path, "--version", TimeSpan.FromSeconds(20), ct).ConfigureAwait(false);
+            var r = await ProcessRunner.RunAsync(path, "--version", TimeSpan.FromSeconds(20), ct, dropElevation: DropElevation).ConfigureAwait(false);
             var line = r.StdOut.Split('\n').Select(l => l.Trim()).FirstOrDefault(l => l.Length > 0) ?? string.Empty;
             if (r.Succeeded && line.StartsWith("Speedtest by Ookla", StringComparison.Ordinal))
             {
@@ -129,10 +129,17 @@ public sealed class OoklaSpeedtestService(Logger logger)
     // ------------------------------------------------------------------ sunucu listesi
 
     /// <summary>Aracın en yakın sunucular listesi ("--servers"). Hata durumunda aracın gerçek mesajı döner.</summary>
+    /// <summary>
+    /// Ookla aracı kullanıcı profiline (kullanıcının yazabildiği klasöre) kurulur. Uygulama yönetici olarak çalışırken araç YÖNETİCİ
+    /// YETKİSİ OLMADAN başlatılır (normal kullanıcı belirteci, orta bütünlük düzeyi): araç dosyası normal yetkiyle değiştirilmiş olsa
+    /// bile yönetici yetkisi kazanamaz. Hız testi yönetici gerektirmez. Test düzenekleri yansımayla değiştirebilir.
+    /// </summary>
+    internal static bool DropElevation = AdminPrivilegeManager.IsElevated;
+
     public async Task<(List<OoklaServer>? Servers, string? Error)> ListServersAsync(string exe, CancellationToken ct)
     {
         var r = await ProcessRunner.RunAsync(exe, string.Join(' ', ["--servers", "--format=json", .. AcceptArgs]),
-            TimeSpan.FromSeconds(60), ct).ConfigureAwait(false);
+            TimeSpan.FromSeconds(60), ct, dropElevation: DropElevation).ConfigureAwait(false);
         if (!r.Succeeded) return (null, ErrorText(r));
         try
         {
@@ -177,7 +184,7 @@ public sealed class OoklaSpeedtestService(Logger logger)
         progress?.Report(new SpeedTestProgress(SpeedTestPhase.Connecting, 0, null, null, null));
 
         var r = await ProcessRunner.RunAsync(exe, string.Join(' ', args), TestTimeout, ct,
-            onStdOut: parser.OnLine, onStdErr: parser.OnLine).ConfigureAwait(false);
+            onStdOut: parser.OnLine, onStdErr: parser.OnLine, dropElevation: DropElevation).ConfigureAwait(false);
         var result = parser.Build(total.Elapsed);
 
         if (r.Cancelled || ct.IsCancellationRequested)

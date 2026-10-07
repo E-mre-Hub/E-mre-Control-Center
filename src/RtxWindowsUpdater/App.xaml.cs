@@ -22,6 +22,7 @@ public partial class App : Application
     private Logger? _logger;
     private MainViewModel? _viewModel;
     private TrayController? _tray;
+    private AppStateStore? _state;
     private Mutex? _instanceMutex;
 
     protected override void OnStartup(StartupEventArgs e)
@@ -67,7 +68,7 @@ public partial class App : Application
         var accepted = e.Args.Contains(AdminPrivilegeManager.ArgAccepted, StringComparer.OrdinalIgnoreCase);
         var startCheck = e.Args.Contains(AdminPrivilegeManager.ArgStartCheck, StringComparer.OrdinalIgnoreCase);
 
-        var state = new AppStateStore(_logger);
+        var state = _state = new AppStateStore(_logger);
         var notifications = new NotificationService(_logger);
         notifications.Register(ExtractNotificationIcon());
 
@@ -255,6 +256,7 @@ public partial class App : Application
         // planda koştuğu için kapanışa yetişmeyebilir. Kurulum / onarım süreçlerine dokunulmaz (hepsi iptal edilemez başlatılır).
         var killed = ProcessRunner.KillCancellableProcesses();
         if (killed.Count > 0) _logger?.Info("Kapanışta sonlandırılan kontrol araçları: " + string.Join(", ", killed));
+        _state?.Flush(); // bekleyen ayar / geçmiş yazımı (yeni örnek kilidi almadan önce diske yazılmış olur)
         _logger?.Dispose();
         try { _instanceMutex?.ReleaseMutex(); } catch { /* sahip değilsek sorun değil */ }
         _instanceMutex?.Dispose();

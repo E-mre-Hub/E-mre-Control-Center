@@ -15,6 +15,7 @@ public static class SectionKeys
     public const string Quick = "quick";
     public const string Admin = "admin";
     public const string LogFiles = "logfiles";
+    public const string Legal = "legal";
     public const string DeviceInfo = "device-info";
     public const string DeviceStatus = "device-status";
     public const string DeviceAbout = "device-about";

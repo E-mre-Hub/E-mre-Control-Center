@@ -980,8 +980,21 @@
                                 </Grid>
                             </Border>
 
-                            <CheckBox Content="Gereksinimleri kabul ediyorum" Margin="2,24,0,0" IsChecked="{Binding Accepted}"
-                                      IsEnabled="{Binding IsSupported}" />
+                            <CheckBox x:Name="AcceptCheck" Margin="2,24,0,0" IsChecked="{Binding Accepted}" IsEnabled="{Binding IsSupported}"
+                                      AutomationProperties.Name="Gereksinimleri, Kullanım Koşulları'nı ve Gizlilik Politikası'nı kabul ediyorum">
+                                <TextBlock Text="Gereksinimleri, Kullanım Koşulları'nı ve Gizlilik Politikası'nı kabul ediyorum" TextWrapping="Wrap" />
+                            </CheckBox>
+                            <!-- v1.9.0 yasal belgeler: bağlantılar kutunun dışında (tıklamak kutuyu değiştirmez); yalnızca izin listesindeki adresler -->
+                            <WrapPanel Margin="22,6,0,0">
+                                <Button x:Name="ReqTermsLink" Style="{StaticResource Btn.Link}" FontSize="12.5" Margin="0,0,4,0" Content="Kullanım Koşulları"
+                                        Command="{Binding OpenLegalLinkCommand}" CommandParameter="{x:Static core:AppInfo.TermsUrl}" ToolTip="{x:Static core:AppInfo.TermsUrl}" />
+                                <Button x:Name="ReqPrivacyLink" Style="{StaticResource Btn.Link}" FontSize="12.5" Margin="0,0,4,0" Content="Gizlilik Politikası"
+                                        Command="{Binding OpenLegalLinkCommand}" CommandParameter="{x:Static core:AppInfo.PrivacyPolicyUrl}" ToolTip="{x:Static core:AppInfo.PrivacyPolicyUrl}" />
+                                <Button Style="{StaticResource Btn.Link}" FontSize="12.5" Margin="0,0,4,0" Content="Terms of Use"
+                                        Command="{Binding OpenLegalLinkCommand}" CommandParameter="{x:Static core:AppInfo.TermsUrlEn}" ToolTip="{x:Static core:AppInfo.TermsUrlEn}" />
+                                <Button Style="{StaticResource Btn.Link}" FontSize="12.5" Content="Privacy Policy"
+                                        Command="{Binding OpenLegalLinkCommand}" CommandParameter="{x:Static core:AppInfo.PrivacyPolicyUrlEn}" ToolTip="{x:Static core:AppInfo.PrivacyPolicyUrlEn}" />
+                            </WrapPanel>
 
                             <Button Style="{StaticResource Btn.Primary}" Margin="0,22,0,0" Command="{Binding ContinueCommand}"
                                     Visibility="{Binding ShowContinue, Converter={StaticResource Visible}}">
@@ -2037,6 +2050,48 @@
                                         </Border>
                                     </Grid>
 
+                                    <!-- Günlük arşivi (v1.9.0): eski günlükleri onaylı silme + isteğe bağlı açılışta otomatik silme (varsayılan kapalı) -->
+                                    <Grid Margin="0,0,0,16">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="96" />
+                                            <ColumnDefinition Width="*" />
+                                        </Grid.ColumnDefinitions>
+                                        <Border Style="{StaticResource IconTile}">
+                                            <TextBlock Text="&#xE7B8;" Style="{StaticResource T.TileIcon}" />
+                                        </Border>
+                                        <Border Grid.Column="1" Style="{StaticResource Card}" Padding="22,16,22,12">
+                                            <StackPanel>
+                                                <TextBlock Text="Günlük arşivi" Style="{StaticResource T.H2}" FontSize="16" />
+                                                <TextBlock x:Name="LogArchiveSummary" Text="{Binding LogArchiveText}" Margin="0,8,0,0" FontSize="12.5"
+                                                           Foreground="{StaticResource B.Text}" TextWrapping="Wrap" />
+                                                <WrapPanel Margin="0,12,0,0">
+                                                    <Button x:Name="DeleteOldLogsButton" Style="{StaticResource Btn.Secondary}" Height="36" Margin="0,0,8,6"
+                                                            Command="{Binding DeleteOldLogsCommand}">
+                                                        <StackPanel Orientation="Horizontal">
+                                                            <TextBlock Text="&#xE74D;" Style="{StaticResource T.Icon}" FontSize="13" Margin="0,0,8,0" />
+                                                            <TextBlock Text="30 günden eski günlükleri sil" FontSize="13" />
+                                                        </StackPanel>
+                                                    </Button>
+                                                </WrapPanel>
+                                                <Grid Margin="0,8,0,0">
+                                                    <Grid.ColumnDefinitions>
+                                                        <ColumnDefinition Width="*" />
+                                                        <ColumnDefinition Width="Auto" />
+                                                    </Grid.ColumnDefinitions>
+                                                    <StackPanel>
+                                                        <TextBlock Text="Açılışta 30 günden eski günlükleri otomatik sil" FontSize="13" FontWeight="SemiBold"
+                                                                   Foreground="{StaticResource B.Text}" TextWrapping="Wrap" />
+                                                        <TextBlock Style="{StaticResource T.SettingDesc}" Margin="0,4,0,0"
+                                                                   Text="Uygulama her açılışta yeni bir günlük dosyası oluşturur. Bu ayar açıkken 30 günden eski günlükler uygulama açılırken silinir; bu oturumun günlüğü, işlem geçmişi ve ayarlar etkilenmez. Varsayılan olarak kapalıdır." />
+                                                    </StackPanel>
+                                                    <CheckBox x:Name="AutoDeleteLogsToggle" Grid.Column="1" Style="{StaticResource ToggleSwitch}" Margin="24,0,0,0"
+                                                              IsChecked="{Binding AutoDeleteOldLogs}"
+                                                              AutomationProperties.Name="Açılışta 30 günden eski günlükleri otomatik sil" />
+                                                </Grid>
+                                            </StackPanel>
+                                        </Border>
+                                    </Grid>
+
                                     <!-- Uygulama verileri -->
                                     <Grid Margin="0,0,0,16">
                                         <Grid.ColumnDefinitions>
@@ -2053,6 +2108,128 @@
                                                            Foreground="{StaticResource B.Text2}" TextWrapping="Wrap" />
                                                 <TextBlock Style="{StaticResource T.SettingDesc}" Margin="0,8,0,0"
                                                            Text="İşlem geçmişi ve tercihler (state.json) ile oturum günlükleri (Logs klasörü) burada saklanır. Önceki sürümlerin veri klasörleri silinmez." />
+                                            </StackPanel>
+                                        </Border>
+                                    </Grid>
+                                </StackPanel>
+                            </Grid>
+                        </ScrollViewer>
+
+                        <!-- ============ Yasal ve Gizlilik (v1.9.0): Gizlilik Politikası, Kullanım Koşulları, bağlanılan hizmetler, kabul kaydı ============
+                             Bağlantılar yalnızca AppInfo.LegalLinks izin listesindeki proje adresleridir; tarayıcı yönetici yetkisi olmadan açılır. -->
+                        <ScrollViewer x:Name="LegalScroll" Grid.Row="1" VerticalScrollBarVisibility="Auto" Padding="0,0,4,0"
+                                      Visibility="{Binding CurrentSectionKey, Converter={StaticResource SectionVisible}, ConverterParameter=legal}">
+                            <Grid Margin="8,0,8,8">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" MaxWidth="1120" />
+                                </Grid.ColumnDefinitions>
+                                <StackPanel>
+                                    <!-- Gizlilik Politikası -->
+                                    <Grid Margin="0,0,0,16">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="96" />
+                                            <ColumnDefinition Width="*" />
+                                        </Grid.ColumnDefinitions>
+                                        <Border Style="{StaticResource IconTile}">
+                                            <TextBlock Text="&#xE72E;" Style="{StaticResource T.TileIcon}" />
+                                        </Border>
+                                        <Border Grid.Column="1" Style="{StaticResource Card}" Padding="22,16,22,12">
+                                            <StackPanel>
+                                                <TextBlock Text="Gizlilik Politikası" Style="{StaticResource T.H2}" FontSize="16" />
+                                                <TextBlock Margin="0,8,0,0" FontSize="13" Foreground="{StaticResource B.Text}" TextWrapping="Wrap"
+                                                           Text="Hesap istenmez; telemetri, analitik, reklam ve çerez kullanılmaz. İşlem geçmişi, tercihler ve günlükler yalnızca bu bilgisayarda saklanır ve geliştiriciye gönderilmez." />
+                                                <TextBlock Style="{StaticResource T.SettingDesc}" Margin="0,6,0,0"
+                                                           Text="Uygulamada çerez veya izleme teknolojisi bulunmadığından çerez onayı gerekmez. Sistem Raporu ve Destek Paketi'nde bilgisayar adı, kullanıcı adı, IP ve MAC adresleri maskelenir. KVKK ve GDPR kapsamındaki haklarınız politikada açıklanmıştır." />
+                                                <WrapPanel Margin="0,10,0,0">
+                                                    <Button x:Name="PrivacyLinkTr" Style="{StaticResource Btn.Link}" Margin="-6,0,8,4" Content="Gizlilik Politikası (Türkçe)"
+                                                            Command="{Binding OpenLegalLinkCommand}" CommandParameter="{x:Static core:AppInfo.PrivacyPolicyUrl}"
+                                                            ToolTip="{x:Static core:AppInfo.PrivacyPolicyUrl}" />
+                                                    <Button x:Name="PrivacyLinkEn" Style="{StaticResource Btn.Link}" Margin="0,0,8,4" Content="Privacy Policy (English)"
+                                                            Command="{Binding OpenLegalLinkCommand}" CommandParameter="{x:Static core:AppInfo.PrivacyPolicyUrlEn}"
+                                                            ToolTip="{x:Static core:AppInfo.PrivacyPolicyUrlEn}" />
+                                                </WrapPanel>
+                                            </StackPanel>
+                                        </Border>
+                                    </Grid>
+
+                                    <!-- Kullanım Koşulları -->
+                                    <Grid Margin="0,0,0,16">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="96" />
+                                            <ColumnDefinition Width="*" />
+                                        </Grid.ColumnDefinitions>
+                                        <Border Style="{StaticResource IconTile}">
+                                            <TextBlock Text="&#xE8A5;" Style="{StaticResource T.TileIcon}" />
+                                        </Border>
+                                        <Border Grid.Column="1" Style="{StaticResource Card}" Padding="22,16,22,12">
+                                            <StackPanel>
+                                                <TextBlock Text="Kullanım Koşulları ve Lisans Sözleşmesi" Style="{StaticResource T.H2}" FontSize="16" />
+                                                <TextBlock Margin="0,8,0,0" FontSize="13" Foreground="{StaticResource B.Text}" TextWrapping="Wrap"
+                                                           Text="Uygulama ücretsizdir ve &quot;olduğu gibi&quot; sunulur. Güncelleme, onarım ve temizlik işlemleri yalnızca sizin başlatmanız ve onayınızla çalışır." />
+                                                <TextBlock Style="{StaticResource T.SettingDesc}" Margin="0,6,0,0"
+                                                           Text="Önemli verilerinizi yedeklemeniz ve büyük değişikliklerden önce sistem geri yükleme noktası oluşturmanız önerilir. Garanti reddi, sorumluluğun sınırlandırılması, üçüncü taraf yazılımlar ve Ookla koşulları belgede açıklanmıştır." />
+                                                <WrapPanel Margin="0,10,0,0">
+                                                    <Button x:Name="TermsLinkTr" Style="{StaticResource Btn.Link}" Margin="-6,0,8,4" Content="Kullanım Koşulları (Türkçe)"
+                                                            Command="{Binding OpenLegalLinkCommand}" CommandParameter="{x:Static core:AppInfo.TermsUrl}"
+                                                            ToolTip="{x:Static core:AppInfo.TermsUrl}" />
+                                                    <Button x:Name="TermsLinkEn" Style="{StaticResource Btn.Link}" Margin="0,0,8,4" Content="Terms of Use (English)"
+                                                            Command="{Binding OpenLegalLinkCommand}" CommandParameter="{x:Static core:AppInfo.TermsUrlEn}"
+                                                            ToolTip="{x:Static core:AppInfo.TermsUrlEn}" />
+                                                </WrapPanel>
+                                            </StackPanel>
+                                        </Border>
+                                    </Grid>
+
+                                    <!-- Bağlanılan hizmetler -->
+                                    <Grid Margin="0,0,0,16">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="96" />
+                                            <ColumnDefinition Width="*" />
+                                        </Grid.ColumnDefinitions>
+                                        <Border Style="{StaticResource IconTile}">
+                                            <TextBlock Text="&#xE774;" Style="{StaticResource T.TileIcon}" />
+                                        </Border>
+                                        <Border Grid.Column="1" Style="{StaticResource Card}" Padding="22,16">
+                                            <StackPanel>
+                                                <TextBlock Text="Uygulamanın bağlandığı hizmetler" Style="{StaticResource T.H2}" FontSize="16" />
+                                                <TextBlock Margin="0,8,0,0" FontSize="12.5" Foreground="{StaticResource B.Text}" TextWrapping="Wrap" LineHeight="20">
+                                                    <Run Text="GitHub – yeni sürüm denetimi ve güncelleme indirme" /><LineBreak />
+                                                    <Run Text="Microsoft – internet bağlantı testi, Windows Update, winget, Microsoft Store, Defender, Edge Update" /><LineBreak />
+                                                    <Run Text="Uygulama yayıncıları – winget ile güncellenen uygulamaların resmi indirme adresleri" /><LineBreak />
+                                                    <Run Text="NVIDIA – sürücü denetimi ve indirme (ekran kartı modeli, Windows sürümü ve dil)" /><LineBreak />
+                                                    <Run Text="Cloudflare – hız testi ve ağ tanılaması" /><LineBreak />
+                                                    <Run Text="Speedtest by Ookla – yalnızca Ookla altyapısını seçip koşullarını kabul ederseniz" /><LineBreak />
+                                                    <Run Text="Google Forms – yalnızca kaldırırken geri bildirim göndermeyi seçerseniz (nedenler, mesaj, uygulama ve Windows sürümü)" />
+                                                </TextBlock>
+                                                <TextBlock Style="{StaticResource T.SettingDesc}" Margin="0,8,0,0"
+                                                           Text="Bu hizmetler kendi gizlilik politikalarına tabidir. Adınız, e-posta adresiniz, bilgisayar adınız veya kullanıcı adınız hiçbir hizmete gönderilmez; veriler satılmaz veya paylaşılmaz." />
+                                            </StackPanel>
+                                        </Border>
+                                    </Grid>
+
+                                    <!-- Kabul kaydı ve iletişim -->
+                                    <Grid Margin="0,0,0,16">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="96" />
+                                            <ColumnDefinition Width="*" />
+                                        </Grid.ColumnDefinitions>
+                                        <Border Style="{StaticResource IconTile}">
+                                            <TextBlock Text="&#xE946;" Style="{StaticResource T.TileIcon}" />
+                                        </Border>
+                                        <Border Grid.Column="1" Style="{StaticResource Card}" Padding="22,16,22,12">
+                                            <StackPanel>
+                                                <TextBlock Text="Kabul kaydı ve iletişim" Style="{StaticResource T.H2}" FontSize="16" />
+                                                <TextBlock x:Name="LegalAcceptanceSummary" Text="{Binding LegalAcceptanceText}" Margin="0,8,0,0" FontSize="13"
+                                                           Foreground="{StaticResource B.Text}" TextWrapping="Wrap" />
+                                                <TextBlock Style="{StaticResource T.SettingDesc}" Margin="0,6,0,0">
+                                                    <Run Text="{Binding LegalVersionText, Mode=OneWay}" />
+                                                    <Run Text="· Kabul kaydı yalnızca bu bilgisayarda (state.json) tutulur. Soru ve talepleriniz için proje sayfasındaki Issues bölümünü kullanın; herkese açık başlıklara kişisel bilgi yazmayın." />
+                                                </TextBlock>
+                                                <WrapPanel Margin="0,10,0,0">
+                                                    <Button x:Name="IssuesLink" Style="{StaticResource Btn.Link}" Margin="-6,0,8,4" Content="GitHub Issues (iletişim)"
+                                                            Command="{Binding OpenLegalLinkCommand}" CommandParameter="{x:Static core:AppInfo.IssuesUrl}"
+                                                            ToolTip="{x:Static core:AppInfo.IssuesUrl}" />
+                                                </WrapPanel>
                                             </StackPanel>
                                         </Border>
                                     </Grid>

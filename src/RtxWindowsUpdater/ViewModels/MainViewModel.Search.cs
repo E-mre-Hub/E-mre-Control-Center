@@ -24,6 +24,7 @@ public sealed partial class MainViewModel
         [SectionKeys.Quick] = "kolay ayar bildirim bildirimler çöp kutusu anahtar tercih arka plan bildirim alanı tepsi simge kapatınca",
         [SectionKeys.Admin] = "yönetici yetki uac izin",
         [SectionKeys.LogFiles] = "günlük dosyası log klasör dışa aktar veri klasörü",
+        [SectionKeys.Legal] = "yasal gizlilik politikası kullanım koşulları sözleşme lisans eula çerez telemetri kvkk gdpr sorumluluk garanti iletişim privacy terms",
         [SectionKeys.DeviceInfo] = "işlemci cpu ekran kartı gpu bellek ram disk depolama ssd işletim sistemi windows sürüm donanım",
         [SectionKeys.DeviceStatus] = "performans canlı sıcaklık kullanım fan cpu gpu vram bellek ram disk ağ termal cihaz durumu",
         [SectionKeys.DeviceAbout] = "hakkında sürüm uygulama kurulum yüklü kaldır",

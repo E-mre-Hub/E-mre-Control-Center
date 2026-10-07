@@ -4,7 +4,7 @@
 bakım uygulaması.**
 
 **[İndir (son sürüm)](https://github.com/E-mre-Hub/E-mre-Control-Center/releases/latest)** ·
-[Hızlı başlangıç](#hızlı-başlangıç-arkadaşlar-için) · [Sürüm geçmişi](#sürüm-geçmişi)
+[Hızlı başlangıç](#hızlı-başlangıç-arkadaşlar-için) · [Gizlilik ve yasal belgeler](#gizlilik-ve-yasal-belgeler) · [Sürüm geçmişi](#sürüm-geçmişi)
 
 ## Ne işe yarar?
 
@@ -49,6 +49,23 @@ temizlenebileceğini ve sistemde bir sorun olup olmadığını listeler; onaylar
 - **Onayın olmadan hiçbir şey yapmaz:** kurmaz, silmez, değiştirmez. Windows'un güvenlik uyarılarını (UAC) atlatmaz.
 - **Arka planda çalışabilir:** pencereyi kapatınca saatin yanındaki simgede çalışmaya devam eder; çift tıklayınca kaldığın yerden açılır.
 - **Kendini günceller:** yeni sürüm çıkınca uygulamanın içinde "Yeni sürüm yayınlandı" penceresi gelir; Güncelle'ye basman yeterli.
+
+## Gizlilik ve yasal belgeler
+
+- **Hesap, telemetri, analitik, reklam ve çerez yok.** İşlem geçmişi, ayarlar ve günlükler yalnızca bilgisayarında
+  (`%LOCALAPPDATA%\E-mre Control Center`) kalır; geliştiriciye gönderilmez.
+- Uygulamanın bağlandığı hizmetler (GitHub, Microsoft, NVIDIA, Cloudflare; isteğe bağlı Speedtest by Ookla ve Google Forms) ve hangi
+  bilginin gönderildiği gizlilik politikasında tek tek yazılıdır.
+- İlk açılışta gereksinim ekranındaki kutuyla Kullanım Koşulları ve Gizlilik Politikası kabul edilir; belgeler uygulamada
+  **Genel Ayarlar → Yasal ve Gizlilik** bölümünden de açılır.
+
+| Belge | Türkçe | English |
+|---|---|---|
+| Gizlilik Politikası (çerez bildirimi dahil) / Privacy Policy (incl. cookie notice) | [gizlilik-politikasi.md](legal/tr/gizlilik-politikasi.md) | [privacy-policy.md](legal/en/privacy-policy.md) |
+| Kullanım Koşulları ve Lisans Sözleşmesi (garanti reddi, sorumluluk sınırı) / Terms of Use and EULA | [kullanim-kosullari.md](legal/tr/kullanim-kosullari.md) | [terms-of-use.md](legal/en/terms-of-use.md) |
+
+Soru ve talepler için: [GitHub Issues](https://github.com/E-mre-Hub/E-mre-Control-Center/issues) (herkese açık başlıklara kişisel
+bilgi yazma).
 
 ## Gereksinimler
 
@@ -155,7 +172,9 @@ kendi bakım araçlarını (SFC, DISM CheckHealth / onayla RestoreHealth, MRT h�
    "Windows kişisel bilgisayarınızı korudu" uyarısı çıkabilir. **Ek bilgi → Yine de çalıştır** seçin.
    (Bu, imzasız her uygulamada görülen normal bir uyarıdır; kaynak kodun tamamı bu depodadır.) Aynı nedenle UAC penceresinde
    "Yayıncı: Bilinmeyen" yazar; bkz. [Kod imzalama](#kod-imzalama-ve-bilinmeyen-yayıncı).
-4. Uygulama açılışta yönetici izni isteyecektir; UAC penceresinde **Evet** deyin. (İzin vermezseniz uygulama açılır ama 10 kartın tamamı
+4. İlk açılışta gereksinim ekranında **"Gereksinimleri, Kullanım Koşulları'nı ve Gizlilik Politikası'nı kabul ediyorum"** kutusunu
+   işaretleyip **Devam Et**'e basın (belgeler kutunun altındaki bağlantılardan okunabilir; bkz. [Gizlilik ve yasal belgeler](#gizlilik-ve-yasal-belgeler)).
+   Uygulama açılışta yönetici izni isteyecektir; UAC penceresinde **Evet** deyin. (İzin vermezseniz uygulama açılır ama 10 kartın tamamı
    kullanım dışı olur; hiçbir kontrol veya güncelleme yapılamaz. Hız Testi, Cihaz Bilgileri ve arama yine kullanılabilir.)
 5. Kaldırmak için: **Windows Ayarlar → Uygulamalar → Yüklü uygulamalar → E-mre Control Center → Kaldır**.
 6. Yeni sürümler uygulamanın içinden gelir: v1.7.0 ve sonrası uygulama açılırken, v1.8.3 ve sonrası uygulama açıkken de (en geç
@@ -173,6 +192,7 @@ uygulama **"Kartsız Devam Et"** ile kullanılabilir; yalnızca NVIDIA Driver ka
 Desktop\E-mre Control Center\        ← Proje klasörü (önceki adları: E-mre_Hub, E-mre_App)
 ├── E-mre Control Center.exe         ← Son uygulama (yerel derleme çıktısı; depoya konmaz)
 ├── README.md
+├── legal\                           ← Gizlilik Politikası + Kullanım Koşulları (tr\ ve en\; uygulama bu dosyalara bağlantı verir)
 ├── .gitignore / .gitattributes
 ├── .github\workflows\release.yml    ← Etiket gönderilince EXE'yi derleyip Releases'a ekler
 ├── assets\
@@ -194,6 +214,9 @@ Desktop\E-mre Control Center\        ← Proje klasörü (önceki adları: E-mre
     │   ├── ProtectedDirectory.cs    ← Yalnızca Yöneticiler + SYSTEM erişimli klasör (kaldırıcı kopyası, indirilen güncelleme)
     │   ├── Logger.cs                ← Thread-safe günlük (arayüz + dosya)
     │   ├── ProcessRunner.cs         ← Harici komut çalıştırma: stdout/stderr, zaman aşımı, süreç ağacını sonlandırma
+    │   ├── UnelevatedLauncher.cs    ← Yönetici olarak çalışırken bir aracı yönetici yetkisi OLMADAN başlatma (normal kullanıcı belirteci)
+    │   ├── ShellOpen.cs             ← Bağlantı / Windows Ayarlar sayfası / dosya açma (Gezgin üzerinden, yönetici yetkisi devredilmez)
+    │   ├── LogArchive.cs            ← Oturum günlüklerinin özeti ve 30 günden eskilerin (onaylı) silinmesi
     │   ├── CmdCommand.cs            ← Güvenli cmd.exe komut satırı (tırnaklama + tehlikeli karakter reddi)
     │   ├── RestartManager.cs        ← Windows Restart Manager API (dosyaları kullanan işlemlerin tespiti)
     │   ├── PowerShellRunner.cs      ← PowerShell 5.1 betikleri (##LOG / ##RESULT JSON protokolü)
@@ -239,6 +262,7 @@ Desktop\E-mre Control Center\        ← Proje klasörü (önceki adları: E-mre
     │                                  arayüz düzeni), DialogViewModel, DetailViewModel, ThrottledProgress, kart/satır modelleri, komutlar;
     │                                  SetupViewModels (kurulum ve kaldırma ekranları), UpdateViewModel (zorunlu güncelleme penceresi)
     │                                  + MainViewModel.Tools (tanılama bölmeleri, Özet tanılama satırları, araç işlem geçmişi), Tools\ (bölme görünüm modelleri)
+    │                                  + MainViewModel.Logs (günlük arşivi), MainViewModel.Legal (yasal belgeler, kabul kaydı)
     ├── Views\                       ← MainWindow.xaml(.cs): giriş sayfası, Kontrol Merkezi ana sayfası, kategori ekranları; RingGauge.cs, SpeedGauge.cs (hız göstergesi), CenteredWrapPanel.cs, WaveBackdrop.cs (ana sayfa dalga zemini, statik); Converters.cs;
     │                                  SetupWindow.xaml (kurulum), UninstallWindow.xaml (kaldırma + geri bildirim), SetupResources.xaml, WindowFrame.cs
     │                                  Tools\ToolViewsA.xaml / ToolViewsB.xaml (tanılama bölmelerinin şablonları); TrayIcon.cs + TrayController.cs (bildirim alanı simgesi ve menüsü)
@@ -301,22 +325,22 @@ tırnak içinde yazılır). Depo: https://github.com/E-mre-Hub/E-mre-Control-Cen
 
 ### Yeni sürüm yayınlama (depo sahibi)
 
-1. `src\RtxWindowsUpdater\RtxWindowsUpdater.csproj` içindeki `<Version>` değerini artırın (ör. `1.8.4`).
+1. `src\RtxWindowsUpdater\RtxWindowsUpdater.csproj` içindeki `<Version>` değerini artırın (ör. `1.9.0`).
 2. Değişiklikleri commit'leyip gönderin, ardından etiket oluşturun:
 
 ```bash
-git tag v1.8.4
+git tag v1.9.0
 ```
 
 ```bash
-git push origin v1.8.4
+git push origin v1.9.0
 ```
 
 3. GitHub Actions (`.github/workflows/release.yml`) EXE'yi Windows sunucusunda derler ve **Releases** sayfasına iki dosya ekler:
-   `E-mre-Control-Center-Setup-v1.8.4.exe` (kurulum) ve `E-mre-Control-Center-v1.8.4.zip` (taşınabilir). Arkadaşlar oradan indirir;
+   `E-mre-Control-Center-Setup-v1.9.0.exe` (kurulum) ve `E-mre-Control-Center-v1.9.0.zip` (taşınabilir). Arkadaşlar oradan indirir;
    yüklü uygulamalar bu yayını "Yeni sürüm yayınlandı" olarak görür (v1.7.2 ve sonrası).
-   Etiketteki sürüm (v1.8.4) EXE'nin sürümü olarak kullanılır; csproj'daki `<Version>` ile aynı olmalıdır. Yayının metni yalnızca
-   README'deki `### v1.8.4` bölümüdür (uygulamadaki güncelleme penceresinde de bu metin görünür); bu bölüm etiketten önce yazılmalıdır.
+   Etiketteki sürüm (v1.9.0) EXE'nin sürümü olarak kullanılır; csproj'daki `<Version>` ile aynı olmalıdır. Yayının metni yalnızca
+   README'deki `### v1.9.0` bölümüdür (uygulamadaki güncelleme penceresinde de bu metin görünür); bu bölüm etiketten önce yazılmalıdır.
 
 Not: Herkese açık depolarda GitHub Actions standart sunucularda ücretsizdir;
 bir derleme yaklaşık 3-5 dakika sürer.
@@ -369,6 +393,22 @@ depo sayfası → **Settings → Collaborators and teams → Add people** → Gi
   yönetici olarak yeniden açılır ve doğrudan ana ekrana döner.
 - `requireAdministrator` bilinçli olarak kullanılmadı: red durumunda Windows uygulamayı hiç açmaz ve kullanıcıya
   açıklama gösterilemezdi. UAC hiçbir şekilde atlatılmaz.
+
+### Yönetici yetkisiyle çalışırken korunma (v1.9.0)
+
+Yönetici olarak çalışan uygulama, normal kullanıcının (veya kullanıcı yetkisiyle çalışan başka bir programın) değiştirebildiği hiçbir
+şeyi yönetici yetkisiyle çalıştırmaz:
+- **winget** Windows'un korumalı paket klasöründen (`C:\Program Files\WindowsApps\Microsoft.DesktopAppInstaller_…`) çalıştırılır;
+  PATH'te aranmaz.
+- **NVIDIA kurulum dosyası** yalnızca Yöneticiler + SYSTEM erişimli bir klasöre indirilir; NVIDIA imzası doğrulandıktan sonra oradan
+  çalıştırılır ve kurulumdan sonra silinir.
+- Kullanıcı klasörüne kurulan **Speedtest by Ookla** aracı yönetici yetkisi OLMADAN (normal kullanıcı belirteci, orta bütünlük düzeyi)
+  çalıştırılır.
+- **Web bağlantıları, Windows Ayarlar sayfaları ve günlük dosyası** Windows Gezgini üzerinden açılır: tarayıcı / Ayarlar / metin
+  düzenleyici yönetici yetkisi almaz ve kullanıcı kayıt defterindeki dosya / protokol ilişkilendirmeleri yönetici yetkisiyle çalışmaz.
+  Uygulama yalnızca kendi izin listesindeki adresleri açar.
+- Yönetici olmadan indirilen **uygulama güncellemesi** (%TEMP%), doğrulamadan kurulumun başlamasına kadar değiştirilemeyecek şekilde
+  açık tutulur ve SHA-256 özeti yeniden okunur.
 
 ### Komutlar nasıl çalıştırılır (cmd.exe)
 
@@ -600,7 +640,7 @@ Kategori her açılışta ilk bölmesiyle açılır.
 | **Temizleme** | **Temizlik** (Windows Geçici Dosyalar, Çöp Kutusu kartları + işlem çubuğu) · **Depolama Analizi** · **İşlem Günlüğü** |
 | **Cihaz Sağlık** | **Sağlık Araçları** (SFC, DISM, MRT kartları + işlem çubuğu) · **Sistem Sağlığı** · **Depolama Sağlığı** · **Olay Günlüğü** · **Çökme Analizi** · **İşlem Günlüğü** |
 | **Hız Testi** | **Hız Testi** (BAŞLAT, seçili sunucu, canlı gösterge, indirme / yükleme, ping, titreşim, paket kaybı, kullanım uygunluğu, ISS ve sunucu, Ookla sonuç sayfası) · **Ağ Merkezi** · **DNS Tanılama** · **Sunucu** (Speedtest by Ookla sunucu listesi: Otomatik Seç, arama, en yakın sunucular; veya Cloudflare) · **Sonuçlar** (geçmiş) · **Yöntem** (nasıl ölçüldüğü) |
-| **Genel Ayarlar** | **Kolay Ayar** (açık / kapalı anahtarları: Windows bildirimleri, "Tümünü Güncelle ile Çöp Kutusu'nu boşalt") · **Gizlilik** · **Yönetici Yetkisi** (gerçek durum + yeniden başlatma) · **Günlük Dosyaları** (oturum günlüğü: aç / klasör / dışa aktar; uygulama veri klasörü) |
+| **Genel Ayarlar** | **Kolay Ayar** (açık / kapalı anahtarları: Windows bildirimleri, "Tümünü Güncelle ile Çöp Kutusu'nu boşalt") · **Gizlilik** · **Yönetici Yetkisi** (gerçek durum + yeniden başlatma) · **Günlük Dosyaları** (oturum günlüğü: aç / klasör / dışa aktar; günlük arşivi: 30 günden eskileri onaylı silme, isteğe bağlı otomatik silme; uygulama veri klasörü) · **Yasal ve Gizlilik** (Gizlilik Politikası, Kullanım Koşulları – Türkçe / English, bağlanılan hizmetler, kabul kaydı) |
 | **Özet** | **Sağlık Özeti** (10 kartın durumu + Sistem Tanılaması + Son İşlem) · **İşlem Geçmişi** · **Bulunan Güncellemeler** · **İşlem Günlüğü** |
 | **Cihaz Bilgileri** | **Cihaz Bilgileri** (İşlemci / Ekran Kartı / Bellek / Depolama / İşletim Sistemi kartları + Uyumluluk) · **Performans** (canlı kullanım, sıcaklık, disk etkinliği ve ağ göstergeleri) · **Batarya** · **Hakkında** |
 | **Sistem Araçları** | **Tek Tıkla Tanıla** · **Başlangıç Uygulamaları** · **Windows Servisleri** · **İşlemler** · **Güvenlik** · **Sistem Raporu** · **Destek Paketi** |
@@ -826,6 +866,10 @@ eski klasörlerde kalır (`%LOCALAPPDATA%\E-mre Hub\Logs\`, `%LOCALAPPDATA%\RTX 
 - Filtreler (Tümü / Bilgi / Başarılı / Uyarı / Hata) yalnızca görünümü değiştirir; kayıtlar silinmez.
 - "Logları Temizle" yalnızca ekranı temizler, günlük dosyası korunur. "Dışa Aktar" gerçek oturum günlüğünü seçtiğiniz konuma
   `E-mre-Control-Center-Log-YYYY-AA-GG.txt` olarak kopyalar. "Log dosyası" dosyayı, "Klasör" günlük klasörünü açar.
+- **Günlük arşivi (v1.9.0):** uygulama her açılışta yeni bir günlük dosyası oluşturur. Genel Ayarlar → Günlük Dosyaları'nda günlük
+  sayısı, toplam boyut ve en eski tarih görünür. **"30 günden eski günlükleri sil"** onay sorar; yalnızca bu uygulamanın
+  `session-*.log` dosyaları silinir, açık oturumun günlüğü, son 30 gün, işlem geçmişi ve ayarlar korunur. **"Açılışta 30 günden eski
+  günlükleri otomatik sil"** ayarı varsayılan olarak kapalıdır (kullanıcıdan habersiz dosya silinmez).
 
 ## 8. Bilinen sınırlamalar
 
@@ -902,6 +946,32 @@ eski klasörlerde kalır (`%LOCALAPPDATA%\E-mre Hub\Logs\`, `%LOCALAPPDATA%\RTX 
   yöneticinin klasörü).
 
 ## Sürüm geçmişi
+
+### v1.9.0
+
+**Yeni: Gizlilik Politikası ve Kullanım Koşulları (Türkçe + English)**
+- Gizlilik Politikası (çerez bildirimi dahil) ile Kullanım Koşulları ve Lisans Sözleşmesi (garanti reddi, sorumluluk sınırı, üçüncü
+  taraf yazılımlar) eklendi.
+- Gereksinim ekranındaki kutu artık Kullanım Koşulları'nı ve Gizlilik Politikası'nı da kapsar. Belgeler kutunun altındaki
+  bağlantılardan, kurulum ekranından ve Genel Ayarlar → Yasal ve Gizlilik bölümünden açılır. Kabul yalnızca bu bilgisayarda kaydedilir.
+- Uygulama hesap istemez; telemetri, analitik, reklam ve çerez kullanmaz.
+
+**Yeni: Günlük arşivi**
+- Genel Ayarlar → Günlük Dosyaları'nda günlüklerin sayısı ve boyutu görünür; 30 günden eski günlükler onayla silinebilir.
+- İsteğe bağlı "Açılışta 30 günden eski günlükleri otomatik sil" ayarı (varsayılan kapalı).
+
+**Güvenlik**
+- Yönetici olarak çalışırken winget yalnızca Windows'un korumalı paket klasöründen çalıştırılır, NVIDIA kurulum dosyası yalnızca
+  yöneticilerin erişebildiği bir klasöre indirilir ve Speedtest by Ookla aracı yönetici yetkisi olmadan çalıştırılır.
+- Bağlantılar, Windows Ayarlar sayfaları ve günlük dosyası yönetici yetkisi olmadan açılır.
+- Yönetici olmadan indirilen güncelleme dosyası, kurulum başlayana kadar kilitli tutulur ve yeniden doğrulanır.
+
+**Düzeltmeler**
+- Geçici dosyalar: temizlik öncesi / sonrası ölçüm ve temizlik aynı 24 saat sınırını kullanır; sınırdaki dosyalar yüzünden yanlış
+  "kısmen temizlendi" sonucu çıkmaz.
+- Winget: kurulumu arka planda süren paketlerde (ör. Discord) doğrulama birkaç kez yeniden denenir; hemen "Doğrulanamadı" denmez.
+- Çalışan uygulama tespiti: listelendikten sonra kapanan bir işlem artık "başka bir kullanıcı oturumunda" diye gösterilmez.
+- Ayarlar ve işlem geçmişi uygulama kapanırken beklemeden diske yazılır; kapanıştan hemen önceki değişiklik kaybolmaz.
 
 ### v1.8.4
 

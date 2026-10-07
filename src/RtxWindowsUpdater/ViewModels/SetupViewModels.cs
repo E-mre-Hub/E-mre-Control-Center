@@ -119,6 +119,12 @@ public sealed class SetupViewModel : ObservableObject
         RetryCommand = new AsyncCommand(StartInstallAsync, () => Page == SetupPage.Failed, OnError);
         FinishCommand = new RelayCommand(Finish);
         CloseCommand = new RelayCommand(() => RequestClose?.Invoke(), () => !IsWorking);
+        OpenLegalLinkCommand = new RelayCommand(p =>
+        {
+            // Yalnızca izin listesindeki yasal belge adresleri; tarayıcı yönetici yetkisi olmadan açılır.
+            if (p is not string url || !AppInfo.LegalLinks.Contains(url)) return;
+            if (ShellOpen.OpenUrl(url) is { } error) _log.Info($"Bağlantı açılamadı ({url}): {error}");
+        });
     }
 
     public event Action? RequestClose;
@@ -134,6 +140,7 @@ public sealed class SetupViewModel : ObservableObject
     public ICommand RetryCommand { get; }
     public ICommand FinishCommand { get; }
     public ICommand CloseCommand { get; }
+    public ICommand OpenLegalLinkCommand { get; }
 
     public SetupPage Page
     {

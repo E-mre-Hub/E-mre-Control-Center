@@ -14,6 +14,18 @@ public static class AppInfo
     /// <summary>Kaynak kod deposu (özel). Windows Uygulamalar kaydında "Destek bağlantısı" ve hız testi Referer başlığı.</summary>
     public const string RepositoryUrl = "https://github.com/E-mre-Hub/E-mre-Control-Center";
 
+    /// <summary>Yasal belgelerin sürümü (Gizlilik Politikası + Kullanım Koşulları; depo: legal/). Değişince kabul yeniden kaydedilir.</summary>
+    public const string LegalVersion = "1.0";
+
+    public const string PrivacyPolicyUrl = RepositoryUrl + "/blob/main/legal/tr/gizlilik-politikasi.md";
+    public const string TermsUrl = RepositoryUrl + "/blob/main/legal/tr/kullanim-kosullari.md";
+    public const string PrivacyPolicyUrlEn = RepositoryUrl + "/blob/main/legal/en/privacy-policy.md";
+    public const string TermsUrlEn = RepositoryUrl + "/blob/main/legal/en/terms-of-use.md";
+    public const string IssuesUrl = RepositoryUrl + "/issues";
+
+    /// <summary>Uygulamanın açmasına izin verilen yasal / proje adresleri (başka adres açılmaz).</summary>
+    public static IReadOnlyList<string> LegalLinks { get; } = [PrivacyPolicyUrl, TermsUrl, PrivacyPolicyUrlEn, TermsUrlEn, IssuesUrl];
+
     /// <summary>
     /// Uygulama içi güncellemenin denetlediği depo: ana depo (2026-09-26'dan beri herkese açık; GitHub Actions her etiketle kurulum
     /// dosyasını ve sürüm notlarını buraya yayınlar). v1.7.0 – v1.7.1 ayrı "E-mre-Control-Center-Releases" deposuna bakıyordu

@@ -156,13 +156,19 @@ public sealed class NvidiaDriverManager(Logger logger, HttpClient http) : IUpdat
             return ModuleResult.Failed(Key, reason, check.Details);
         }
 
-        var dir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData),
-            AppInfo.Name, "Downloads");
+        // Yönetici yetkisiyle çalıştırılacak kurulum dosyası, bu indirmeye özel ve yalnızca Yöneticiler + SYSTEM erişimli bir klasöre iner
+        // (ProtectedDirectory): standart kullanıcı yetkisiyle çalışan bir işlem dosyayı imza doğrulamasından SONRA değiştiremez. Önceki
+        // C:\ProgramData\E-mre Control Center\Downloads klasöründe normal kullanıcılar önceden dosya oluşturabiliyordu (sahibi olarak
+        // doğrulamayla çalıştırma arasında içeriği değiştirebilirdi).
+        var programData = Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData);
+        CleanupStaleDownloads(programData);
+        var dir = Path.Combine(programData, $"{DownloadFolderPrefix}{Guid.NewGuid():N}");
         var file = Path.Combine(dir, Path.GetFileName(uri.LocalPath));
 
         try
         {
-            Directory.CreateDirectory(dir);
+            if (AdminPrivilegeManager.IsElevated) ProtectedDirectory.Create(dir);
+            else Directory.CreateDirectory(dir);
 
             // --- İndirme ---
             logger.Info($"NVIDIA sürücüsü indiriliyor: {uri}");
@@ -240,7 +246,7 @@ public sealed class NvidiaDriverManager(Logger logger, HttpClient http) : IUpdat
         }
         finally
         {
-            // Yalnızca bu uygulamanın kendi indirdiği geçici kurulum dosyası temizlenir.
+            // Yalnızca bu uygulamanın kendi indirdiği geçici kurulum dosyası ve bu indirmeye özel klasör temizlenir.
             try
             {
                 if (File.Exists(file))
@@ -248,8 +254,42 @@ public sealed class NvidiaDriverManager(Logger logger, HttpClient http) : IUpdat
                     File.Delete(file);
                     logger.Info("Uygulamanın indirdiği geçici NVIDIA kurulum dosyası silindi.");
                 }
+                if (Directory.Exists(dir) && !Directory.EnumerateFileSystemEntries(dir).Any()) Directory.Delete(dir);
             }
-            catch { /* kilitliyse bir sonraki çalıştırmada üzerine yazılır */ }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+            {
+                // kilitliyse bir sonraki güncellemede CleanupStaleDownloads siler
+            }
+        }
+    }
+
+    /// <summary>Bu uygulamanın NVIDIA indirme klasörlerinin ön eki (C:\ProgramData altında; korumalı, tek kullanımlık).</summary>
+    internal const string DownloadFolderPrefix = AppInfo.Name + " NVIDIA ";
+
+    /// <summary>
+    /// Önceki (yarıda kalmış) NVIDIA indirme klasörlerini siler: yalnızca bu uygulamanın ön ekli klasörleri. Directory.Delete bağlantı
+    /// noktalarını (junction) izlemez, yalnızca bağlantının kendisini siler.
+    /// </summary>
+    private void CleanupStaleDownloads(string programData)
+    {
+        try
+        {
+            foreach (var stale in Directory.EnumerateDirectories(programData, DownloadFolderPrefix + "*"))
+            {
+                try
+                {
+                    Directory.Delete(stale, true);
+                    logger.Info("Önceki NVIDIA indirme klasörü silindi: " + stale);
+                }
+                catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+                {
+                    // kurulum programı hâlâ çalışıyor olabilir
+                }
+            }
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            // ProgramData listelenemedi: yeni indirme yine de korumalı klasöre yapılır
         }
     }
 

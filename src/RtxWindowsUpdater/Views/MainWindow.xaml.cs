@@ -120,6 +120,7 @@ public partial class MainWindow : Window
         QuickScroll.ScrollToTop();
         AdminScroll.ScrollToTop();
         LogFilesScroll.ScrollToTop();
+        LegalScroll.ScrollToTop();
         DeviceScroll.ScrollToTop();
         DeviceStatusScroll.ScrollToTop();
         DeviceAboutScroll.ScrollToTop();
