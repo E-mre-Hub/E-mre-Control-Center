@@ -106,7 +106,7 @@ public sealed class LargeFileAnalyzer(Logger logger)
                 dirFiles++;
                 files.Enqueue(new FileEntry(f.FullName, size, f.LastWriteTime), size);
                 if (files.Count > TopFiles) files.Dequeue();
-                var ext = string.IsNullOrEmpty(f.Extension) ? "(uzantısız)" : f.Extension.ToLowerInvariant();
+                var ext = string.IsNullOrEmpty(f.Extension) ? L.T("(uzantısız)", "(no extension)") : f.Extension.ToLowerInvariant();
                 types[ext] = types.TryGetValue(ext, out var t) ? (t.Size + size, t.Count + 1) : (size, 1);
             }
             // Klasör boyutu: bu klasördeki dosyalar kökten bu klasöre kadar tüm üst klasörlere eklenir.
@@ -136,8 +136,8 @@ public sealed class LargeFileAnalyzer(Logger logger)
             .Select(kv => new TypeEntry(kv.Key, kv.Value.Size, kv.Value.Count, total > 0 ? kv.Value.Size * 100.0 / total : 0)).ToList();
         var volume = StorageHealthService.ReadVolumes()
             .FirstOrDefault(v => root.StartsWith(v.Letter, StringComparison.OrdinalIgnoreCase));
-        logger.Info($"Depolama analizi {(cancelled ? "iptal edildi" : "tamamlandı")}: {root} – {fileCount:N0} dosya, {Formats.Bytes(total)}, " +
-                    $"{skipped} erişilemeyen öğe, {watch.Elapsed.TotalSeconds:0.0} sn.");
+        logger.Info(L.T($"Depolama analizi {(cancelled ? "iptal edildi" : "tamamlandı")}: {root} – {fileCount:N0} dosya, {Formats.Bytes(total)}, ", $"Storage analysis {(cancelled ? "cancelled" : "completed")}: {root} – {fileCount:N0} files, {Formats.Bytes(total)}, ") +
+                    L.T($"{skipped} erişilemeyen öğe, {watch.Elapsed.TotalSeconds:0.0} sn.", $"{skipped} inaccessible item(s), {watch.Elapsed.TotalSeconds:0.0} sec."));
         return new AnalysisResult(root, total, fileCount, folderCount, skipped, largest, folders, typeList, volume, watch.Elapsed, cancelled);
     }
 
@@ -156,14 +156,14 @@ public sealed class LargeFileAnalyzer(Logger logger)
         ];
         foreach (var r in roots.Where(r => !string.IsNullOrEmpty(r)))
             if (full.StartsWith(r.TrimEnd('\\') + "\\", StringComparison.OrdinalIgnoreCase))
-                return $"{r} altındaki dosyalar korunur (sistem / program dosyası).";
+                return L.T($"{r} altındaki dosyalar korunur (sistem / program dosyası).", $"Files under {r} are protected (system / program files).");
         try
         {
-            if (File.GetAttributes(full).HasFlag(FileAttributes.System)) return "Sistem dosyası olarak işaretli; korunur.";
+            if (File.GetAttributes(full).HasFlag(FileAttributes.System)) return L.T("Sistem dosyası olarak işaretli; korunur.", "Marked as a system file; protected.");
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
         {
-            return "Dosyaya erişilemiyor: " + ex.Message;
+            return L.T("Dosyaya erişilemiyor: ", "Cannot access the file: ") + ex.Message;
         }
         return null;
     }
@@ -174,7 +174,7 @@ public sealed class LargeFileAnalyzer(Logger logger)
     /// </summary>
     public (bool Success, string Message) SendToRecycleBin(string path, IntPtr owner)
     {
-        if (!File.Exists(path)) return (false, "Dosya bulunamadı: " + path);
+        if (!File.Exists(path)) return (false, L.T("Dosya bulunamadı: ", "File not found: ") + path);
         if (ProtectedReason(path) is { } reason) return (false, reason);
         var op = new ShFileOpStruct
         {
@@ -184,11 +184,11 @@ public sealed class LargeFileAnalyzer(Logger logger)
             fFlags = FofAllowUndo | FofWantNukeWarning
         };
         var code = SHFileOperation(ref op);
-        if (op.fAnyOperationsAborted) return (false, "İşlem iptal edildi; dosya silinmedi.");
-        if (code != 0) return (false, $"Windows dosyayı taşıyamadı (kod 0x{code:X}).");
-        if (File.Exists(path)) return (false, "Dosya hâlâ yerinde (kullanımda olabilir).");
-        logger.Info("Geri Dönüşüm Kutusu'na gönderildi: " + path);
-        return (true, "Dosya Geri Dönüşüm Kutusu'na gönderildi (oradan geri alınabilir).");
+        if (op.fAnyOperationsAborted) return (false, L.T("İşlem iptal edildi; dosya silinmedi.", "Operation cancelled; the file was not deleted."));
+        if (code != 0) return (false, L.T($"Windows dosyayı taşıyamadı (kod 0x{code:X}).", $"Windows could not move the file (code 0x{code:X})."));
+        if (File.Exists(path)) return (false, L.T("Dosya hâlâ yerinde (kullanımda olabilir).", "The file is still in place (it may be in use)."));
+        logger.Info(L.T("Geri Dönüşüm Kutusu'na gönderildi: ", "Sent to the Recycle Bin: ") + path);
+        return (true, L.T("Dosya Geri Dönüşüm Kutusu'na gönderildi (oradan geri alınabilir).", "The file was sent to the Recycle Bin (it can be restored from there)."));
     }
 
     private const uint FoDelete = 0x0003;

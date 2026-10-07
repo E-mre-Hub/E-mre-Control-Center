@@ -99,45 +99,45 @@ public sealed class WingetManager(Logger logger, string source, string key, stri
     private static readonly Dictionary<uint, WingetCode> Codes = new()
     {
         [InstallTechnologyMismatch] = new("UPDATE_INSTALL_TECHNOLOGY_MISMATCH",
-            "Güncelleme bulundu ancak mevcut kurulum teknolojisi ile yeni sürümün kurulum teknolojisi farklı. " +
-            "Winget otomatik yükseltemiyor; paketi kaldırıp yeni sürümü kurmak gerekir.",
-            "Kurulum teknolojisi uyuşmazlığı"),
+            L.T("Güncelleme bulundu ancak mevcut kurulum teknolojisi ile yeni sürümün kurulum teknolojisi farklı. ", "An update was found, but the installer technology of the current installation differs from that of the new version. ") +
+            L.T("Winget otomatik yükseltemiyor; paketi kaldırıp yeni sürümü kurmak gerekir.", "Winget cannot upgrade it automatically; the package must be uninstalled and the new version installed."),
+            L.T("Kurulum teknolojisi uyuşmazlığı", "Installer technology mismatch")),
         [InstallPackageInUseByApplication] = new("INSTALL_PACKAGE_IN_USE_BY_APPLICATION",
-            "Kurulum programı, uygulamanın başka bir uygulama tarafından kullanıldığını bildirdi. İlgili uygulamaları kapatıp tekrar deneyin.",
-            "Uygulama/kurulum programının kullandığı dosyalar kullanımda"),
-        [InstallPackageInUse] = new("INSTALL_PACKAGE_IN_USE", "Uygulama şu anda çalışıyor. Uygulamayı kapatıp tekrar deneyin.",
-            "Uygulama çalışıyor"),
-        [0x8A150102] = new("INSTALL_INSTALL_IN_PROGRESS", "Başka bir kurulum sürüyor. Daha sonra tekrar deneyin.",
-            "Başka bir kurulum sürüyor"),
-        [InstallFileInUse] = new("INSTALL_FILE_IN_USE", "Bir veya daha fazla dosya kullanımda. Uygulamayı kapatıp tekrar deneyin.",
-            "Dosyalar kullanımda"),
-        [0x8A150104] = new("INSTALL_MISSING_DEPENDENCY", "Paketin sistemde eksik bir bağımlılığı var.", "Eksik bağımlılık"),
-        [0x8A150105] = new("INSTALL_DISK_FULL", "Diskte yeterli alan yok.", "Disk dolu"),
-        [0x8A150106] = new("INSTALL_INSUFFICIENT_MEMORY", "Kurulum için yeterli bellek yok.", "Yetersiz bellek"),
-        [0x8A150107] = new("INSTALL_NO_NETWORK", "Kurulum internet bağlantısı gerektiriyor.", "İnternet bağlantısı gerekli"),
-        [0x8A150108] = new("INSTALL_CONTACT_SUPPORT", "Kurulum sırasında hata oluştu; üretici desteğine başvurulmalı.",
-            "Kurulum hatası (üretici desteği gerekli)"),
-        [0x8A150109] = new("INSTALL_REBOOT_REQUIRED_TO_FINISH", "Kurulumun tamamlanması için yeniden başlatma gerekiyor.",
-            "Yeniden başlatma gerekli"),
-        [0x8A15010A] = new("INSTALL_REBOOT_REQUIRED_FOR_INSTALL", "Kurulum başarısız: bilgisayarı yeniden başlatıp tekrar deneyin.",
-            "Kurulumdan önce yeniden başlatma gerekli"),
-        [0x8A15010B] = new("INSTALL_REBOOT_INITIATED", "Kurulum programı, kurulumu tamamlamak için yeniden başlatma bildirdi.",
-            "Kurulum yeniden başlatma bildirdi"),
-        [0x8A15010C] = new("INSTALL_CANCELLED_BY_USER", "Kurulum iptal edildi.", "Kurulum iptal edildi"),
-        [0x8A15010D] = new("INSTALL_ALREADY_INSTALLED", "Uygulamanın başka bir sürümü zaten kurulu.", "Başka bir sürüm kurulu"),
-        [0x8A15010E] = new("INSTALL_DOWNGRADE", "Daha yüksek bir sürüm zaten kurulu.", "Daha yüksek sürüm kurulu"),
-        [0x8A15010F] = new("INSTALL_BLOCKED_BY_POLICY", "Kurum ilkeleri kurulumu engelliyor.", "Kurum ilkesi engelliyor"),
-        [0x8A150110] = new("INSTALL_DEPENDENCIES", "Paket bağımlılıkları kurulamadı.", "Bağımlılıklar kurulamadı"),
-        [0x8A150112] = new("INSTALL_INVALID_PARAMETER", "Kurulum programı geçersiz parametre bildirdi.", "Geçersiz kurulum parametresi"),
-        [0x8A150113] = new("INSTALL_SYSTEM_NOT_SUPPORTED", "Paket bu sistemi desteklemiyor.", "Sistem desteklenmiyor"),
-        [0x8A150114] = new("INSTALL_UPGRADE_NOT_SUPPORTED", "Kurulum programı mevcut paketin yükseltilmesini desteklemiyor.",
-            "Yükseltme desteklenmiyor"),
-        [0x8A150115] = new("INSTALL_CUSTOM_ERROR", "Kurulum programı özel bir hata kodu döndürdü.", "Kurulum programı özel hata"),
-        [0x8A15002B] = new("UPDATE_NOT_APPLICABLE", "Uygulanabilir güncelleme bulunamadı.", "Uygulanabilir güncelleme yok"),
-        [0x8A150014] = new("NO_APPLICATIONS_FOUND", "Paket bulunamadı.", "Paket bulunamadı"),
-        [0x8A150011] = new("INSTALLER_HASH_MISMATCH", "İndirilen kurulum dosyasının karması manifestle eşleşmiyor; güvenlik nedeniyle kurulmadı.",
-            "Kurulum dosyası karması eşleşmiyor"),
-        [0x8A150010] = new("NO_APPLICABLE_INSTALLER", "Bu sistem için uygun kurulum programı yok.", "Uygun kurulum programı yok")
+            L.T("Kurulum programı, uygulamanın başka bir uygulama tarafından kullanıldığını bildirdi. İlgili uygulamaları kapatıp tekrar deneyin.", "The installer reported that the app is in use by another app. Close the related apps and try again."),
+            L.T("Uygulama/kurulum programının kullandığı dosyalar kullanımda", "Files used by the app/installer are in use")),
+        [InstallPackageInUse] = new("INSTALL_PACKAGE_IN_USE", L.T("Uygulama şu anda çalışıyor. Uygulamayı kapatıp tekrar deneyin.", "The app is currently running. Close the app and try again."),
+            L.T("Uygulama çalışıyor", "App is running")),
+        [0x8A150102] = new("INSTALL_INSTALL_IN_PROGRESS", L.T("Başka bir kurulum sürüyor. Daha sonra tekrar deneyin.", "Another installation is in progress. Try again later."),
+            L.T("Başka bir kurulum sürüyor", "Another installation is in progress")),
+        [InstallFileInUse] = new("INSTALL_FILE_IN_USE", L.T("Bir veya daha fazla dosya kullanımda. Uygulamayı kapatıp tekrar deneyin.", "One or more files are in use. Close the app and try again."),
+            L.T("Dosyalar kullanımda", "Files in use")),
+        [0x8A150104] = new("INSTALL_MISSING_DEPENDENCY", L.T("Paketin sistemde eksik bir bağımlılığı var.", "The package is missing a dependency on the system."), L.T("Eksik bağımlılık", "Missing dependency")),
+        [0x8A150105] = new("INSTALL_DISK_FULL", L.T("Diskte yeterli alan yok.", "There is not enough disk space."), L.T("Disk dolu", "Disk full")),
+        [0x8A150106] = new("INSTALL_INSUFFICIENT_MEMORY", L.T("Kurulum için yeterli bellek yok.", "There is not enough memory for the installation."), L.T("Yetersiz bellek", "Insufficient memory")),
+        [0x8A150107] = new("INSTALL_NO_NETWORK", L.T("Kurulum internet bağlantısı gerektiriyor.", "The installation requires an internet connection."), L.T("İnternet bağlantısı gerekli", "Internet connection required")),
+        [0x8A150108] = new("INSTALL_CONTACT_SUPPORT", L.T("Kurulum sırasında hata oluştu; üretici desteğine başvurulmalı.", "An error occurred during installation; contact the publisher's support."),
+            L.T("Kurulum hatası (üretici desteği gerekli)", "Installation error (publisher support needed)")),
+        [0x8A150109] = new("INSTALL_REBOOT_REQUIRED_TO_FINISH", L.T("Kurulumun tamamlanması için yeniden başlatma gerekiyor.", "A restart is required to complete the installation."),
+            L.T("Yeniden başlatma gerekli", "Restart required")),
+        [0x8A15010A] = new("INSTALL_REBOOT_REQUIRED_FOR_INSTALL", L.T("Kurulum başarısız: bilgisayarı yeniden başlatıp tekrar deneyin.", "Installation failed: restart the computer and try again."),
+            L.T("Kurulumdan önce yeniden başlatma gerekli", "Restart required before installation")),
+        [0x8A15010B] = new("INSTALL_REBOOT_INITIATED", L.T("Kurulum programı, kurulumu tamamlamak için yeniden başlatma bildirdi.", "The installer reported a restart to complete the installation."),
+            L.T("Kurulum yeniden başlatma bildirdi", "Installer reported a restart")),
+        [0x8A15010C] = new("INSTALL_CANCELLED_BY_USER", L.T("Kurulum iptal edildi.", "Installation cancelled."), L.T("Kurulum iptal edildi", "Installation cancelled")),
+        [0x8A15010D] = new("INSTALL_ALREADY_INSTALLED", L.T("Uygulamanın başka bir sürümü zaten kurulu.", "Another version of the app is already installed."), L.T("Başka bir sürüm kurulu", "Another version installed")),
+        [0x8A15010E] = new("INSTALL_DOWNGRADE", L.T("Daha yüksek bir sürüm zaten kurulu.", "A higher version is already installed."), L.T("Daha yüksek sürüm kurulu", "Higher version installed")),
+        [0x8A15010F] = new("INSTALL_BLOCKED_BY_POLICY", L.T("Kurum ilkeleri kurulumu engelliyor.", "Organization policy blocks the installation."), L.T("Kurum ilkesi engelliyor", "Blocked by organization policy")),
+        [0x8A150110] = new("INSTALL_DEPENDENCIES", L.T("Paket bağımlılıkları kurulamadı.", "The package dependencies could not be installed."), L.T("Bağımlılıklar kurulamadı", "Dependencies could not be installed")),
+        [0x8A150112] = new("INSTALL_INVALID_PARAMETER", L.T("Kurulum programı geçersiz parametre bildirdi.", "The installer reported an invalid parameter."), L.T("Geçersiz kurulum parametresi", "Invalid installer parameter")),
+        [0x8A150113] = new("INSTALL_SYSTEM_NOT_SUPPORTED", L.T("Paket bu sistemi desteklemiyor.", "The package does not support this system."), L.T("Sistem desteklenmiyor", "System not supported")),
+        [0x8A150114] = new("INSTALL_UPGRADE_NOT_SUPPORTED", L.T("Kurulum programı mevcut paketin yükseltilmesini desteklemiyor.", "The installer does not support upgrading the existing package."),
+            L.T("Yükseltme desteklenmiyor", "Upgrade not supported")),
+        [0x8A150115] = new("INSTALL_CUSTOM_ERROR", L.T("Kurulum programı özel bir hata kodu döndürdü.", "The installer returned a custom error code."), L.T("Kurulum programı özel hata", "Installer custom error")),
+        [0x8A15002B] = new("UPDATE_NOT_APPLICABLE", L.T("Uygulanabilir güncelleme bulunamadı.", "No applicable update was found."), L.T("Uygulanabilir güncelleme yok", "No applicable update")),
+        [0x8A150014] = new("NO_APPLICATIONS_FOUND", L.T("Paket bulunamadı.", "Package not found."), L.T("Paket bulunamadı", "Package not found")),
+        [0x8A150011] = new("INSTALLER_HASH_MISMATCH", L.T("İndirilen kurulum dosyasının karması manifestle eşleşmiyor; güvenlik nedeniyle kurulmadı.", "The hash of the downloaded installer does not match the manifest; it was not installed for security reasons."),
+            L.T("Kurulum dosyası karması eşleşmiyor", "Installer hash mismatch")),
+        [0x8A150010] = new("NO_APPLICABLE_INSTALLER", L.T("Bu sistem için uygun kurulum programı yok.", "There is no suitable installer for this system."), L.T("Uygun kurulum programı yok", "No suitable installer"))
     };
 
     private static string? _packagedWinget;
@@ -229,7 +229,7 @@ public sealed class WingetManager(Logger logger, string source, string key, stri
         private readonly Stopwatch _phaseClock = Stopwatch.StartNew();
         private readonly Timer _timer;
         private readonly object _lock = new();
-        private string _phase = "başlatılıyor";
+        private string _phase = L.T("başlatılıyor", "starting");
         private string? _detail;
         private bool _disposed;
 
@@ -272,10 +272,10 @@ public sealed class WingetManager(Logger logger, string source, string key, stri
                 lock (_lock) _detail = detail;
                 return; // zamanlayıcı en geç 5 sn içinde gösterir (her ilerleme karesinde bildirim yapılmaz)
             }
-            if (s.StartsWith("Downloading", StringComparison.OrdinalIgnoreCase)) SetPhase("indiriliyor");
-            else if (s.Contains("verified installer hash", StringComparison.OrdinalIgnoreCase)) SetPhase("kurulum dosyası doğrulandı");
-            else if (s.StartsWith("Starting package install", StringComparison.OrdinalIgnoreCase)) SetPhase("kuruluyor");
-            else if (s.StartsWith("Successfully installed", StringComparison.OrdinalIgnoreCase)) SetPhase("kuruldu");
+            if (s.StartsWith("Downloading", StringComparison.OrdinalIgnoreCase)) SetPhase(L.T("indiriliyor", "downloading"));
+            else if (s.Contains("verified installer hash", StringComparison.OrdinalIgnoreCase)) SetPhase(L.T("kurulum dosyası doğrulandı", "installer verified"));
+            else if (s.StartsWith("Starting package install", StringComparison.OrdinalIgnoreCase)) SetPhase(L.T("kuruluyor", "installing"));
+            else if (s.StartsWith("Successfully installed", StringComparison.OrdinalIgnoreCase)) SetPhase(L.T("kuruldu", "installed"));
         }
 
         private static string FormatSize(string value) =>
@@ -308,11 +308,11 @@ public sealed class WingetManager(Logger logger, string source, string key, stri
 
     public async Task<ModuleResult> CheckAsync(CancellationToken ct)
     {
-        logger.Info($"{displayName}: winget kontrol ediliyor...");
+        logger.Info(L.T($"{displayName}: winget kontrol ediliyor...", $"{displayName}: checking winget..."));
         var winget = LocateWinget();
         if (winget is null)
         {
-            const string reason = "Winget (Windows Paket Yöneticisi) bulunamadı. Microsoft Store'dan 'Uygulama Yükleyicisi' (App Installer) kurulmalı.";
+            var reason = L.T("Winget (Windows Paket Yöneticisi) bulunamadı. Microsoft Store'dan 'Uygulama Yükleyicisi' (App Installer) kurulmalı.", "Winget (Windows Package Manager) was not found. Install 'App Installer' from Microsoft Store.");
             logger.Error(reason);
             return ModuleResult.CheckFailed(key, reason);
         }
@@ -325,16 +325,16 @@ public sealed class WingetManager(Logger logger, string source, string key, stri
             var ver = await ProcessRunner.RunCmdAsync(winget, ["--version"], TimeSpan.FromSeconds(30), ct);
             if (!ver.Succeeded)
             {
-                var reason = "Winget çalıştırılamadı: " + ProcessRunner.Describe(ver, "winget");
+                var reason = L.T("Winget çalıştırılamadı: ", "Could not run winget: ") + ProcessRunner.Describe(ver, "winget");
                 logger.Error(reason);
                 return ModuleResult.CheckFailed(key, reason);
             }
             version = ver.StdOut.Trim();
             lock (VersionLock) _cachedVersion = version;
         }
-        logger.Success($"Winget bulundu ({version}; {(IsPackagedPath(winget) ? "korumalı paket klasörü" : "Windows uygulama takma adı")}).");
+        logger.Success(L.T($"Winget bulundu ({version}; {(IsPackagedPath(winget) ? "korumalı paket klasörü" : "Windows uygulama takma adı")}).", $"Winget found ({version}; {(IsPackagedPath(winget) ? "protected package folder" : "Windows app execution alias")})."));
 
-        logger.Info($"{displayName}: '{source}' kaynağında güncellemeler aranıyor...");
+        logger.Info(L.T($"{displayName}: '{source}' kaynağında güncellemeler aranıyor...", $"{displayName}: searching for updates in the '{source}' source..."));
         var up = await RunWingetAsync(winget, Args("upgrade", "--source", source), ListTimeout, ct);
         if (!up.Started || up.TimedOut || up.Cancelled)
         {
@@ -353,12 +353,12 @@ public sealed class WingetManager(Logger logger, string source, string key, stri
         var exit = unchecked((uint)up.ExitCode);
         if (tables.Count == 0 && up.ExitCode != 0 && exit != NoApplicationsFound && exit != UpdateNotApplicable)
         {
-            var reason = $"'{source}' kaynağı sorgulanamadı: " + DescribeFailure(up);
+            var reason = L.T($"'{source}' kaynağı sorgulanamadı: ", $"Could not query the '{source}' source: ") + DescribeFailure(up);
             logger.Error(reason);
             return ModuleResult.CheckFailed(key, reason);
         }
         if (up.ExitCode != 0 && tables.Count > 0)
-            logger.Warning($"winget uyarı koduyla döndü ({up.ExitCodeHex}); bulunan liste kullanılıyor.");
+            logger.Warning(L.T($"winget uyarı koduyla döndü ({up.ExitCodeHex}); bulunan liste kullanılıyor.", $"winget returned a warning code ({up.ExitCodeHex}); using the list it found."));
 
         var items = new List<UpdateItem>();
         var edgeNotes = new List<string>();
@@ -395,12 +395,12 @@ public sealed class WingetManager(Logger logger, string source, string key, stri
                         : table.RequiresExplicitTargeting ? ManualUpdateKind.ExplicitTargeting
                         : ManualUpdateKind.None,
                     StatusText = mismatch
-                        ? "Güncelleme mevcut – winget otomatik yükseltemiyor (kurulum teknolojisi farklı, 0x8A15008E); paketi kaldırıp yeni sürümü kurun"
+                        ? L.T("Güncelleme mevcut – winget otomatik yükseltemiyor (kurulum teknolojisi farklı, 0x8A15008E); paketi kaldırıp yeni sürümü kurun", "Update available – winget cannot upgrade it automatically (different installer technology, 0x8A15008E); uninstall the package and install the new version")
                         : noChange
-                            ? $"Winget {row.Available} sürümünü listeliyor ama kurulumu sürümü değiştirmiyor (kurulu {row.Version} kaldı) – winget ile güncellenemiyor, güncelleme sayılmadı"
+                            ? L.T($"Winget {row.Available} sürümünü listeliyor ama kurulumu sürümü değiştirmiyor (kurulu {row.Version} kaldı) – winget ile güncellenemiyor, güncelleme sayılmadı", $"Winget lists version {row.Available} but its installer does not change the version ({row.Version} remained installed) – cannot be updated with winget, not counted as an update")
                             : table.RequiresExplicitTargeting
-                                ? "Güncelleme mevcut (açık hedefleme gerekli – otomatik güncellenmez)"
-                                : "Güncelleme mevcut"
+                                ? L.T("Güncelleme mevcut (açık hedefleme gerekli – otomatik güncellenmez)", "Update available (explicit targeting required – not updated automatically)")
+                                : L.T("Güncelleme mevcut", "Update available")
                 });
             }
         }
@@ -436,36 +436,36 @@ public sealed class WingetManager(Logger logger, string source, string key, stri
                     NewVersion = row.Version,
                     UpdateAvailable = false,
                     AutoUpdatable = false,
-                    StatusText = "Güncel"
+                    StatusText = L.T("Güncel", "Up to date")
                 });
             }
         }
         else
         {
-            logger.Warning("Kurulu paket listesi alınamadı: " + ProcessRunner.Describe(list, "winget list"));
+            logger.Warning(L.T("Kurulu paket listesi alınamadı: ", "Could not get the installed package list: ") + ProcessRunner.Describe(list, "winget list"));
         }
 
-        if (actionable > 0) logger.Warning($"{displayName}: {actionable} güncelleme bulundu.");
-        else logger.Success($"{displayName}: otomatik uygulanabilir güncelleme bulunamadı.");
+        if (actionable > 0) logger.Warning(L.T($"{displayName}: {actionable} güncelleme bulundu.", $"{displayName}: {actionable} update(s) found."));
+        else logger.Success(L.T($"{displayName}: otomatik uygulanabilir güncelleme bulunamadı.", $"{displayName}: no automatically applicable update found."));
         if (explicitCount > 0)
-            logger.Info($"{displayName}: {explicitCount} paket yalnızca açık hedeflemeyle güncellenebilir (sabitlenmiş/özel paket); otomatik güncellenmeyecek.");
+            logger.Info(L.T($"{displayName}: {explicitCount} paket yalnızca açık hedeflemeyle güncellenebilir (sabitlenmiş/özel paket); otomatik güncellenmeyecek.", $"{displayName}: {explicitCount} package(s) can only be updated with explicit targeting (pinned/special package); they will not be updated automatically."));
         if (mismatchCount > 0)
-            logger.Warning($"{displayName}: {mismatchCount} paket bu oturumda kurulum teknolojisi uyuşmazlığı (0x8A15008E) bildirdiği için " +
-                           "otomatik güncellemeye alınmadı; bu paketler kaldırılıp yeni sürüm kurularak güncellenebilir.");
+            logger.Warning(L.T($"{displayName}: {mismatchCount} paket bu oturumda kurulum teknolojisi uyuşmazlığı (0x8A15008E) bildirdiği için ", $"{displayName}: {mismatchCount} package(s) reported an installer technology mismatch (0x8A15008E) in this session, so they were ") +
+                           L.T("otomatik güncellemeye alınmadı; bu paketler kaldırılıp yeni sürüm kurularak güncellenebilir.", "not included in automatic updates; they can be updated by uninstalling them and installing the new version."));
         if (noChangeCount > 0)
-            logger.Info($"{displayName}: winget'te güncellenebilir görünen ama kurulumu sürümü değiştirmeyen {noChangeCount} paket güncelleme sayılmadı: " +
+            logger.Info(L.T($"{displayName}: winget'te güncellenebilir görünen ama kurulumu sürümü değiştirmeyen {noChangeCount} paket güncelleme sayılmadı: ", $"{displayName}: {noChangeCount} package(s) that look updatable in winget but whose installer does not change the version were not counted as updates: ") +
                         string.Join(", ", items.Where(i => i.Manual == ManualUpdateKind.NoVersionChange).Select(i => i.Name)) + ".");
 
         // Otomatik uygulanabilir ve manuel (açık hedefleme / teknoloji uyuşmazlığı) güncellemeler ayrı sayılır;
         // manuel olanlar "güncelleme bulundu" sayısına ve "Tümünü Güncelle"ye dahil edilmez.
         var manual = explicitCount + mismatchCount;
-        var details = $"Otomatik uygulanabilir: {actionable}";
+        var details = L.T($"Otomatik uygulanabilir: {actionable}", $"Automatically applicable: {actionable}");
         var edgeCount = items.Count(i => i.UpdateAvailable && IsEdgeManaged(i.Id, out _));
-        if (edgeCount > 0) details += $"\nMicrosoft Edge Update ile güncellenecek: {edgeCount}";
-        if (explicitCount > 0) details += $"\nManuel / açık hedefleme gerekli: {explicitCount}";
-        if (mismatchCount > 0) details += $"\nManuel – kurulum teknolojisi farklı (0x8A15008E): {mismatchCount}";
-        if (noChangeCount > 0) details += $"\nWinget ile güncellenemeyen (kurulum sürümü değiştirmiyor): {noChangeCount}";
-        if (upToDate.Count > 0) details += $"\nGüncel paket: {upToDate.Count}";
+        if (edgeCount > 0) details += L.T($"\nMicrosoft Edge Update ile güncellenecek: {edgeCount}", $"\nTo be updated with Microsoft Edge Update: {edgeCount}");
+        if (explicitCount > 0) details += L.T($"\nManuel / açık hedefleme gerekli: {explicitCount}", $"\nManual / explicit targeting required: {explicitCount}");
+        if (mismatchCount > 0) details += L.T($"\nManuel – kurulum teknolojisi farklı (0x8A15008E): {mismatchCount}", $"\nManual – different installer technology (0x8A15008E): {mismatchCount}");
+        if (noChangeCount > 0) details += L.T($"\nWinget ile güncellenemeyen (kurulum sürümü değiştirmiyor): {noChangeCount}", $"\nCannot be updated with winget (installer does not change the version): {noChangeCount}");
+        if (upToDate.Count > 0) details += L.T($"\nGüncel paket: {upToDate.Count}", $"\nUp-to-date packages: {upToDate.Count}");
         var reasonText = string.Join("\n", new[] { ManualReason(items, mismatchCount, explicitCount, noChangeCount) }.Concat(edgeNotes)
             .Where(l => !string.IsNullOrEmpty(l)));
 
@@ -476,9 +476,9 @@ public sealed class WingetManager(Logger logger, string source, string key, stri
             Status = actionable > 0 ? ComponentStatus.UpdateAvailable
                 : manual > 0 ? ComponentStatus.Attention : ComponentStatus.UpToDate,
             Summary = actionable > 0
-                ? (manual > 0 ? $"{actionable} güncelleme mevcut (+{manual} manuel)" : $"{actionable} güncelleme mevcut")
-                : manual > 0 ? $"Dikkat: {manual} güncelleme otomatik uygulanamıyor"
-                : noChangeCount > 0 ? $"Güncel ({noChangeCount} paket winget ile güncellenemiyor – bilgi)" : "Güncel",
+                ? (manual > 0 ? L.T($"{actionable} güncelleme mevcut (+{manual} manuel)", $"{actionable} update(s) available (+{manual} manual)") : L.T($"{actionable} güncelleme mevcut", $"{actionable} update(s) available"))
+                : manual > 0 ? L.T($"Dikkat: {manual} güncelleme otomatik uygulanamıyor", $"Attention: {manual} update(s) cannot be applied automatically")
+                : noChangeCount > 0 ? L.T($"Güncel ({noChangeCount} paket winget ile güncellenemiyor – bilgi)", $"Up to date ({noChangeCount} package(s) cannot be updated with winget – info)") : L.T("Güncel", "Up to date"),
             Reason = reasonText.Length > 0 ? reasonText : null,
             Details = details,
             Items = items.Concat(upToDate).ToList(),
@@ -491,22 +491,22 @@ public sealed class WingetManager(Logger logger, string source, string key, stri
     {
         var lines = new List<string>();
         if (noChangeCount > 0)
-            lines.Add("Winget ile güncellenemeyen paketler (güncelleme sayılmadı): " +
+            lines.Add(L.T("Winget ile güncellenemeyen paketler (güncelleme sayılmadı): ", "Packages that cannot be updated with winget (not counted as updates): ") +
                       string.Join(", ", items.Where(i => i.Manual == ManualUpdateKind.NoVersionChange)
-                                             .Select(i => $"{i.Name} (kurulu {i.CurrentVersion}, winget {i.NewVersion})")) +
-                      ". Winget kurulumu çalıştırıp başarı bildiriyor ama kurulu sürüm değişmiyor: winget kataloğundaki sürüm numarası uygulamanın " +
-                      "kendi sürüm numarasıyla uyuşmuyor (ör. Google Play Games'te katalogdaki numara Google güncelleyicisine ait). Winget ile tekrar " +
-                      "denemek sonucu değiştirmez; uygulamanın kendi güncelleme seçeneği varsa onu kullanın.");
+                                             .Select(i => L.T($"{i.Name} (kurulu {i.CurrentVersion}, winget {i.NewVersion})", $"{i.Name} (installed {i.CurrentVersion}, winget {i.NewVersion})"))) +
+                      L.T(". Winget kurulumu çalıştırıp başarı bildiriyor ama kurulu sürüm değişmiyor: winget kataloğundaki sürüm numarası uygulamanın ", ". Winget runs the installer and reports success, but the installed version does not change: the version number in the winget catalog does not match the app's ") +
+                      L.T("kendi sürüm numarasıyla uyuşmuyor (ör. Google Play Games'te katalogdaki numara Google güncelleyicisine ait). Winget ile tekrar ", "own version number (e.g. for Google Play Games the catalog number belongs to the Google updater). Trying again with winget ") +
+                      L.T("denemek sonucu değiştirmez; uygulamanın kendi güncelleme seçeneği varsa onu kullanın.", "does not change the result; use the app's own update option if it has one."));
         if (mismatchCount > 0)
-            lines.Add("Kurulum teknolojisi farklı olduğu için winget bu paketleri yerinde yükseltemiyor (0x8A15008E): " +
+            lines.Add(L.T("Kurulum teknolojisi farklı olduğu için winget bu paketleri yerinde yükseltemiyor (0x8A15008E): ", "Winget cannot upgrade these packages in place because the installer technology differs (0x8A15008E): ") +
                       string.Join(", ", items.Where(i => i.Manual == ManualUpdateKind.TechnologyMismatch)
                                              .Select(i => $"{i.Name} ({i.CurrentVersion} → {i.NewVersion})")) +
-                      ". Çözüm: mevcut sürümü kaldırıp yeni sürümü kurmak (kartın \"Kontrol Et\" butonundaki manuel güncelleme seçeneği).");
+                      L.T(". Çözüm: mevcut sürümü kaldırıp yeni sürümü kurmak (kartın \"Kontrol Et\" butonundaki manuel güncelleme seçeneği).", ". Solution: uninstall the current version and install the new one (the manual update option of the card's \"Check\" button)."));
         if (explicitCount > 0)
-            lines.Add("Yalnızca açık hedeflemeyle güncellenen paketler (genelde kendini güncelleyen uygulamalar) otomatik güncellenmez: " +
+            lines.Add(L.T("Yalnızca açık hedeflemeyle güncellenen paketler (genelde kendini güncelleyen uygulamalar) otomatik güncellenmez: ", "Packages updated only with explicit targeting (usually apps that update themselves) are not updated automatically: ") +
                       string.Join(", ", items.Where(i => i.Manual == ManualUpdateKind.ExplicitTargeting)
                                              .Select(i => $"{i.Name} ({i.CurrentVersion} → {i.NewVersion})")) +
-                      ". Çözüm: uygulamayı açmak (kendini günceller) veya kartın \"Kontrol Et\" butonundaki manuel güncelleme seçeneği.");
+                      L.T(". Çözüm: uygulamayı açmak (kendini günceller) veya kartın \"Kontrol Et\" butonundaki manuel güncelleme seçeneği.", ". Solution: open the app (it updates itself) or use the manual update option of the card's \"Check\" button."));
         return lines.Count > 0 ? string.Join("\n", lines) : null;
     }
 
@@ -538,10 +538,10 @@ public sealed class WingetManager(Logger logger, string source, string key, stri
         // Önceki sürümlerin "kaldır + yeniden kur" kaydı bu paketlerde geçersiz (kaldırılamazlar); kalıcı kayıttan da silinir.
         TechnologyMismatch.TryRemove(source + "|" + row.Id, out _);
 
-        logger.Info($"{row.Name}: winget {row.Version} → {row.Available} listeliyor; Microsoft Edge Update'e soruluyor...");
+        logger.Info(L.T($"{row.Name}: winget {row.Version} → {row.Available} listeliyor; Microsoft Edge Update'e soruluyor...", $"{row.Name}: winget lists {row.Version} → {row.Available}; asking Microsoft Edge Update..."));
         var r = await EdgeUpdateService.CheckAsync(edge, EdgeCheckTimeout, ct);
-        ExecutionTrace.Note($"{row.Name}: Microsoft Edge Update denetimi – {r.Outcome}" +
-                            (r.AvailableVersion is null ? "" : $", sunulan sürüm {r.AvailableVersion}") +
+        ExecutionTrace.Note(L.T($"{row.Name}: Microsoft Edge Update denetimi – {r.Outcome}", $"{row.Name}: Microsoft Edge Update check – {r.Outcome}") +
+                            (r.AvailableVersion is null ? "" : L.T($", sunulan sürüm {r.AvailableVersion}", $", offered version {r.AvailableVersion}")) +
                             (r.Outcome is EdgeUpdateService.EdgeUpdateOutcome.Error or EdgeUpdateService.EdgeUpdateOutcome.Unavailable
                                 ? " – " + r.Describe() : ""));
         switch (r.Outcome)
@@ -549,34 +549,34 @@ public sealed class WingetManager(Logger logger, string source, string key, stri
             case EdgeUpdateService.EdgeUpdateOutcome.UpdateAvailable:
             {
                 var target = string.IsNullOrWhiteSpace(r.AvailableVersion) ? row.Available : r.AvailableVersion;
-                logger.Info($"{row.Name}: Microsoft Edge Update bu cihaza {target} sürümünü sunuyor.");
+                logger.Info(L.T($"{row.Name}: Microsoft Edge Update bu cihaza {target} sürümünü sunuyor.", $"{row.Name}: Microsoft Edge Update offers version {target} to this device."));
                 return new UpdateItem
                 {
                     Name = row.Name, Id = row.Id, CurrentVersion = row.Version, NewVersion = target,
                     UpdateAvailable = true, AutoUpdatable = true,
-                    StatusText = "Güncelleme mevcut – Microsoft Edge Update ile güncellenecek (Edge Windows bileşenidir; " +
-                                 "kaldırılamaz ve winget yerinde yükseltemez)"
+                    StatusText = L.T("Güncelleme mevcut – Microsoft Edge Update ile güncellenecek (Edge Windows bileşenidir; ", "Update available – will be updated with Microsoft Edge Update (Edge is a Windows component; ") +
+                                 L.T("kaldırılamaz ve winget yerinde yükseltemez)", "it cannot be uninstalled and winget cannot upgrade it in place)")
                 };
             }
             case EdgeUpdateService.EdgeUpdateOutcome.NoUpdate:
-                logger.Info($"{row.Name}: Microsoft Edge Update bu cihaz için yeni sürüm sunmuyor (winget {row.Available} listeliyor).");
-                notes.Add($"{row.Name}: winget {row.Available} sürümünü listeliyor ancak Microsoft Edge Update bu sürümü bu cihaza henüz " +
-                          "sunmuyor (Microsoft güncellemeleri kademeli dağıtır); sunulduğunda Edge kendini günceller.");
+                logger.Info(L.T($"{row.Name}: Microsoft Edge Update bu cihaz için yeni sürüm sunmuyor (winget {row.Available} listeliyor).", $"{row.Name}: Microsoft Edge Update offers no new version for this device (winget lists {row.Available})."));
+                notes.Add(L.T($"{row.Name}: winget {row.Available} sürümünü listeliyor ancak Microsoft Edge Update bu sürümü bu cihaza henüz ", $"{row.Name}: winget lists version {row.Available}, but Microsoft Edge Update does not offer this version to this device ") +
+                          L.T("sunmuyor (Microsoft güncellemeleri kademeli dağıtır); sunulduğunda Edge kendini günceller.", "yet (Microsoft rolls out updates gradually); Edge updates itself when it is offered."));
                 return new UpdateItem
                 {
                     Name = row.Name, Id = row.Id, CurrentVersion = row.Version, NewVersion = row.Version,
                     UpdateAvailable = false, AutoUpdatable = false,
-                    StatusText = $"Güncel (Microsoft Edge Update'e göre) – winget {row.Available} listeliyor, Microsoft bu cihaza henüz sunmadı"
+                    StatusText = L.T($"Güncel (Microsoft Edge Update'e göre) – winget {row.Available} listeliyor, Microsoft bu cihaza henüz sunmadı", $"Up to date (according to Microsoft Edge Update) – winget lists {row.Available}, Microsoft has not offered it to this device yet")
                 };
             default:
             {
                 var reason = r.Describe();
-                logger.Warning($"{row.Name}: Microsoft Edge Update'e sorulamadı: {reason}");
+                logger.Warning(L.T($"{row.Name}: Microsoft Edge Update'e sorulamadı: {reason}", $"{row.Name}: could not ask Microsoft Edge Update: {reason}"));
                 return new UpdateItem
                 {
                     Name = row.Name, Id = row.Id, CurrentVersion = row.Version, NewVersion = row.Available,
                     UpdateAvailable = true, AutoUpdatable = true,
-                    StatusText = $"Güncelleme mevcut (winget) – Microsoft Edge Update ile güncellenecek; Edge Update denetlenemedi: {reason}"
+                    StatusText = L.T($"Güncelleme mevcut (winget) – Microsoft Edge Update ile güncellenecek; Edge Update denetlenemedi: {reason}", $"Update available (winget) – will be updated with Microsoft Edge Update; Edge Update could not be checked: {reason}")
                 };
             }
         }
@@ -589,7 +589,7 @@ public sealed class WingetManager(Logger logger, string source, string key, stri
     private async Task UpdateEdgeAsync(EdgeUpdateService.EdgeApp edge, UpdateItem target)
     {
         var before = EdgeUpdateService.ReadInstalledVersion(edge) ?? target.CurrentVersion;
-        logger.Info($"{target.Name}: Microsoft Edge Update ile güncelleniyor ({before} → {target.NewVersion})...");
+        logger.Info(L.T($"{target.Name}: Microsoft Edge Update ile güncelleniyor ({before} → {target.NewVersion})...", $"{target.Name}: updating with Microsoft Edge Update ({before} → {target.NewVersion})..."));
         var r = await _edgeInstall(edge, line => logger.Output("  Edge Update> " + line), EdgeInstallTimeout);
         var after = EdgeUpdateService.ReadInstalledVersion(edge);
 
@@ -600,8 +600,8 @@ public sealed class WingetManager(Logger logger, string source, string key, stri
         target.InstallerExitCode = r.InstallerResultCode != 0 ? r.InstallerResultCode.ToString() : null;
         target.ResultSymbol = target.ResultCode is null ? null : "Microsoft Edge Update";
         target.ToolMessage = string.IsNullOrWhiteSpace(r.Message) ? null : "Microsoft Edge Update: " + r.Message.Trim();
-        ExecutionTrace.Note($"{target.Name}: Microsoft Edge Update – {r.Outcome}, kayıtlı sürüm {before} → {after ?? "okunamadı"}" +
-                            (r.AvailableVersion is null ? "" : $", sunulan {r.AvailableVersion}"));
+        ExecutionTrace.Note(L.T($"{target.Name}: Microsoft Edge Update – {r.Outcome}, kayıtlı sürüm {before} → {after ?? "okunamadı"}", $"{target.Name}: Microsoft Edge Update – {r.Outcome}, registered version {before} → {after ?? "unreadable"}") +
+                            (r.AvailableVersion is null ? "" : L.T($", sunulan {r.AvailableVersion}", $", offered {r.AvailableVersion}")));
 
         var expected = r.AvailableVersion ?? target.NewVersion;
         switch (r.Outcome)
@@ -610,28 +610,28 @@ public sealed class WingetManager(Logger logger, string source, string key, stri
             {
                 var pending = EdgeUpdateService.IsRestartPending(edge);
                 target.Outcome = ItemOutcome.Updated;
-                target.OutcomeText = pending ? $"Güncellendi – {edge.Name} yeniden açılınca etkinleşir" : "Güncellendi (Microsoft Edge Update)";
-                target.StatusText = $"Güncellendi: Microsoft Edge Update {before} → {after} kurdu (kayıt defterinden doğrulandı)" +
-                                    (pending ? $"; {edge.Name} açık olduğu için yeni sürüm uygulama kapatılıp açılınca etkinleşir" : "");
-                logger.Success($"{target.Name} güncellendi: {before} → {after} (Microsoft Edge Update, kayıt defterinden doğrulandı).");
-                if (pending) logger.Info($"{target.Name}: yeni sürüm, uygulama kapatılıp yeniden açılınca etkinleşecek.");
+                target.OutcomeText = pending ? L.T($"Güncellendi – {edge.Name} yeniden açılınca etkinleşir", $"Updated – takes effect when {edge.Name} is reopened") : L.T("Güncellendi (Microsoft Edge Update)", "Updated (Microsoft Edge Update)");
+                target.StatusText = L.T($"Güncellendi: Microsoft Edge Update {before} → {after} kurdu (kayıt defterinden doğrulandı)", $"Updated: Microsoft Edge Update installed {before} → {after} (verified from the registry)") +
+                                    (pending ? L.T($"; {edge.Name} açık olduğu için yeni sürüm uygulama kapatılıp açılınca etkinleşir", $"; because {edge.Name} is open, the new version takes effect when the app is closed and reopened") : "");
+                logger.Success(L.T($"{target.Name} güncellendi: {before} → {after} (Microsoft Edge Update, kayıt defterinden doğrulandı).", $"{target.Name} updated: {before} → {after} (Microsoft Edge Update, verified from the registry)."));
+                if (pending) logger.Info(L.T($"{target.Name}: yeni sürüm, uygulama kapatılıp yeniden açılınca etkinleşecek.", $"{target.Name}: the new version will take effect when the app is closed and reopened."));
                 return;
             }
             case EdgeUpdateService.EdgeUpdateOutcome.Installed:
                 target.Outcome = ItemOutcome.Unverified;
-                target.OutcomeText = "Doğrulanamadı";
+                target.OutcomeText = L.T("Doğrulanamadı", "Could not be verified");
                 target.StatusText = after is not null && !string.Equals(after, before, StringComparison.OrdinalIgnoreCase)
-                    ? $"Microsoft Edge Update {before} → {after} kurdu; beklenen {expected} sürümü kayıt defterinde görünmüyor"
-                    : $"Microsoft Edge Update kurulumun tamamlandığını bildirdi ancak kayıtlı sürüm hâlâ {after ?? "okunamadı"}";
+                    ? L.T($"Microsoft Edge Update {before} → {after} kurdu; beklenen {expected} sürümü kayıt defterinde görünmüyor", $"Microsoft Edge Update installed {before} → {after}; the expected version {expected} does not appear in the registry")
+                    : L.T($"Microsoft Edge Update kurulumun tamamlandığını bildirdi ancak kayıtlı sürüm hâlâ {after ?? "okunamadı"}", $"Microsoft Edge Update reported that the installation finished, but the registered version is still {after ?? "unreadable"}");
                 logger.Warning($"{target.Name}: {target.StatusText}.");
                 return;
             case EdgeUpdateService.EdgeUpdateOutcome.NoUpdate:
                 target.Outcome = ItemOutcome.Failed;
-                target.OutcomeText = "Microsoft bu cihaza henüz sunmadı";
-                target.StatusText = FailedPrefix + $"Microsoft Edge Update bu cihaz için yeni sürüm sunmuyor (winget {target.NewVersion} " +
-                                    $"listeliyor; Microsoft güncellemeleri kademeli dağıtır). Kurulu sürüm {after ?? before}; " +
-                                    "sürüm sunulduğunda Edge kendini günceller.";
-                logger.Warning($"{target.Name}: Microsoft Edge Update bu cihaz için yeni sürüm sunmuyor; güncellenmedi.");
+                target.OutcomeText = L.T("Microsoft bu cihaza henüz sunmadı", "Microsoft has not offered it to this device yet");
+                target.StatusText = FailedPrefix + L.T($"Microsoft Edge Update bu cihaz için yeni sürüm sunmuyor (winget {target.NewVersion} ", $"Microsoft Edge Update offers no new version for this device (winget lists {target.NewVersion}; ") +
+                                    L.T($"listeliyor; Microsoft güncellemeleri kademeli dağıtır). Kurulu sürüm {after ?? before}; ", $"Microsoft rolls out updates gradually). Installed version {after ?? before}; ") +
+                                    L.T("sürüm sunulduğunda Edge kendini günceller.", "Edge updates itself when the version is offered.");
+                logger.Warning(L.T($"{target.Name}: Microsoft Edge Update bu cihaz için yeni sürüm sunmuyor; güncellenmedi.", $"{target.Name}: Microsoft Edge Update offers no new version for this device; not updated."));
                 return;
             default:
             {
@@ -639,15 +639,15 @@ public sealed class WingetManager(Logger logger, string source, string key, stri
                 target.Outcome = ItemOutcome.Failed;
                 target.OutcomeText = r.Outcome switch
                 {
-                    EdgeUpdateService.EdgeUpdateOutcome.TimedOut => "Zaman aşımı",
-                    EdgeUpdateService.EdgeUpdateOutcome.Unavailable => "Microsoft Edge Update kullanılamadı",
-                    _ => "Microsoft Edge Update hatası"
+                    EdgeUpdateService.EdgeUpdateOutcome.TimedOut => L.T("Zaman aşımı", "Timed out"),
+                    EdgeUpdateService.EdgeUpdateOutcome.Unavailable => L.T("Microsoft Edge Update kullanılamadı", "Microsoft Edge Update unavailable"),
+                    _ => L.T("Microsoft Edge Update hatası", "Microsoft Edge Update error")
                 };
-                target.StatusText = FailedPrefix + reason + $" Kurulu sürüm: {after ?? before}." +
+                target.StatusText = FailedPrefix + reason + L.T($" Kurulu sürüm: {after ?? before}.", $" Installed version: {after ?? before}.") +
                                     (r.Outcome == EdgeUpdateService.EdgeUpdateOutcome.TimedOut
-                                        ? " Güncelleme arka planda sürüyor olabilir; bir süre sonra yeniden kontrol edin."
-                                        : " Edge'de Ayarlar → Microsoft Edge hakkında sayfasından da güncellenebilir.");
-                logger.Error($"{target.Name} güncellenemedi: {reason}");
+                                        ? L.T(" Güncelleme arka planda sürüyor olabilir; bir süre sonra yeniden kontrol edin.", " The update may still be running in the background; check again after a while.")
+                                        : L.T(" Edge'de Ayarlar → Microsoft Edge hakkında sayfasından da güncellenebilir.", " It can also be updated in Edge from Settings → About Microsoft Edge."));
+                logger.Error(L.T($"{target.Name} güncellenemedi: {reason}", $"{target.Name} could not be updated: {reason}"));
                 return;
             }
         }
@@ -657,7 +657,7 @@ public sealed class WingetManager(Logger logger, string source, string key, stri
     {
         var winget = LocateWinget();
         if (winget is null)
-            return ModuleResult.Failed(key, "Winget bulunamadı.");
+            return ModuleResult.Failed(key, L.T("Winget bulunamadı.", "Winget not found."));
 
         // Güncelleme, kontrolde gerçekten bulunan paket listesiyle yapılır (tekrar liste sorgusu yapılmaz).
         var targets = check.Items.Where(i => i.UpdateAvailable && i.AutoUpdatable).ToList();
@@ -685,7 +685,7 @@ public sealed class WingetManager(Logger logger, string source, string key, stri
             if (IsEdgeManaged(item.Id, out var edge))
             {
                 using var edgeProgress = new PackageProgress(this, n, targets.Count, item.Name);
-                edgeProgress.SetPhase("Microsoft Edge Update ile güncelleniyor");
+                edgeProgress.SetPhase(L.T("Microsoft Edge Update ile güncelleniyor", "Updating with Microsoft Edge Update"));
                 await UpdateEdgeAsync(edge, target);
                 continue;
             }
@@ -697,7 +697,7 @@ public sealed class WingetManager(Logger logger, string source, string key, stri
                 continue;
             }
 
-            logger.Info($"{item.Name} güncelleniyor ({item.CurrentVersion} → {item.NewVersion})...");
+            logger.Info(L.T($"{item.Name} güncelleniyor ({item.CurrentVersion} → {item.NewVersion})...", $"Updating {item.Name} ({item.CurrentVersion} → {item.NewVersion})..."));
             using var progress = new PackageProgress(this, n, targets.Count, item.Name);
             var r = await RunWingetAsync(winget, UpgradeArgs(item.Id), PackageTimeout, CancellationToken.None, forward: true, onLine: progress.OnLine);
             Evaluate(r, target);
@@ -711,8 +711,8 @@ public sealed class WingetManager(Logger logger, string source, string key, stri
         else if (batch.Count > 0)
         {
             // Aynı listeyi (winget'in kendi "otomatik güncellenebilir" kümesini) toplu komutla güncelle.
-            logger.Info($"Kimliği tek tek hedeflenemeyen {batch.Count} paket için toplu winget güncellemesi çalıştırılıyor...");
-            using var progress = new PackageProgress(this, targets.Count - batch.Count, targets.Count, $"{batch.Count} paket (toplu güncelleme)");
+            logger.Info(L.T($"Kimliği tek tek hedeflenemeyen {batch.Count} paket için toplu winget güncellemesi çalıştırılıyor...", $"Running a batch winget update for {batch.Count} package(s) whose ID cannot be targeted individually..."));
+            using var progress = new PackageProgress(this, targets.Count - batch.Count, targets.Count, L.T($"{batch.Count} paket (toplu güncelleme)", $"{batch.Count} package(s) (batch update)"));
             var r = await RunWingetAsync(winget,
                 Args("upgrade", "--all", "--source", source, "--silent", "--accept-package-agreements"),
                 PackageTimeout * 2, CancellationToken.None, forward: true, onLine: progress.OnLine);
@@ -722,16 +722,16 @@ public sealed class WingetManager(Logger logger, string source, string key, stri
         }
 
         foreach (var t in skipped)
-            t.StatusText = "Atlandı: işlem iptal edildi / uygulama kapatılıyor (kurulum başlatılmadı); bir sonraki güncellemede yeniden sunulur";
+            t.StatusText = L.T("Atlandı: işlem iptal edildi / uygulama kapatılıyor (kurulum başlatılmadı); bir sonraki güncellemede yeniden sunulur", "Skipped: operation cancelled / app closing (installation not started); offered again at the next update");
         if (skipped.Count > 0)
-            logger.Warning($"{displayName}: iptal istendiği için {skipped.Count} paket başlatılmadı: {string.Join(", ", skipped.Select(s => s.Name))}.");
+            logger.Warning(L.T($"{displayName}: iptal istendiği için {skipped.Count} paket başlatılmadı: {string.Join(", ", skipped.Select(s => s.Name))}.", $"{displayName}: {skipped.Count} package(s) were not started because cancellation was requested: {string.Join(", ", skipped.Select(s => s.Name))}."));
 
         // "Uygulama / dosyalar kullanımda" hatalarında güncellemeyi engelleyen GERÇEK işlemler tespit edilir (kapatılmaz).
         foreach (var t in attempted.Where(i => i.InUse))
             DetectBlockers(t);
 
         if (attempted.Count > 0)
-            ReportProgress($"{attempted.Count} paket işlendi · sonuçlar doğrulanıyor (winget upgrade)", 100.0 * (targets.Count - skipped.Count) / targets.Count);
+            ReportProgress(L.T($"{attempted.Count} paket işlendi · sonuçlar doğrulanıyor (winget upgrade)", $"{attempted.Count} package(s) processed · verifying the results (winget upgrade)"), 100.0 * (targets.Count - skipped.Count) / targets.Count);
         var verifyNote = await VerifyAsync(winget, attempted, ct);
         return Summarize(resultItems, verifyNote, [], skipped);
     }
@@ -746,7 +746,7 @@ public sealed class WingetManager(Logger logger, string source, string key, stri
     {
         var winget = LocateWinget();
         if (winget is null)
-            return ModuleResult.Failed(key, "Winget bulunamadı.");
+            return ModuleResult.Failed(key, L.T("Winget bulunamadı.", "Winget not found."));
 
         var approvedKeys = approved.Select(p => (p.ProcessId, p.StartTime)).ToHashSet();
         var items = previous.Items.Select(Clone).ToList();
@@ -759,7 +759,7 @@ public sealed class WingetManager(Logger logger, string source, string key, stri
             .ToList();
         if (targets.Count == 0)
         {
-            logger.Info($"{displayName}: yeniden denenecek paket yok.");
+            logger.Info(L.T($"{displayName}: yeniden denenecek paket yok.", $"{displayName}: no packages to retry."));
             return previous;
         }
 
@@ -768,14 +768,14 @@ public sealed class WingetManager(Logger logger, string source, string key, stri
         foreach (var t in targets)
         {
             var toClose = t.BlockingProcesses.Where(p => p.CanClose && approvedKeys.Contains((p.ProcessId, p.StartTime))).ToList();
-            logger.Info($"{t.Name}: güncellemeyi engelleyen uygulamalar kapatılıyor: {string.Join(", ", toClose.Select(p => $"{p.Name} (PID {p.ProcessId})"))}");
+            logger.Info(L.T($"{t.Name}: güncellemeyi engelleyen uygulamalar kapatılıyor: {string.Join(", ", toClose.Select(p => $"{p.Name} (PID {p.ProcessId})"))}", $"{t.Name}: closing the apps blocking the update: {string.Join(", ", toClose.Select(p => $"{p.Name} (PID {p.ProcessId})"))}"));
             var report = await RunningAppManager.CloseAsync(toClose, logger);
             foreach (var line in report)
             {
                 notes.Add($"{t.Name}: {line}");
                 ExecutionTrace.Note($"{t.Name}: {line}");
             }
-            anyClosed |= report.Any(l => l.Contains("kapatıldı", StringComparison.Ordinal) || l.Contains("sonlandırıldı", StringComparison.Ordinal));
+            anyClosed |= report.Any(l => l.Contains(L.T("kapatıldı", "closed normally"), StringComparison.Ordinal) || l.Contains(L.T("sonlandırıldı", "ended"), StringComparison.Ordinal));
 
             // Kapatmadan sonra dosyaları hâlâ kullanan işlem var mı? (gerçek Restart Manager denetimi)
             var dir = SafeFindInstallDirectory(t);
@@ -786,26 +786,26 @@ public sealed class WingetManager(Logger logger, string source, string key, stri
                     var still = RunningAppManager.FindBlockingProcesses(dir);
                     if (still.Count > 0)
                     {
-                        var text = $"{t.Name}: kapatmadan sonra dosyaları hâlâ kullanan işlemler: {string.Join(", ", still.Select(p => p.DisplayText))}";
+                        var text = L.T($"{t.Name}: kapatmadan sonra dosyaları hâlâ kullanan işlemler: {string.Join(", ", still.Select(p => p.DisplayText))}", $"{t.Name}: processes still using the files after closing: {string.Join(", ", still.Select(p => p.DisplayText))}");
                         logger.Warning(text);
                         notes.Add(text);
                     }
                 }
                 catch (Exception ex) when (ex is System.ComponentModel.Win32Exception or IOException or UnauthorizedAccessException)
                 {
-                    logger.Warning($"{t.Name}: kapatma sonrası denetim yapılamadı: {ex.Message}");
+                    logger.Warning(L.T($"{t.Name}: kapatma sonrası denetim yapılamadı: {ex.Message}", $"{t.Name}: could not check after closing: {ex.Message}"));
                 }
             }
 
             await Task.Delay(TimeSpan.FromSeconds(2)); // dosya tanıtıcılarının serbest kalması için
-            logger.Info($"{t.Name} güncellemesi yeniden deneniyor ({t.CurrentVersion} → {t.NewVersion})...");
+            logger.Info(L.T($"{t.Name} güncellemesi yeniden deneniyor ({t.CurrentVersion} → {t.NewVersion})...", $"Retrying the {t.Name} update ({t.CurrentVersion} → {t.NewVersion})..."));
             var r = await RunWingetAsync(winget, UpgradeArgs(t.Id), PackageTimeout, CancellationToken.None, forward: true);
             Evaluate(r, t);
             if (t.InUse) DetectBlockers(t);
         }
 
         if (anyClosed)
-            notes.Add("Kapatılan uygulamalar otomatik olarak yeniden açılmaz; gerekirse kendiniz açabilirsiniz.");
+            notes.Add(L.T("Kapatılan uygulamalar otomatik olarak yeniden açılmaz; gerekirse kendiniz açabilirsiniz.", "Closed apps are not reopened automatically; you can open them yourself if needed."));
 
         var verifyNote = await VerifyAsync(winget, targets);
         return Summarize(items, verifyNote, notes);
@@ -825,7 +825,7 @@ public sealed class WingetManager(Logger logger, string source, string key, stri
     {
         var winget = LocateWinget();
         if (winget is null)
-            return ModuleResult.Failed(key, "Winget bulunamadı.");
+            return ModuleResult.Failed(key, L.T("Winget bulunamadı.", "Winget not found."));
 
         var items = check.Items.Select(Clone).ToList();
         var targets = items
@@ -835,8 +835,8 @@ public sealed class WingetManager(Logger logger, string source, string key, stri
         {
             return new ModuleResult
             {
-                Key = key, Status = ComponentStatus.Skipped, Summary = "Manuel güncelleme seçilmedi",
-                Reason = "Uygulanacak manuel güncelleme seçilmedi; hiçbir pakete dokunulmadı."
+                Key = key, Status = ComponentStatus.Skipped, Summary = L.T("Manuel güncelleme seçilmedi", "No manual update selected"),
+                Reason = L.T("Uygulanacak manuel güncelleme seçilmedi; hiçbir pakete dokunulmadı.", "No manual update was selected; no package was touched.")
             };
         }
 
@@ -854,7 +854,7 @@ public sealed class WingetManager(Logger logger, string source, string key, stri
             wingetTargets.Add(t);
             if (t.Manual == ManualUpdateKind.ExplicitTargeting)
             {
-                logger.Info($"{t.Name} açık hedeflemeyle güncelleniyor ({t.CurrentVersion} → {t.NewVersion})...");
+                logger.Info(L.T($"{t.Name} açık hedeflemeyle güncelleniyor ({t.CurrentVersion} → {t.NewVersion})...", $"Updating {t.Name} with explicit targeting ({t.CurrentVersion} → {t.NewVersion})..."));
                 var r = await RunWingetAsync(winget, UpgradeArgs(t.Id), PackageTimeout, CancellationToken.None, forward: true);
                 Evaluate(r, t);
                 if (t.InUse) DetectBlockers(t);
@@ -862,23 +862,23 @@ public sealed class WingetManager(Logger logger, string source, string key, stri
             }
 
             // Kurulum teknolojisi farklı: kaldır → kur.
-            logger.Info($"{t.Name}: kurulum teknolojisi farklı olduğu için mevcut sürüm kaldırılıyor ({t.CurrentVersion})...");
+            logger.Info(L.T($"{t.Name}: kurulum teknolojisi farklı olduğu için mevcut sürüm kaldırılıyor ({t.CurrentVersion})...", $"{t.Name}: uninstalling the current version because the installer technology differs ({t.CurrentVersion})..."));
             var un = await RunWingetAsync(winget, Args("uninstall", "--id", t.Id, "--exact", "--source", source, "--silent"),
                 PackageTimeout, CancellationToken.None, forward: true);
             if (!un.Succeeded)
             {
                 Evaluate(un, t);
                 t.Outcome = ItemOutcome.Failed; // kaldırma başarısızsa güncelleme hiçbir koşulda başarılı sayılmaz
-                t.OutcomeText = "Mevcut sürüm kaldırılamadı – hiçbir değişiklik yapılmadı";
-                t.StatusText = FailedPrefix + "Mevcut sürüm kaldırılamadı; yeni sürüm kurulmadı, paket olduğu gibi kaldı. " + DescribeFailure(un);
-                logger.Error($"{t.Name}: mevcut sürüm kaldırılamadı; hiçbir değişiklik yapılmadı.");
+                t.OutcomeText = L.T("Mevcut sürüm kaldırılamadı – hiçbir değişiklik yapılmadı", "The current version could not be uninstalled – no changes were made");
+                t.StatusText = FailedPrefix + L.T("Mevcut sürüm kaldırılamadı; yeni sürüm kurulmadı, paket olduğu gibi kaldı. ", "The current version could not be uninstalled; the new version was not installed and the package was left as it was. ") + DescribeFailure(un);
+                logger.Error(L.T($"{t.Name}: mevcut sürüm kaldırılamadı; hiçbir değişiklik yapılmadı.", $"{t.Name}: the current version could not be uninstalled; no changes were made."));
                 if (t.InUse) DetectBlockers(t);
                 continue;
             }
-            logger.Success($"{t.Name} {t.CurrentVersion} kaldırıldı.");
-            notes.Add($"{t.Name}: eski sürüm ({t.CurrentVersion}) winget ile kaldırıldı.");
+            logger.Success(L.T($"{t.Name} {t.CurrentVersion} kaldırıldı.", $"{t.Name} {t.CurrentVersion} uninstalled."));
+            notes.Add(L.T($"{t.Name}: eski sürüm ({t.CurrentVersion}) winget ile kaldırıldı.", $"{t.Name}: the old version ({t.CurrentVersion}) was uninstalled with winget."));
 
-            logger.Info($"{t.Name} {t.NewVersion} kuruluyor...");
+            logger.Info(L.T($"{t.Name} {t.NewVersion} kuruluyor...", $"Installing {t.Name} {t.NewVersion}..."));
             var ins = await RunWingetAsync(winget,
                 Args("install", "--id", t.Id, "--exact", "--source", source, "--silent", "--accept-package-agreements"),
                 PackageTimeout, CancellationToken.None, forward: true);
@@ -886,17 +886,17 @@ public sealed class WingetManager(Logger logger, string source, string key, stri
             if (t.Outcome == ItemOutcome.Failed)
             {
                 var reason = FailureReason(t);
-                t.OutcomeText = "Eski sürüm kaldırıldı, yeni sürüm kurulamadı";
-                t.StatusText = FailedPrefix + $"Eski sürüm kaldırıldı ancak {t.NewVersion} kurulamadı – paket şu anda KURULU DEĞİL. " +
-                               $"Yeniden kurmak için: winget install --id {t.Id} --exact. {reason}";
-                logger.Error($"{t.Name}: eski sürüm kaldırıldı ancak yeni sürüm kurulamadı; paket şu anda kurulu değil.");
+                t.OutcomeText = L.T("Eski sürüm kaldırıldı, yeni sürüm kurulamadı", "Old version uninstalled, new version could not be installed");
+                t.StatusText = FailedPrefix + L.T($"Eski sürüm kaldırıldı ancak {t.NewVersion} kurulamadı – paket şu anda KURULU DEĞİL. ", $"The old version was uninstalled but {t.NewVersion} could not be installed – the package is currently NOT INSTALLED. ") +
+                               L.T($"Yeniden kurmak için: winget install --id {t.Id} --exact. {reason}", $"To reinstall: winget install --id {t.Id} --exact. {reason}");
+                logger.Error(L.T($"{t.Name}: eski sürüm kaldırıldı ancak yeni sürüm kurulamadı; paket şu anda kurulu değil.", $"{t.Name}: the old version was uninstalled but the new version could not be installed; the package is currently not installed."));
                 if (t.InUse) DetectBlockers(t);
             }
             else
             {
                 TechnologyMismatch.TryRemove(source + "|" + t.Id, out _);
-                t.OutcomeText = "Kaldırılıp yeni sürüm kuruldu";
-                t.StatusText = $"Kaldırılıp yeniden kuruldu ({t.CurrentVersion} → {t.NewVersion})";
+                t.OutcomeText = L.T("Kaldırılıp yeni sürüm kuruldu", "Uninstalled and new version installed");
+                t.StatusText = L.T($"Kaldırılıp yeniden kuruldu ({t.CurrentVersion} → {t.NewVersion})", $"Uninstalled and reinstalled ({t.CurrentVersion} → {t.NewVersion})");
             }
         }
 
@@ -915,7 +915,7 @@ public sealed class WingetManager(Logger logger, string source, string key, stri
         var claimed = attempted.Where(i => i.Outcome is ItemOutcome.Updated or ItemOutcome.UpdatedReboot).ToList();
         if (claimed.Count == 0) return null;
 
-        logger.Info($"{displayName}: güncelleme sonrası doğrulama yapılıyor (winget upgrade)...");
+        logger.Info(L.T($"{displayName}: güncelleme sonrası doğrulama yapılıyor (winget upgrade)...", $"{displayName}: verifying after the update (winget upgrade)..."));
         var stillPending = new Dictionary<string, WingetRow>(StringComparer.OrdinalIgnoreCase);
         bool Pending(UpdateItem o) => stillPending.TryGetValue(o.Id, out var r) &&
                                       string.Equals(r.Available, o.NewVersion, StringComparison.OrdinalIgnoreCase);
@@ -928,7 +928,7 @@ public sealed class WingetManager(Logger logger, string source, string key, stri
             var verify = await RunWingetAsync(winget, Args("upgrade", "--source", source), ListTimeout, CancellationToken.None);
             if (!verify.Started || verify.TimedOut || verify.Cancelled)
             {
-                var note = "Güncelleme sonrası doğrulama yapılamadı: " + ProcessRunner.Describe(verify, "winget");
+                var note = L.T("Güncelleme sonrası doğrulama yapılamadı: ", "Could not verify after the update: ") + ProcessRunner.Describe(verify, "winget");
                 logger.Warning(note);
                 return note;
             }
@@ -939,8 +939,8 @@ public sealed class WingetManager(Logger logger, string source, string key, stri
 
             var waiting = claimed.Where(Pending).ToList();
             if (waiting.Count == 0 || attempt >= VerifyRetries || stopRetries.IsCancellationRequested) break;
-            logger.Info($"{string.Join(", ", waiting.Select(o => o.Name))}: kurulum programı arka planda sürüyor olabilir; doğrulama " +
-                        $"{VerifyRetryDelay.TotalSeconds:0} sn sonra tekrarlanacak ({attempt + 1}/{VerifyRetries}).");
+            logger.Info(L.T($"{string.Join(", ", waiting.Select(o => o.Name))}: kurulum programı arka planda sürüyor olabilir; doğrulama ", $"{string.Join(", ", waiting.Select(o => o.Name))}: the installer may still be running in the background; the verification ") +
+                        L.T($"{VerifyRetryDelay.TotalSeconds:0} sn sonra tekrarlanacak ({attempt + 1}/{VerifyRetries}).", $"will be repeated in {VerifyRetryDelay.TotalSeconds:0} sec ({attempt + 1}/{VerifyRetries})."));
             try
             {
                 await Task.Delay(VerifyRetryDelay, stopRetries);
@@ -957,9 +957,9 @@ public sealed class WingetManager(Logger logger, string source, string key, stri
                 string.Equals(row.Available, o.NewVersion, StringComparison.OrdinalIgnoreCase))
             {
                 o.Outcome = ItemOutcome.Unverified;
-                o.OutcomeText = "Doğrulanamadı";
-                o.StatusText = $"Winget başarı bildirdi ancak doğrulamada {row.Version} → {row.Available} güncellemesi hâlâ görünüyor";
-                logger.Warning($"{o.Name}: winget başarı bildirdi ancak doğrulamada güncelleme hâlâ görünüyor.");
+                o.OutcomeText = L.T("Doğrulanamadı", "Could not be verified");
+                o.StatusText = L.T($"Winget başarı bildirdi ancak doğrulamada {row.Version} → {row.Available} güncellemesi hâlâ görünüyor", $"Winget reported success, but the verification still shows the {row.Version} → {row.Available} update");
+                logger.Warning(L.T($"{o.Name}: winget başarı bildirdi ancak doğrulamada güncelleme hâlâ görünüyor.", $"{o.Name}: winget reported success, but the verification still shows the update."));
 
                 // Bazı kurulum programları (ör. Discord/Squirrel) uygulama açıkken dosyaları değiştiremeyip yine de 0 döndürür.
                 // Paketin dosyalarını kullanan çalışan işlem varsa gerçek olarak tespit edilir ve "kapat ve tekrar dene" sunulur.
@@ -967,19 +967,19 @@ public sealed class WingetManager(Logger logger, string source, string key, stri
                 if (o.BlockingProcesses.Any(p => p.CanClose))
                 {
                     o.InUse = true;
-                    o.OutcomeText = "Doğrulanamadı – uygulama çalışıyor";
-                    o.StatusText += "; uygulamanın dosyalarını kullanan çalışan işlemler var (" +
+                    o.OutcomeText = L.T("Doğrulanamadı – uygulama çalışıyor", "Could not be verified – app is running");
+                    o.StatusText += L.T("; uygulamanın dosyalarını kullanan çalışan işlemler var (", "; there are running processes using the app's files (") +
                                     string.Join(", ", o.BlockingProcesses.Select(p => p.DisplayText)) +
-                                    "). Kurulum programı açık uygulamanın dosyalarını değiştirememiş olabilir – uygulamayı kapatıp tekrar deneyin";
+                                    L.T("). Kurulum programı açık uygulamanın dosyalarını değiştirememiş olabilir – uygulamayı kapatıp tekrar deneyin", "). The installer may not have been able to change the files of the open app – close the app and try again");
                 }
                 else if (string.Equals(row.Version, o.CurrentVersion, StringComparison.OrdinalIgnoreCase))
                 {
                     // Açık uygulama yok ve kurulu sürüm hiç değişmedi: aynı sürüm çifti bir dahaki kontrolde otomatik denenmez.
                     NoVersionChange[source + "|" + o.Id] = NoChangeValue(row.Version, row.Available);
-                    o.OutcomeText = "Doğrulanamadı – kurulu sürüm değişmedi";
-                    o.StatusText += $"; kurulu sürüm hiç değişmedi ({row.Version}). Winget kataloğundaki sürüm numarası uygulamanın kendi " +
-                                    "sürüm numarasıyla uyuşmuyor olabilir; bir dahaki kontrolde bu paket güncelleme sayılmaz (yeniden kurulmaz)";
-                    logger.Info($"{o.Name}: kurulu sürüm değişmedi ({row.Version}); winget'in {row.Available} sürümü bir dahaki kontrolde güncelleme sayılmayacak.");
+                    o.OutcomeText = L.T("Doğrulanamadı – kurulu sürüm değişmedi", "Could not be verified – installed version did not change");
+                    o.StatusText += L.T($"; kurulu sürüm hiç değişmedi ({row.Version}). Winget kataloğundaki sürüm numarası uygulamanın kendi ", $"; the installed version did not change at all ({row.Version}). The version number in the winget catalog may not match the app's own ") +
+                                    L.T("sürüm numarasıyla uyuşmuyor olabilir; bir dahaki kontrolde bu paket güncelleme sayılmaz (yeniden kurulmaz)", "version number; this package will not be counted as an update at the next check (it will not be reinstalled)");
+                    logger.Info(L.T($"{o.Name}: kurulu sürüm değişmedi ({row.Version}); winget'in {row.Available} sürümü bir dahaki kontrolde güncelleme sayılmayacak.", $"{o.Name}: the installed version did not change ({row.Version}); winget's version {row.Available} will not be counted as an update at the next check."));
                 }
             }
         }
@@ -1003,31 +1003,31 @@ public sealed class WingetManager(Logger logger, string source, string key, stri
         if (skipped.Count > 0 && ok == 0 && failed.Count == 0 && unverified.Count == 0)
         {
             status = ComponentStatus.Skipped;
-            summary = $"{skipped.Count} paket atlandı (iptal edildi)";
+            summary = L.T($"{skipped.Count} paket atlandı (iptal edildi)", $"{skipped.Count} package(s) skipped (cancelled)");
         }
         else if (skipped.Count > 0 && failed.Count == 0 && unverified.Count == 0)
         {
             status = ComponentStatus.PartiallyUpdated;
-            summary = $"{ok} güncellendi, {skipped.Count} atlandı (iptal edildi)" + (reboot > 0 ? " – yeniden başlatma gerekli" : "");
+            summary = L.T($"{ok} güncellendi, {skipped.Count} atlandı (iptal edildi)", $"{ok} updated, {skipped.Count} skipped (cancelled)") + (reboot > 0 ? L.T(" – yeniden başlatma gerekli", " – restart required") : "");
         }
         else if (failed.Count == 0 && unverified.Count == 0)
         {
             status = reboot > 0 ? ComponentStatus.RebootRequired : ComponentStatus.Updated;
-            summary = reboot > 0 ? $"{ok} paket güncellendi – yeniden başlatma gerekli" : $"{ok} paket güncellendi";
+            summary = reboot > 0 ? L.T($"{ok} paket güncellendi – yeniden başlatma gerekli", $"{ok} package(s) updated – restart required") : L.T($"{ok} paket güncellendi", $"{ok} package(s) updated");
         }
         else if (ok > 0 || unverified.Count > 0)
         {
             status = ComponentStatus.PartiallyUpdated;
-            var parts = new List<string> { $"{ok} güncellendi" };
-            if (failed.Count > 0) parts.Add($"{failed.Count} güncellenemedi");
-            if (unverified.Count > 0) parts.Add($"{unverified.Count} doğrulanamadı");
-            if (skipped.Count > 0) parts.Add($"{skipped.Count} atlandı (iptal edildi)");
+            var parts = new List<string> { L.T($"{ok} güncellendi", $"{ok} updated") };
+            if (failed.Count > 0) parts.Add(L.T($"{failed.Count} güncellenemedi", $"{failed.Count} could not be updated"));
+            if (unverified.Count > 0) parts.Add(L.T($"{unverified.Count} doğrulanamadı", $"{unverified.Count} could not be verified"));
+            if (skipped.Count > 0) parts.Add(L.T($"{skipped.Count} atlandı (iptal edildi)", $"{skipped.Count} skipped (cancelled)"));
             summary = string.Join(", ", parts);
         }
         else
         {
             status = ComponentStatus.Failed;
-            summary = failed.Count == 1 ? "1 paket güncellenemedi" : $"{failed.Count} paket güncellenemedi";
+            summary = failed.Count == 1 ? L.T("1 paket güncellenemedi", "1 package could not be updated") : L.T($"{failed.Count} paket güncellenemedi", $"{failed.Count} packages could not be updated");
         }
 
         if (failed.Count == 0 && unverified.Count == 0 && skipped.Count == 0) logger.Success($"{displayName}: {summary}.");
@@ -1036,21 +1036,21 @@ public sealed class WingetManager(Logger logger, string source, string key, stri
         var reasons = new List<string>();
         reasons.AddRange(failed.Select(i => $"{i.Name} ({i.CurrentVersion} → {i.NewVersion}): {FailureReason(i)}"));
         reasons.AddRange(failed.Where(i => i.InUse && i.BlockingProcesses.Count > 0)
-            .Select(i => $"{i.Name}: güncellemeyi engelleyen çalışan uygulamalar – {string.Join(", ", i.BlockingProcesses.Select(p => p.DisplayText))}"));
+            .Select(i => L.T($"{i.Name}: güncellemeyi engelleyen çalışan uygulamalar – {string.Join(", ", i.BlockingProcesses.Select(p => p.DisplayText))}", $"{i.Name}: running apps blocking the update – {string.Join(", ", i.BlockingProcesses.Select(p => p.DisplayText))}")));
         reasons.AddRange(unverified.Select(i => $"{i.Name}: {i.StatusText}."));
         if (verifyNote is not null) reasons.Add(verifyNote);
-        if (reboot > 0) reasons.Add("Bazı paketlerin tamamlanması için yeniden başlatma gerekiyor.");
+        if (reboot > 0) reasons.Add(L.T("Bazı paketlerin tamamlanması için yeniden başlatma gerekiyor.", "A restart is required to complete some packages."));
         if (skipped.Count > 0)
-            reasons.Add($"İşlem iptal edildiği / uygulama kapatıldığı için başlatılmayan paketler: {string.Join(", ", skipped.Select(s => s.Name))}. " +
-                        "Bir sonraki kontrolde yeniden sunulur.");
+            reasons.Add(L.T($"İşlem iptal edildiği / uygulama kapatıldığı için başlatılmayan paketler: {string.Join(", ", skipped.Select(s => s.Name))}. ", $"Packages not started because the operation was cancelled / the app was closed: {string.Join(", ", skipped.Select(s => s.Name))}. ") +
+                        L.T("Bir sonraki kontrolde yeniden sunulur.", "They are offered again at the next check."));
         reasons.AddRange(extraNotes);
 
-        var details = $"Güncellenen: {ok}\nGüncellenemeyen: {failed.Count}";
-        if (unverified.Count > 0) details += $"\nDoğrulanamayan: {unverified.Count}";
-        if (skipped.Count > 0) details += $"\nAtlanan (iptal edildi): {skipped.Count}";
-        if (reboot > 0) details += $"\nYeniden başlatma bekleyen: {reboot}";
+        var details = L.T($"Güncellenen: {ok}\nGüncellenemeyen: {failed.Count}", $"Updated: {ok}\nNot updated: {failed.Count}");
+        if (unverified.Count > 0) details += L.T($"\nDoğrulanamayan: {unverified.Count}", $"\nNot verified: {unverified.Count}");
+        if (skipped.Count > 0) details += L.T($"\nAtlanan (iptal edildi): {skipped.Count}", $"\nSkipped (cancelled): {skipped.Count}");
+        if (reboot > 0) details += L.T($"\nYeniden başlatma bekleyen: {reboot}", $"\nWaiting for restart: {reboot}");
         var blocked = failed.Count(i => i.InUse && i.BlockingProcesses.Any(p => p.CanClose));
-        if (blocked > 0) details += $"\nÇalışan uygulama nedeniyle güncellenemeyen: {blocked}";
+        if (blocked > 0) details += L.T($"\nÇalışan uygulama nedeniyle güncellenemeyen: {blocked}", $"\nNot updated because of a running app: {blocked}");
 
         return new ModuleResult
         {
@@ -1064,7 +1064,7 @@ public sealed class WingetManager(Logger logger, string source, string key, stri
         };
     }
 
-    private const string FailedPrefix = "Güncellenemedi: ";
+    private static string FailedPrefix => L.T("Güncellenemedi: ", "Could not be updated: ");
 
     private static string FailureReason(UpdateItem i) =>
         i.StatusText.StartsWith(FailedPrefix, StringComparison.Ordinal) ? i.StatusText[FailedPrefix.Length..] : i.StatusText;
@@ -1090,17 +1090,17 @@ public sealed class WingetManager(Logger logger, string source, string key, stri
         if (r.Succeeded)
         {
             target.Outcome = ItemOutcome.Updated;
-            target.OutcomeText = "Güncellendi";
-            target.StatusText = "Güncellendi (winget çıkış kodu 0)";
-            logger.Success($"{target.Name} güncellendi.");
+            target.OutcomeText = L.T("Güncellendi", "Updated");
+            target.StatusText = L.T("Güncellendi (winget çıkış kodu 0)", "Updated (winget exit code 0)");
+            logger.Success(L.T($"{target.Name} güncellendi.", $"{target.Name} updated."));
             return;
         }
 
         if (ran && code is RebootRequiredToFinish or RebootInitiated)
         {
             target.Outcome = ItemOutcome.UpdatedReboot;
-            target.OutcomeText = "Güncellendi – yeniden başlatma gerekli";
-            target.StatusText = "Güncellendi – yeniden başlatma gerekli";
+            target.OutcomeText = L.T("Güncellendi – yeniden başlatma gerekli", "Updated – restart required");
+            target.StatusText = L.T("Güncellendi – yeniden başlatma gerekli", "Updated – restart required");
             logger.Warning($"{target.Name}: {Codes[code].Text}");
             return;
         }
@@ -1110,13 +1110,13 @@ public sealed class WingetManager(Logger logger, string source, string key, stri
             TechnologyMismatch[source + "|" + target.Id] = target.NewVersion;
 
         target.Outcome = ItemOutcome.Failed;
-        target.OutcomeText = !r.Started ? "Winget başlatılamadı"
-            : r.TimedOut ? "Zaman aşımı"
-            : r.Cancelled ? "İptal edildi"
-            : known?.Short ?? "Winget işlemi başarısız oldu";
+        target.OutcomeText = !r.Started ? L.T("Winget başlatılamadı", "Winget could not be started")
+            : r.TimedOut ? L.T("Zaman aşımı", "Timed out")
+            : r.Cancelled ? L.T("İptal edildi", "Cancelled")
+            : known?.Short ?? L.T("Winget işlemi başarısız oldu", "The winget operation failed");
         target.InUse = ran && code is InstallPackageInUse or InstallFileInUse or InstallPackageInUseByApplication;
         target.StatusText = FailedPrefix + reason;
-        logger.Error($"{target.Name} güncellenemedi: {reason}");
+        logger.Error(L.T($"{target.Name} güncellenemedi: {reason}", $"{target.Name} could not be updated: {reason}"));
     }
 
     /// <summary>Winget'in bu paket için verdiği son anlamlı mesaj satırları (başlık/lisans satırları hariç).</summary>
@@ -1139,8 +1139,8 @@ public sealed class WingetManager(Logger logger, string source, string key, stri
         var dir = SafeFindInstallDirectory(item);
         if (dir is null)
         {
-            logger.Warning($"{item.Name}: kurulum klasörü Programlar ve Özellikler kaydında güvenli şekilde bulunamadı; " +
-                           "güncellemeyi engelleyen uygulama tespit edilemedi.");
+            logger.Warning(L.T($"{item.Name}: kurulum klasörü Programlar ve Özellikler kaydında güvenli şekilde bulunamadı; ", $"{item.Name}: the installation folder could not be found safely in the Programs and Features entry; ") +
+                           L.T("güncellemeyi engelleyen uygulama tespit edilemedi.", "the app blocking the update could not be identified."));
             return;
         }
         try
@@ -1149,19 +1149,19 @@ public sealed class WingetManager(Logger logger, string source, string key, stri
             item.BlockingProcesses = found.ToList();
             if (found.Count == 0)
             {
-                logger.Info($"{item.Name}: '{dir}' klasöründeki dosyaları kullanan çalışan işlem bulunamadı.");
-                ExecutionTrace.Note($"{item.Name}: Restart Manager – '{dir}' dosyalarını kullanan işlem yok.");
+                logger.Info(L.T($"{item.Name}: '{dir}' klasöründeki dosyaları kullanan çalışan işlem bulunamadı.", $"{item.Name}: no running process is using the files in the '{dir}' folder."));
+                ExecutionTrace.Note(L.T($"{item.Name}: Restart Manager – '{dir}' dosyalarını kullanan işlem yok.", $"{item.Name}: Restart Manager – no process is using the '{dir}' files."));
             }
             else
             {
                 var text = string.Join(", ", found.Select(p => p.DisplayText));
-                logger.Warning($"{item.Name}: güncellemeyi engelleyen çalışan işlemler: {text}");
-                ExecutionTrace.Note($"{item.Name}: Restart Manager – '{dir}' dosyalarını kullanan işlemler: {text}");
+                logger.Warning(L.T($"{item.Name}: güncellemeyi engelleyen çalışan işlemler: {text}", $"{item.Name}: running processes blocking the update: {text}"));
+                ExecutionTrace.Note(L.T($"{item.Name}: Restart Manager – '{dir}' dosyalarını kullanan işlemler: {text}", $"{item.Name}: Restart Manager – processes using the '{dir}' files: {text}"));
             }
         }
         catch (Exception ex) when (ex is System.ComponentModel.Win32Exception or IOException or UnauthorizedAccessException)
         {
-            logger.Warning($"{item.Name}: çalışan uygulamalar tespit edilemedi: {ex.Message}");
+            logger.Warning(L.T($"{item.Name}: çalışan uygulamalar tespit edilemedi: {ex.Message}", $"{item.Name}: running apps could not be identified: {ex.Message}"));
         }
     }
 
@@ -1173,7 +1173,7 @@ public sealed class WingetManager(Logger logger, string source, string key, stri
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or System.Security.SecurityException)
         {
-            logger.Warning($"{item.Name}: kurulum kaydı okunamadı: {ex.Message}");
+            logger.Warning(L.T($"{item.Name}: kurulum kaydı okunamadı: {ex.Message}", $"{item.Name}: could not read the installation entry: {ex.Message}"));
             return null;
         }
     }
@@ -1193,8 +1193,8 @@ public sealed class WingetManager(Logger logger, string source, string key, stri
         var installer = InstallerExitCodeRegex.Match(r.StdOut + "\n" + r.StdErr);
 
         var parts = new List<string>();
-        parts.Add(Codes.TryGetValue(code, out var known) ? known.Text : "Winget işlemi başarısız oldu.");
-        if (installer.Success) parts.Add($"Kurulum programı çıkış kodu: {installer.Groups[1].Value}.");
+        parts.Add(Codes.TryGetValue(code, out var known) ? known.Text : L.T("Winget işlemi başarısız oldu.", "The winget operation failed."));
+        if (installer.Success) parts.Add(L.T($"Kurulum programı çıkış kodu: {installer.Groups[1].Value}.", $"Installer exit code: {installer.Groups[1].Value}."));
         var codeText = known is null ? r.ExitCodeHex : $"{r.ExitCodeHex} ({known.Symbol})";
         parts.Add(wingetMessage is null ? $"Winget: {codeText}." : $"Winget: {codeText} – \"{wingetMessage}\".");
         return string.Join(" ", parts);

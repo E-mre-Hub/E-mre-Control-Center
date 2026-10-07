@@ -76,7 +76,6 @@ public static class CategoryKeys
 public sealed class CategoryViewModel(string key, string title, string glyph, string description,
     IReadOnlyList<ComponentCardViewModel> cards, IReadOnlyList<SectionViewModel> sections) : ObservableObject
 {
-    private static readonly CultureInfo Turkish = CultureInfo.GetCultureInfo("tr-TR");
 
     private string _statusText = string.Empty;
     private ComponentStatus _status = ComponentStatus.NotChecked;
@@ -85,7 +84,7 @@ public sealed class CategoryViewModel(string key, string title, string glyph, st
     public string Title { get; } = title;
 
     /// <summary>Ana sayfa kartındaki büyük harfli başlık (Türkçe kuralıyla: "Cihaz Bilgileri" → "CİHAZ BİLGİLERİ").</summary>
-    public string TileTitle { get; } = title.ToUpper(Turkish);
+    public string TileTitle { get; } = L.Upper(title);
 
     public string Glyph { get; } = glyph;
     public string Description { get; } = description;
@@ -127,13 +126,13 @@ public sealed class CategoryViewModel(string key, string title, string glyph, st
         var total = Cards.Count;
         var active = total - unavailable;
         (Status, StatusText) =
-            running > 0 ? (ComponentStatus.Checking, $"{running} işlem çalışıyor...")
-            : active == 0 ? (ComponentStatus.Unavailable, "Kullanım dışı")
-            : errors > 0 ? (ComponentStatus.Failed, errors == 1 ? "1 işlemde hata var" : $"{errors} işlemde hata var")
-            : pending > 0 ? (ComponentStatus.UpdateAvailable, $"{pending} işlem dikkat gerektiriyor")
-            : ok == active ? (ComponentStatus.UpToDate, "Sorun bulunmadı")
-            : ok > 0 ? (ComponentStatus.NotChecked, $"{ok} sorunsuz · {notRun} kontrol edilmedi")
-            : (ComponentStatus.NotChecked, $"{active} işlem · kontrol edilmedi");
-        if (unavailable > 0 && active > 0) StatusText += $" · {unavailable} kullanım dışı";
+            running > 0 ? (ComponentStatus.Checking, L.T($"{running} işlem çalışıyor...", $"{running} operation(s) running..."))
+            : active == 0 ? (ComponentStatus.Unavailable, L.T("Kullanım dışı", "Unavailable"))
+            : errors > 0 ? (ComponentStatus.Failed, errors == 1 ? L.T("1 işlemde hata var", "1 operation has an error") : L.T($"{errors} işlemde hata var", $"{errors} operations have errors"))
+            : pending > 0 ? (ComponentStatus.UpdateAvailable, L.T($"{pending} işlem dikkat gerektiriyor", $"{pending} operation(s) need attention"))
+            : ok == active ? (ComponentStatus.UpToDate, L.T("Sorun bulunmadı", "No problems found"))
+            : ok > 0 ? (ComponentStatus.NotChecked, L.T($"{ok} sorunsuz · {notRun} kontrol edilmedi", $"{ok} OK · {notRun} not checked"))
+            : (ComponentStatus.NotChecked, L.T($"{active} işlem · kontrol edilmedi", $"{active} operation(s) · not checked"));
+        if (unavailable > 0 && active > 0) StatusText += L.T($" · {unavailable} kullanım dışı", $" · {unavailable} unavailable");
     }
 }

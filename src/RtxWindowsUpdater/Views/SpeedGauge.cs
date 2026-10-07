@@ -147,7 +147,9 @@ public sealed class SpeedGauge : FrameworkElement
             ctx.LineTo(b2, true, false);
         }
         needle.Freeze();
-        var needleBrush = new LinearGradientBrush(Color.FromArgb(0x00, 0xE7, 0xEE, 0xF9), Color.FromArgb(0xF0, 0xE7, 0xEE, 0xF9),
+        // İbre metin rengini izler (koyu temada açık, açık temada koyu).
+        var nc = (ActiveLabelBrush as SolidColorBrush)?.Color ?? Color.FromRgb(0xE7, 0xEE, 0xF9);
+        var needleBrush = new LinearGradientBrush(Color.FromArgb(0x00, nc.R, nc.G, nc.B), Color.FromArgb(0xF0, nc.R, nc.G, nc.B),
             new Point(0.5, 0), new Point(0.5, 1))
         {
             MappingMode = BrushMappingMode.Absolute,

@@ -38,7 +38,7 @@ namespace RtxWindowsUpdater.Services;
 public sealed class TemporaryFilesManager(Logger logger) : IUpdateModule, IProgressReportingModule
 {
     public string Key => ComponentKeys.TempFiles;
-    public string DisplayName => "Windows Geçici Dosyalar";
+    public string DisplayName => L.T("Windows Geçici Dosyalar", "Windows Temporary Files");
 
     public event Action<ModuleProgress>? ProgressChanged;
 
@@ -58,15 +58,15 @@ public sealed class TemporaryFilesManager(Logger logger) : IUpdateModule, IProgr
         var userTemp = Path.GetTempPath();
         return
         [
-            new("user-temp", "Kullanıcı geçici dosyaları", false, [userTemp],
+            new("user-temp", L.T("Kullanıcı geçici dosyaları", "User temporary files"), false, [userTemp],
                 // .NET tek dosya uygulamalarının (bu uygulama dahil) çıkarılmış çalışma dosyaları silinmez.
                 [Path.Combine(userTemp, ".net")]),
-            new("windows-temp", "Windows geçici dosyaları", false, [Path.Combine(windows, "Temp")], []),
-            new("delivery-optimization", "Teslim En İyileştirme (Delivery Optimization) önbelleği", true, [], []),
-            new("wer", "Windows hata raporlama dosyaları", false,
+            new("windows-temp", L.T("Windows geçici dosyaları", "Windows temporary files"), false, [Path.Combine(windows, "Temp")], []),
+            new("delivery-optimization", L.T("Teslim En İyileştirme (Delivery Optimization) önbelleği", "Delivery Optimization cache"), true, [], []),
+            new("wer", L.T("Windows hata raporlama dosyaları", "Windows error reporting files"), false,
                 [Path.Combine(programData, "Microsoft", "Windows", "WER", "ReportArchive"),
                  Path.Combine(programData, "Microsoft", "Windows", "WER", "ReportQueue")], []),
-            new("d3d-shader-cache", "DirectX gölgelendirici önbelleği", false, [Path.Combine(local, "D3DSCache")], [])
+            new("d3d-shader-cache", L.T("DirectX gölgelendirici önbelleği", "DirectX shader cache"), false, [Path.Combine(local, "D3DSCache")], [])
         ];
     }
 
@@ -87,7 +87,7 @@ public sealed class TemporaryFilesManager(Logger logger) : IUpdateModule, IProgr
 
     public async Task<ModuleResult> CheckAsync(CancellationToken ct)
     {
-        logger.Info("Windows geçici dosyaları ölçülüyor (güvenli kategoriler; korunan dosyalar ayrı hesaplanır)...");
+        logger.Info(L.T("Windows geçici dosyaları ölçülüyor (güvenli kategoriler; korunan dosyalar ayrı hesaplanır)...", "Measuring Windows temporary files (safe categories; protected files are counted separately)..."));
         var categories = Categories();
         var items = new List<UpdateItem>();
         long measured = 0, cleanable = 0, protectedBytes = 0;
@@ -99,7 +99,7 @@ public sealed class TemporaryFilesManager(Logger logger) : IUpdateModule, IProgr
         {
             ct.ThrowIfCancellationRequested();
             var c = categories[i];
-            Report($"{c.Label} ölçülüyor...", 100.0 * i / categories.Count);
+            Report(L.T($"{c.Label} ölçülüyor...", $"Measuring {c.Label}..."), 100.0 * i / categories.Count);
             var m = await MeasureAsync(c, checkCutoff, ct);
             if (m.Error is not null)
             {
@@ -107,10 +107,10 @@ public sealed class TemporaryFilesManager(Logger logger) : IUpdateModule, IProgr
                 items.Add(new UpdateItem
                 {
                     Name = c.Label, Id = c.Id, CurrentVersion = "—", NewVersion = "—",
-                    StatusText = "Okunamadı: " + m.Error, Tag = "0"
+                    StatusText = L.T("Okunamadı: ", "Unreadable: ") + m.Error, Tag = "0"
                 });
-                logger.Warning($"  {c.Label}: okunamadı – {m.Error}");
-                ExecutionTrace.Note($"{c.Label}: okunamadı – {m.Error}");
+                logger.Warning(L.T($"  {c.Label}: okunamadı – {m.Error}", $"  {c.Label}: unreadable – {m.Error}"));
+                ExecutionTrace.Note(L.T($"{c.Label}: okunamadı – {m.Error}", $"{c.Label}: unreadable – {m.Error}"));
                 continue;
             }
 
@@ -120,54 +120,54 @@ public sealed class TemporaryFilesManager(Logger logger) : IUpdateModule, IProgr
             if (m.Protected > 0) protectedWhy.Add($"{c.Label}: {FormatSize(m.Protected)} ({m.ProtectedWhy})");
 
             var status = m.Cleanable > 0
-                ? (m.Protected > 0 ? $"Temizlenebilir · korunan {FormatSize(m.Protected)} ({m.ProtectedWhy})" : "Temizlenebilir")
-                : m.Measured > 0 ? $"Temizlenebilir dosya yok · korunan {FormatSize(m.Protected)} ({m.ProtectedWhy})" : "Temizlenecek dosya yok";
+                ? (m.Protected > 0 ? L.T($"Temizlenebilir · korunan {FormatSize(m.Protected)} ({m.ProtectedWhy})", $"Cleanable · protected {FormatSize(m.Protected)} ({m.ProtectedWhy})") : L.T("Temizlenebilir", "Cleanable"))
+                : m.Measured > 0 ? L.T($"Temizlenebilir dosya yok · korunan {FormatSize(m.Protected)} ({m.ProtectedWhy})", $"No cleanable files · protected {FormatSize(m.Protected)} ({m.ProtectedWhy})") : L.T("Temizlenecek dosya yok", "Nothing to clean");
             items.Add(new UpdateItem
             {
                 Name = c.Label,
                 Id = c.Id,
                 CurrentVersion = FormatSize(m.Cleanable),
-                NewVersion = $"Ölçülen {FormatSize(m.Measured)}",
+                NewVersion = L.T($"Ölçülen {FormatSize(m.Measured)}", $"Measured {FormatSize(m.Measured)}"),
                 UpdateAvailable = m.Cleanable > 0,
                 AutoUpdatable = m.Cleanable > 0,
                 StatusText = status,
                 Tag = m.Cleanable.ToString()
             });
 
-            var line = $"{c.Label}: ölçülen {FormatSize(m.Measured)} ({m.MeasuredFiles} dosya) · temizlenebilir {FormatSize(m.Cleanable)} ({m.CleanableFiles} dosya)" +
-                       (m.Protected > 0 ? $" · korunan {FormatSize(m.Protected)} ({m.ProtectedWhy})" : string.Empty);
+            var line = L.T($"{c.Label}: ölçülen {FormatSize(m.Measured)} ({m.MeasuredFiles} dosya) · temizlenebilir {FormatSize(m.Cleanable)} ({m.CleanableFiles} dosya)", $"{c.Label}: measured {FormatSize(m.Measured)} ({m.MeasuredFiles} files) · cleanable {FormatSize(m.Cleanable)} ({m.CleanableFiles} files)") +
+                       (m.Protected > 0 ? L.T($" · korunan {FormatSize(m.Protected)} ({m.ProtectedWhy})", $" · protected {FormatSize(m.Protected)} ({m.ProtectedWhy})") : string.Empty);
             logger.Info("  " + line);
             ExecutionTrace.Note(line);
         }
 
         if (errors.Count == categories.Count)
         {
-            const string reason = "Geçici dosya konumlarının hiçbiri okunamadı.";
+            var reason = L.T("Geçici dosya konumlarının hiçbiri okunamadı.", "None of the temporary file locations could be read.");
             logger.Error(reason);
             return ModuleResult.CheckFailed(Key, reason);
         }
 
         var actionable = items.Count(x => x.UpdateAvailable);
         if (actionable > 0)
-            logger.Warning($"Geçici dosyalar: ölçülen {FormatSize(measured)} · temizlenebilir {FormatSize(cleanable)}" +
-                           (protectedBytes > 0 ? $" · korunan (temizlenmez) {FormatSize(protectedBytes)}" : string.Empty) + ".");
+            logger.Warning(L.T($"Geçici dosyalar: ölçülen {FormatSize(measured)} · temizlenebilir {FormatSize(cleanable)}", $"Temporary files: measured {FormatSize(measured)} · cleanable {FormatSize(cleanable)}") +
+                           (protectedBytes > 0 ? L.T($" · korunan (temizlenmez) {FormatSize(protectedBytes)}", $" · protected (not cleaned) {FormatSize(protectedBytes)}") : string.Empty) + ".");
         else
-            logger.Success($"Temizlenecek geçici dosya bulunamadı (ölçülen {FormatSize(measured)}, tamamı korunuyor veya boş).");
+            logger.Success(L.T($"Temizlenecek geçici dosya bulunamadı (ölçülen {FormatSize(measured)}, tamamı korunuyor veya boş).", $"No temporary files to clean (measured {FormatSize(measured)}, all protected or empty)."));
 
-        var details = $"Ölçülen: {FormatSize(measured)}\nTemizlenebilir: {FormatSize(cleanable)}";
-        if (protectedBytes > 0) details += $"\nKorunan (temizlenmez): {FormatSize(protectedBytes)}";
+        var details = L.T($"Ölçülen: {FormatSize(measured)}\nTemizlenebilir: {FormatSize(cleanable)}", $"Measured: {FormatSize(measured)}\nCleanable: {FormatSize(cleanable)}");
+        if (protectedBytes > 0) details += L.T($"\nKorunan (temizlenmez): {FormatSize(protectedBytes)}", $"\nProtected (not cleaned): {FormatSize(protectedBytes)}");
 
         var reasons = new List<string>();
         if (protectedBytes > 0)
-            reasons.Add($"Ek olarak {FormatSize(protectedBytes)} korunuyor ve temizlenmez – " + string.Join("; ", protectedWhy) + ".");
+            reasons.Add(L.T($"Ek olarak {FormatSize(protectedBytes)} korunuyor ve temizlenmez – ", $"In addition, {FormatSize(protectedBytes)} is protected and not cleaned – ") + string.Join("; ", protectedWhy) + ".");
         if (errors.Count > 0)
-            reasons.Add($"{errors.Count} kategori okunamadı: " + string.Join("; ", errors) + ".");
+            reasons.Add(L.T($"{errors.Count} kategori okunamadı: ", $"{errors.Count} category(ies) could not be read: ") + string.Join("; ", errors) + ".");
 
         return new ModuleResult
         {
             Key = Key,
             Status = actionable > 0 ? ComponentStatus.UpdateAvailable : ComponentStatus.UpToDate,
-            Summary = actionable > 0 ? $"Temizlenebilir: {FormatSize(cleanable)}" : "Temizlenecek geçici dosya bulunamadı",
+            Summary = actionable > 0 ? CleanablePrefix + FormatSize(cleanable) : L.T("Temizlenecek geçici dosya bulunamadı", "No temporary files to clean"),
             Details = details,
             Reason = reasons.Count > 0 ? string.Join("\n", reasons) : null,
             Items = items,
@@ -182,13 +182,13 @@ public sealed class TemporaryFilesManager(Logger logger) : IUpdateModule, IProgr
         var selected = check.Items.Where(i => i.UpdateAvailable && i.Selected).Select(i => i.Id).ToHashSet();
         if (selected.Count == 0)
         {
-            logger.Info("Geçici dosyalar: temizlenecek kategori seçilmedi; hiçbir dosyaya dokunulmadı.");
+            logger.Info(L.T("Geçici dosyalar: temizlenecek kategori seçilmedi; hiçbir dosyaya dokunulmadı.", "Temporary files: no category selected for cleaning; no file was touched."));
             return new ModuleResult
             {
                 Key = Key,
                 Status = ComponentStatus.Skipped,
-                Summary = "Kategori seçilmedi – temizlenmedi",
-                Reason = "Temizlik için hiçbir kategori seçilmedi."
+                Summary = L.T("Kategori seçilmedi – temizlenmedi", "No category selected – not cleaned"),
+                Reason = L.T("Temizlik için hiçbir kategori seçilmedi.", "No category was selected for cleaning.")
             };
         }
 
@@ -203,7 +203,7 @@ public sealed class TemporaryFilesManager(Logger logger) : IUpdateModule, IProgr
         var before = new Dictionary<string, Measurement>();
         for (var i = 0; i < categories.Count; i++)
         {
-            Report($"{categories[i].Label} ölçülüyor...", 5.0 * i / categories.Count);
+            Report(L.T($"{categories[i].Label} ölçülüyor...", $"Measuring {categories[i].Label}..."), 5.0 * i / categories.Count);
             before[categories[i].Id] = await MeasureAsync(categories[i], cutoff, CancellationToken.None);
         }
 
@@ -213,16 +213,16 @@ public sealed class TemporaryFilesManager(Logger logger) : IUpdateModule, IProgr
         for (var i = 0; i < toClean.Count; i++)
         {
             var c = toClean[i];
-            Report($"{c.Label} temizleniyor...", 5 + 85.0 * i / toClean.Count);
-            logger.Info($"Temizleniyor: {c.Label}...");
+            Report(L.T($"{c.Label} temizleniyor...", $"Cleaning {c.Label}..."), 5 + 85.0 * i / toClean.Count);
+            logger.Info(L.T($"Temizleniyor: {c.Label}...", $"Cleaning: {c.Label}..."));
             skipped[c.Id] = c.IsDeliveryOptimization
                 ? await CleanDeliveryOptimizationAsync(before[c.Id].Error is null ? before[c.Id].CleanableIds : [])
                 : await Task.Run(() => CleanFolders(c, cutoff));
         }
 
         // 3) Temizlikten sonra TÜM kategoriler dosya sisteminden yeniden ölçülür (gerçek yeniden kontrol).
-        Report("Temizlik sonrası yeniden ölçülüyor...", 92);
-        logger.Info("Temizlik sonrası geçici dosyalar yeniden ölçülüyor...");
+        Report(L.T("Temizlik sonrası yeniden ölçülüyor...", "Measuring again after cleaning..."), 92);
+        logger.Info(L.T("Temizlik sonrası geçici dosyalar yeniden ölçülüyor...", "Measuring temporary files again after cleaning..."));
         var after = new Dictionary<string, Measurement>();
         foreach (var c in categories)
             after[c.Id] = await MeasureAsync(c, cutoff, CancellationToken.None);
@@ -236,8 +236,8 @@ public sealed class TemporaryFilesManager(Logger logger) : IUpdateModule, IProgr
             if (retained.Count > 0)
             {
                 lock (RetainedLock) RetainedDoFiles.UnionWith(retained);
-                logger.Warning($"Teslim En İyileştirme: Windows {retained.Count} önbellek dosyasını {DoWaitSeconds} sn beklemeye rağmen silmedi; " +
-                               "bu dosyalar oturum boyunca korunan sayılacak.");
+                logger.Warning(L.T($"Teslim En İyileştirme: Windows {retained.Count} önbellek dosyasını {DoWaitSeconds} sn beklemeye rağmen silmedi; ", $"Delivery Optimization: Windows did not delete {retained.Count} cache file(s) despite waiting {DoWaitSeconds} sec; ") +
+                               L.T("bu dosyalar oturum boyunca korunan sayılacak.", "these files will count as protected for the rest of the session."));
             }
         }
 
@@ -264,9 +264,9 @@ public sealed class TemporaryFilesManager(Logger logger) : IUpdateModule, IProgr
                 items.Add(new UpdateItem
                 {
                     Name = c.Label, Id = c.Id,
-                    CurrentVersion = b.Error is null ? $"Önce {FormatSize(b.Measured)}" : "—",
-                    NewVersion = a.Error is null ? $"Sonra {FormatSize(a.Measured)}" : "—",
-                    StatusText = "Seçilmedi – temizlenmedi"
+                    CurrentVersion = b.Error is null ? L.T($"Önce {FormatSize(b.Measured)}", $"Before {FormatSize(b.Measured)}") : "—",
+                    NewVersion = a.Error is null ? L.T($"Sonra {FormatSize(a.Measured)}", $"After {FormatSize(a.Measured)}") : "—",
+                    StatusText = L.T("Seçilmedi – temizlenmedi", "Not selected – not cleaned")
                 });
                 continue;
             }
@@ -276,11 +276,11 @@ public sealed class TemporaryFilesManager(Logger logger) : IUpdateModule, IProgr
             {
                 errorCount++;
                 var err = b.Error ?? a.Error!;
-                problems.Add($"{c.Label}: ölçülemedi – {err}");
+                problems.Add(L.T($"{c.Label}: ölçülemedi – {err}", $"{c.Label}: could not be measured – {err}"));
                 items.Add(new UpdateItem
                 {
                     Name = c.Label, Id = c.Id, CurrentVersion = "—", NewVersion = "—",
-                    StatusText = "Ölçülemedi: " + err, Outcome = ItemOutcome.Failed, OutcomeText = "Ölçülemedi"
+                    StatusText = L.T("Ölçülemedi: ", "Could not be measured: ") + err, Outcome = ItemOutcome.Failed, OutcomeText = L.T("Ölçülemedi", "Could not be measured")
                 });
                 continue;
             }
@@ -297,29 +297,29 @@ public sealed class TemporaryFilesManager(Logger logger) : IUpdateModule, IProgr
 
             var parts = new List<string>
             {
-                $"Temizlenen {FormatSize(cleanedHere)}",
-                $"Önce {FormatSize(b.Measured)} · Sonra {FormatSize(a.Measured)}"
+                L.T($"Temizlenen {FormatSize(cleanedHere)}", $"Cleaned {FormatSize(cleanedHere)}"),
+                L.T($"Önce {FormatSize(b.Measured)} · Sonra {FormatSize(a.Measured)}", $"Before {FormatSize(b.Measured)} · After {FormatSize(a.Measured)}")
             };
-            if (a.Cleanable > 0) parts.Add($"Kalan temizlenebilir {FormatSize(a.Cleanable)}");
+            if (a.Cleanable > 0) parts.Add(L.T($"Kalan temizlenebilir {FormatSize(a.Cleanable)}", $"Still cleanable {FormatSize(a.Cleanable)}"));
             var skippedText = sk.Files == 0 ? null
-                : $"{sk.Files} dosya silinirken kullanımda / erişilemez olduğu için atlandı ({FormatSize(sk.Bytes)}" +
+                : L.T($"{sk.Files} dosya silinirken kullanımda / erişilemez olduğu için atlandı ({FormatSize(sk.Bytes)}", $"{sk.Files} file(s) skipped because they were in use / inaccessible during deletion ({FormatSize(sk.Bytes)}") +
                   (sk.Note is null ? ")" : $" – {sk.Note})");
             if (skippedText is not null)
             {
                 parts.Add(skippedText);
                 notes.Add($"{c.Label}: {skippedText}.");
             }
-            if (a.Protected > 0) parts.Add($"Korunan {FormatSize(a.Protected)} ({a.ProtectedWhy})");
+            if (a.Protected > 0) parts.Add(L.T($"Korunan {FormatSize(a.Protected)} ({a.ProtectedWhy})", $"Protected {FormatSize(a.Protected)} ({a.ProtectedWhy})"));
             if (sk.Error is not null)
             {
-                parts.Add("Hata: " + sk.Error);
+                parts.Add(L.T("Hata: ", "Error: ") + sk.Error);
                 problems.Add($"{c.Label}: {sk.Error}");
             }
             else if (a.Cleanable > 0)
             {
-                problems.Add($"{c.Label}: {FormatSize(a.Cleanable)} temizlenemedi – " + (c.IsDeliveryOptimization
-                    ? (sk.Note ?? "Windows silme komutunu onayladı ancak dosyalar Windows kaydında duruyor") + "."
-                    : "silme isteği Windows tarafından reddedildi" + (sk.Note is null ? "." : $" (kullanan: {sk.Note}).")));
+                problems.Add(L.T($"{c.Label}: {FormatSize(a.Cleanable)} temizlenemedi – ", $"{c.Label}: {FormatSize(a.Cleanable)} could not be cleaned – ") + (c.IsDeliveryOptimization
+                    ? (sk.Note ?? L.T("Windows silme komutunu onayladı ancak dosyalar Windows kaydında duruyor", "Windows accepted the delete command but the files are still in the Windows records")) + "."
+                    : L.T("silme isteği Windows tarafından reddedildi", "Windows rejected the delete request") + (sk.Note is null ? "." : L.T($" (kullanan: {sk.Note}).", $" (used by: {sk.Note})."))));
             }
             else if (c.IsDeliveryOptimization && sk.Note is not null)
             {
@@ -331,73 +331,73 @@ public sealed class TemporaryFilesManager(Logger logger) : IUpdateModule, IProgr
             {
                 Name = c.Label,
                 Id = c.Id,
-                CurrentVersion = $"Önce {FormatSize(b.Measured)}",
-                NewVersion = $"Sonra {FormatSize(a.Measured)}",
+                CurrentVersion = L.T($"Önce {FormatSize(b.Measured)}", $"Before {FormatSize(b.Measured)}"),
+                NewVersion = L.T($"Sonra {FormatSize(a.Measured)}", $"After {FormatSize(a.Measured)}"),
                 StatusText = string.Join(" · ", parts),
                 Tag = cleanedHere.ToString(),
                 Outcome = outcome,
                 OutcomeText = outcome == ItemOutcome.Updated
-                    ? (sk.Files > 0 ? $"Temizlendi – {sk.Files} dosya kullanımda olduğu için atlandı" : "Temizlendi")
-                    : cleanedHere > 0 ? "Kısmen temizlendi" : "Temizlenemedi"
+                    ? (sk.Files > 0 ? L.T($"Temizlendi – {sk.Files} dosya kullanımda olduğu için atlandı", $"Cleaned – {sk.Files} file(s) skipped because they were in use") : L.T("Temizlendi", "Cleaned"))
+                    : cleanedHere > 0 ? L.T("Kısmen temizlendi", "Partially cleaned") : L.T("Temizlenemedi", "Could not be cleaned")
             });
             var line = $"{c.Label}: {string.Join(" · ", parts)}";
             logger.Info("  " + line);
             ExecutionTrace.Note(line);
         }
 
-        logger.Info($"Temizlik öncesi: {FormatSize(measuredBefore)} · Temizlik sonrası: {FormatSize(measuredAfter)} · " +
-                    $"Gerçekten temizlenen: {FormatSize(cleaned)}");
+        logger.Info(L.T($"Temizlik öncesi: {FormatSize(measuredBefore)} · Temizlik sonrası: {FormatSize(measuredAfter)} · ", $"Before cleaning: {FormatSize(measuredBefore)} · After cleaning: {FormatSize(measuredAfter)} · ") +
+                    L.T($"Gerçekten temizlenen: {FormatSize(cleaned)}", $"Actually cleaned: {FormatSize(cleaned)}"));
 
         var detailText =
-            $"Ölçülen (önce): {FormatSize(measuredBefore)}\n" +
-            $"Bu işlemde temizlenebilen: {FormatSize(cleanableBefore)}\n" +
-            $"Temizlenen: {FormatSize(cleaned)}\n" +
-            $"Kalan (sonra ölçülen): {FormatSize(measuredAfter)}";
-        if (remainingCleanable > 0) detailText += $"\nKullanımda / atlanan: {FormatSize(remainingCleanable)}";
-        if (protectedAfter > 0) detailText += $"\nKorunan (temizlenmez): {FormatSize(protectedAfter)}";
+            L.T($"Ölçülen (önce): {FormatSize(measuredBefore)}\n", $"Measured (before): {FormatSize(measuredBefore)}\n") +
+            L.T($"Bu işlemde temizlenebilen: {FormatSize(cleanableBefore)}\n", $"Cleanable in this operation: {FormatSize(cleanableBefore)}\n") +
+            L.T($"Temizlenen: {FormatSize(cleaned)}\n", $"Cleaned: {FormatSize(cleaned)}\n") +
+            L.T($"Kalan (sonra ölçülen): {FormatSize(measuredAfter)}", $"Remaining (measured after): {FormatSize(measuredAfter)}");
+        if (remainingCleanable > 0) detailText += L.T($"\nKullanımda / atlanan: {FormatSize(remainingCleanable)}", $"\nIn use / skipped: {FormatSize(remainingCleanable)}");
+        if (protectedAfter > 0) detailText += L.T($"\nKorunan (temizlenmez): {FormatSize(protectedAfter)}", $"\nProtected (not cleaned): {FormatSize(protectedAfter)}");
 
         ModuleResult result;
         if (cleanableBefore == 0 && errorCount == 0)
         {
             result = new ModuleResult
             {
-                Key = Key, Status = ComponentStatus.UpToDate, Summary = "Temizlenecek dosya kalmamıştı",
+                Key = Key, Status = ComponentStatus.UpToDate, Summary = L.T("Temizlenecek dosya kalmamıştı", "No files were left to clean"),
                 Details = detailText, Items = items
             };
-            logger.Success("Geçici dosyalar: temizlik anında temizlenebilir dosya kalmamıştı.");
+            logger.Success(L.T("Geçici dosyalar: temizlik anında temizlenebilir dosya kalmamıştı.", "Temporary files: no cleanable files were left at the time of cleaning."));
         }
         else if (cleaned > 0 && remainingCleanable == 0 && problems.Count == 0)
         {
             result = new ModuleResult
             {
-                Key = Key, Status = ComponentStatus.Updated, Summary = $"Temizlenen: {FormatSize(cleaned)}",
+                Key = Key, Status = ComponentStatus.Updated, Summary = L.T($"Temizlenen: {FormatSize(cleaned)}", $"Cleaned: {FormatSize(cleaned)}"),
                 Details = detailText, Items = items,
                 Reason = string.Join("\n", notes.Append(protectedAfter > 0
-                    ? $"Korunan {FormatSize(protectedAfter)} temizlik kapsamında değildi (son 24 saatte eklenen/değişen, salt okunur/sistem veya kullanımdaki dosyalar)."
+                    ? L.T($"Korunan {FormatSize(protectedAfter)} temizlik kapsamında değildi (son 24 saatte eklenen/değişen, salt okunur/sistem veya kullanımdaki dosyalar).", $"The protected {FormatSize(protectedAfter)} was not in the cleanup scope (files added/changed in the last 24 hours, read-only/system or in use).")
                     : string.Empty).Where(l => l.Length > 0)) is { Length: > 0 } reason ? reason : null
             };
-            logger.Success($"Geçici dosyalar temizlendi: {FormatSize(cleaned)}.");
+            logger.Success(L.T($"Geçici dosyalar temizlendi: {FormatSize(cleaned)}.", $"Temporary files cleaned: {FormatSize(cleaned)}."));
         }
         else if (cleaned > 0)
         {
             result = new ModuleResult
             {
                 Key = Key, Status = ComponentStatus.PartiallyUpdated,
-                Summary = $"Kısmen temizlendi: {FormatSize(cleaned)}",
+                Summary = L.T($"Kısmen temizlendi: {FormatSize(cleaned)}", $"Partially cleaned: {FormatSize(cleaned)}"),
                 Details = detailText, Reason = string.Join("\n", problems.Concat(notes)), Items = items
             };
-            logger.Warning($"Geçici dosyalar kısmen temizlendi: {FormatSize(cleaned)} temizlendi" +
-                           (remainingCleanable > 0 ? $", {FormatSize(remainingCleanable)} kullanımda olduğu için kaldı" : string.Empty) + ".");
+            logger.Warning(L.T($"Geçici dosyalar kısmen temizlendi: {FormatSize(cleaned)} temizlendi", $"Temporary files partially cleaned: {FormatSize(cleaned)} cleaned") +
+                           (remainingCleanable > 0 ? L.T($", {FormatSize(remainingCleanable)} kullanımda olduğu için kaldı", $", {FormatSize(remainingCleanable)} remained because it was in use") : string.Empty) + ".");
         }
         else
         {
             result = new ModuleResult
             {
-                Key = Key, Status = ComponentStatus.Failed, Summary = "Geçici dosyalar temizlenemedi",
+                Key = Key, Status = ComponentStatus.Failed, Summary = L.T("Geçici dosyalar temizlenemedi", "Temporary files could not be cleaned"),
                 Details = detailText, Items = items,
-                Reason = problems.Count > 0 ? string.Join("\n", problems) : "Hiçbir dosya silinemedi."
+                Reason = problems.Count > 0 ? string.Join("\n", problems) : L.T("Hiçbir dosya silinemedi.", "No file could be deleted.")
             };
-            logger.Error("Geçici dosyalar temizlenemedi.");
+            logger.Error(L.T("Geçici dosyalar temizlenemedi.", "Temporary files could not be cleaned."));
         }
         return result;
     }
@@ -466,10 +466,10 @@ public sealed class TemporaryFilesManager(Logger logger) : IUpdateModule, IProgr
         if (error is not null && measuredFiles == 0) return Measurement.Failed(error);
 
         var why = new List<string>();
-        if (recent > 0) why.Add("son 24 saatte eklenen/değişen");
-        if (readOnlyOrSystem > 0) why.Add("salt okunur/sistem");
-        if (inUse > 0) why.Add($"kullanımda {FormatSize(inUse)}{AppsSuffix(FileProbe.AppsUsing(inUsePaths))}");
-        if (denied > 0) why.Add($"erişim reddedildi {FormatSize(denied)}");
+        if (recent > 0) why.Add(L.T("son 24 saatte eklenen/değişen", "added/changed in the last 24 hours"));
+        if (readOnlyOrSystem > 0) why.Add(L.T("salt okunur/sistem", "read-only/system"));
+        if (inUse > 0) why.Add(L.T($"kullanımda {FormatSize(inUse)}{AppsSuffix(FileProbe.AppsUsing(inUsePaths))}", $"in use {FormatSize(inUse)}{AppsSuffix(FileProbe.AppsUsing(inUsePaths))}"));
+        if (denied > 0) why.Add(L.T($"erişim reddedildi {FormatSize(denied)}", $"access denied {FormatSize(denied)}"));
         return new Measurement(measured, measuredFiles, cleanable, cleanableFiles, measured - cleanable,
             string.Join(", ", why), null, []);
     }
@@ -511,7 +511,7 @@ public sealed class TemporaryFilesManager(Logger logger) : IUpdateModule, IProgr
         }
         catch (UnauthorizedAccessException)
         {
-            return AdminPrivilegeManager.IsElevated ? "Erişim reddedildi" : "Erişim reddedildi (yönetici izni gerekli)";
+            return AdminPrivilegeManager.IsElevated ? L.T("Erişim reddedildi", "Access denied") : L.T("Erişim reddedildi (yönetici izni gerekli)", "Access denied (administrator permission required)");
         }
         catch (IOException ex)
         {
@@ -593,7 +593,7 @@ public sealed class TemporaryFilesManager(Logger logger) : IUpdateModule, IProgr
             catch (Exception ex) when (ex is UnauthorizedAccessException or IOException)
             {
                 error = ex.Message;
-                logger.Warning($"{c.Label} temizlenirken hata: {ex.Message}");
+                logger.Warning(L.T($"{c.Label} temizlenirken hata: {ex.Message}", $"Error while cleaning {c.Label}: {ex.Message}"));
             }
         }
         var apps = FileProbe.AppsUsing(lockedPaths);
@@ -706,7 +706,7 @@ public sealed class TemporaryFilesManager(Logger logger) : IUpdateModule, IProgr
             }
             catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
             {
-                logger.Output($"Teslim En İyileştirme önbellek klasörü okunamadı ({dir}): {ex.Message}");
+                logger.Output(L.T($"Teslim En İyileştirme önbellek klasörü okunamadı ({dir}): {ex.Message}", $"Could not read the Delivery Optimization cache folder ({dir}): {ex.Message}"));
             }
         }
 
@@ -716,7 +716,7 @@ public sealed class TemporaryFilesManager(Logger logger) : IUpdateModule, IProgr
 
         // Ne diskteki klasör okunabildi ne de Windows kayıt / boyut bildirdi: "0 bayt / temizlenecek dosya yok" DENMEZ.
         if (disk is null && listedFiles == 0 && reported is null)
-            return Measurement.Failed("Windows önbellek kaydı ve önbellek boyutu bildirmedi; önbellek klasörü okunamadı");
+            return Measurement.Failed(L.T("Windows önbellek kaydı ve önbellek boyutu bildirmedi; önbellek klasörü okunamadı", "Windows reported no cache records and no cache size; the cache folder could not be read"));
 
         var measured = disk ?? Math.Max(listed, reported ?? 0);
         cleanable = Math.Min(cleanable, measured);
@@ -724,15 +724,15 @@ public sealed class TemporaryFilesManager(Logger logger) : IUpdateModule, IProgr
         var unlisted = Math.Max(0, measured - listed);
 
         var why = new List<string>();
-        if (pinned > 0) why.Add($"Windows tarafından sabitlenmiş {FormatSize(pinned)}");
-        if (active > 0) why.Add($"etkin indirme {FormatSize(active)}");
-        if (retainedBytes > 0) why.Add($"önceki temizlikte Windows {DoWaitSeconds} sn içinde silmedi {FormatSize(retainedBytes)}");
-        if (unlisted > 0) why.Add($"Windows'un etkin kayıt bildirmediği önbellek {FormatSize(unlisted)}");
-        if (disk is null && measured > 0) why.Add("önbellek klasörü okunamadı; Windows'un bildirdiği kayıtlar / boyut ölçüldü");
+        if (pinned > 0) why.Add(L.T($"Windows tarafından sabitlenmiş {FormatSize(pinned)}", $"pinned by Windows {FormatSize(pinned)}"));
+        if (active > 0) why.Add(L.T($"etkin indirme {FormatSize(active)}", $"active download {FormatSize(active)}"));
+        if (retainedBytes > 0) why.Add(L.T($"önceki temizlikte Windows {DoWaitSeconds} sn içinde silmedi {FormatSize(retainedBytes)}", $"not deleted by Windows within {DoWaitSeconds} sec in the previous cleanup {FormatSize(retainedBytes)}"));
+        if (unlisted > 0) why.Add(L.T($"Windows'un etkin kayıt bildirmediği önbellek {FormatSize(unlisted)}", $"cache without active records reported by Windows {FormatSize(unlisted)}"));
+        if (disk is null && measured > 0) why.Add(L.T("önbellek klasörü okunamadı; Windows'un bildirdiği kayıtlar / boyut ölçüldü", "the cache folder could not be read; the records / size reported by Windows were measured"));
 
-        ExecutionTrace.Note($"Teslim En İyileştirme: Windows kaydı {listedFiles} dosya / {FormatSize(listed)} · sabitlenmiş {FormatSize(pinned)} · " +
-                            $"etkin {FormatSize(active)} · Windows'un bildirdiği önbellek {(reported is null ? "okunamadı" : FormatSize(reported.Value))} · " +
-                            $"diskte {(disk is null ? "okunamadı" : FormatSize(disk.Value) + $" ({diskFiles} dosya)")}");
+        ExecutionTrace.Note(L.T($"Teslim En İyileştirme: Windows kaydı {listedFiles} dosya / {FormatSize(listed)} · sabitlenmiş {FormatSize(pinned)} · ", $"Delivery Optimization: Windows records {listedFiles} files / {FormatSize(listed)} · pinned {FormatSize(pinned)} · ") +
+                            L.T($"etkin {FormatSize(active)} · Windows'un bildirdiği önbellek {(reported is null ? "okunamadı" : FormatSize(reported.Value))} · ", $"active {FormatSize(active)} · cache reported by Windows {(reported is null ? "unreadable" : FormatSize(reported.Value))} · ") +
+                            L.T($"diskte {(disk is null ? "okunamadı" : FormatSize(disk.Value) + $" ({diskFiles} dosya)")}", $"on disk {(disk is null ? "unreadable" : FormatSize(disk.Value) + $" ({diskFiles} files)")}"));
         return new Measurement(measured, disk is null ? listedFiles : diskFiles, cleanable, cleanableIds.Count, protectedBytes,
             string.Join(", ", why), null, cleanableIds);
     }
@@ -744,13 +744,13 @@ public sealed class TemporaryFilesManager(Logger logger) : IUpdateModule, IProgr
     private async Task<(int Files, long Bytes, string? Error, string? Note)> CleanDeliveryOptimizationAsync(IReadOnlyCollection<string> ids)
     {
         if (ids.Count > 0)
-            Report($"Teslim En İyileştirme: Windows'un {ids.Count} önbellek dosyasını silmesi bekleniyor (en fazla {DoWaitSeconds} sn)...", null);
+            Report(L.T($"Teslim En İyileştirme: Windows'un {ids.Count} önbellek dosyasını silmesi bekleniyor (en fazla {DoWaitSeconds} sn)...", $"Delivery Optimization: waiting for Windows to delete {ids.Count} cache file(s) (up to {DoWaitSeconds} sec)..."), null);
         var ps = await PowerShellRunner.RunAsync(DoDeleteScript(ids, DoWaitSeconds), TimeSpan.FromMinutes(5), CancellationToken.None,
-            traceName: $"Delete-DeliveryOptimizationCache -Force + silinmenin doğrulanması (en fazla {DoWaitSeconds} sn)");
+            traceName: L.T($"Delete-DeliveryOptimizationCache -Force + silinmenin doğrulanması (en fazla {DoWaitSeconds} sn)", $"Delete-DeliveryOptimizationCache -Force + verification of the deletion (up to {DoWaitSeconds} sec)"));
         if (!ps.Ok)
         {
             var error = ps.DescribeFailure("Delete-DeliveryOptimizationCache");
-            logger.Warning("Teslim En İyileştirme önbelleği temizlenemedi: " + error);
+            logger.Warning(L.T("Teslim En İyileştirme önbelleği temizlenemedi: ", "Could not clean the Delivery Optimization cache: ") + error);
             return (0, 0, error, null);
         }
 
@@ -762,27 +762,30 @@ public sealed class TemporaryFilesManager(Logger logger) : IUpdateModule, IProgr
         string? note = null;
         if (statusError is not null)
         {
-            note = $"silme sonrası Windows kaydı okunamadı: {statusError}";
-            logger.Warning($"Teslim En İyileştirme: {note}");
+            note = L.T($"silme sonrası Windows kaydı okunamadı: {statusError}", $"could not read the Windows records after deletion: {statusError}");
+            logger.Warning(L.T($"Teslim En İyileştirme: {note}", $"Delivery Optimization: {note}"));
         }
         else if (targets > 0 && remaining == 0)
         {
-            logger.Info($"Teslim En İyileştirme: Windows {targets} önbellek dosyasını sildi (Windows kaydından çıktığı {waited} sn içinde doğrulandı).");
+            logger.Info(L.T($"Teslim En İyileştirme: Windows {targets} önbellek dosyasını sildi (Windows kaydından çıktığı {waited} sn içinde doğrulandı).", $"Delivery Optimization: Windows deleted {targets} cache file(s) (verified within {waited} sec as they left the Windows records)."));
         }
         else if (remaining > 0)
         {
-            note = $"Windows silme komutunu onayladı ancak {waited} sn içinde {remaining}/{targets} dosyayı silmedi";
-            logger.Warning($"Teslim En İyileştirme: {note}.");
+            note = L.T($"Windows silme komutunu onayladı ancak {waited} sn içinde {remaining}/{targets} dosyayı silmedi", $"Windows accepted the delete command but did not delete {remaining}/{targets} file(s) within {waited} sec");
+            logger.Warning(L.T($"Teslim En İyileştirme: {note}.", $"Delivery Optimization: {note}."));
         }
         return (0, 0, null, note);
     }
+
+    /// <summary>Kontrol özetinin öneki ("Temizlenebilir: 1,2 GB"); onay penceresi boyutu bu önek olmadan gösterir.</summary>
+    public static string CleanablePrefix => L.T("Temizlenebilir: ", "Cleanable: ");
 
     public static string FormatSize(long bytes) => bytes switch
     {
         >= 1L << 30 => $"{bytes / (double)(1L << 30):0.00} GB",
         >= 1L << 20 => $"{bytes / (double)(1L << 20):0.0} MB",
         >= 1L << 10 => $"{bytes / 1024.0:0} KB",
-        _ => $"{bytes} bayt"
+        _ => L.T($"{bytes} bayt", $"{bytes} bytes")
     };
 
     private void Report(string text, double? percent)

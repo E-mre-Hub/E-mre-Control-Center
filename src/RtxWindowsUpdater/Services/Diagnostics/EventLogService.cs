@@ -8,7 +8,7 @@ public sealed record EventEntry(DateTime? Time, string Log, string Provider, int
 {
     public string TimeText => Formats.Date(Time);
     public string LevelText => EventLogService.LevelText(Level);
-    public string LogText => Log switch { "System" => "Sistem", "Application" => "Uygulama", _ => Log };
+    public string LogText => Log switch { "System" => L.T("Sistem", "System"), "Application" => L.T("Uygulama", "Application"), _ => Log };
     public string ShortMessage => Message.Length <= 220 ? Message.ReplaceLineEndings(" ") : Message[..220].ReplaceLineEndings(" ") + "…";
 }
 
@@ -31,12 +31,12 @@ public sealed class EventLogService(Logger logger)
 
     public static string LevelText(int level) => level switch
     {
-        1 => "Kritik",
-        2 => "Hata",
-        3 => "Uyarı",
-        4 or 0 => "Bilgi",
-        5 => "Ayrıntılı",
-        _ => $"Düzey {level}"
+        1 => L.T("Kritik", "Critical"),
+        2 => L.T("Hata", "Error"),
+        3 => L.T("Uyarı", "Warning"),
+        4 or 0 => L.T("Bilgi", "Information"),
+        5 => L.T("Ayrıntılı", "Verbose"),
+        _ => L.T($"Düzey {level}", $"Level {level}")
     };
 
     internal static string XPath(IEnumerable<int> levels, TimeSpan period, string? extra = null)
@@ -69,13 +69,13 @@ public sealed class EventLogService(Logger logger)
             catch (OperationCanceledException) { throw; }
             catch (Exception ex) when (ex is EventLogException or UnauthorizedAccessException or InvalidOperationException)
             {
-                errors.Add($"{log} günlüğü okunamadı: {Describe(ex)}");
+                errors.Add(L.T($"{log} günlüğü okunamadı: {Describe(ex)}", $"Could not read the {log} log: {Describe(ex)}"));
             }
         }
         var ordered = all.OrderByDescending(e => e.Time).Take(MaxEntries).ToList();
         truncated |= all.Count > ordered.Count;
-        logger.Info($"Olay günlüğü sorgusu: {string.Join("+", logs)}, düzey {string.Join(",", levels)}, {period.TotalHours:0} sa → {ordered.Count} kayıt" +
-                    (truncated ? " (sınır)" : "") + (errors.Count > 0 ? "; " + string.Join("; ", errors) : "."));
+        logger.Info(L.T($"Olay günlüğü sorgusu: {string.Join("+", logs)}, düzey {string.Join(",", levels)}, {period.TotalHours:0} sa → {ordered.Count} kayıt", $"Event log query: {string.Join("+", logs)}, level {string.Join(",", levels)}, {period.TotalHours:0} h → {ordered.Count} records") +
+                    (truncated ? L.T(" (sınır)", " (limit)") : "") + (errors.Count > 0 ? "; " + string.Join("; ", errors) : "."));
         return new EventQueryResult(ordered, truncated, errors);
     }, ct);
 
@@ -151,14 +151,14 @@ public sealed class EventLogService(Logger logger)
         var props = r.Properties?.Select(p => Convert.ToString(p.Value, System.Globalization.CultureInfo.InvariantCulture))
             .Where(s => !string.IsNullOrWhiteSpace(s)).ToList() ?? [];
         return props.Count == 0
-            ? "(Windows bu olay için ileti metni bulamadı; olay verisi yok.)"
-            : "(Windows bu olay için ileti metni bulamadı.) Olay verisi: " + string.Join(" · ", props);
+            ? L.T("(Windows bu olay için ileti metni bulamadı; olay verisi yok.)", "(Windows could not find the message text for this event; no event data.)")
+            : L.T("(Windows bu olay için ileti metni bulamadı.) Olay verisi: ", "(Windows could not find the message text for this event.) Event data: ") + string.Join(" · ", props);
     }
 
     internal static string Describe(Exception ex) => ex switch
     {
-        EventLogNotFoundException => "Günlük bu sistemde bulunamadı.",
-        UnauthorizedAccessException or EventLogReadingException { HResult: unchecked((int)0x80070005) } => "Erişim reddedildi (yönetici yetkisi gerekebilir).",
+        EventLogNotFoundException => L.T("Günlük bu sistemde bulunamadı.", "The log was not found on this system."),
+        UnauthorizedAccessException or EventLogReadingException { HResult: unchecked((int)0x80070005) } => L.T("Erişim reddedildi (yönetici yetkisi gerekebilir).", "Access denied (administrator rights may be required)."),
         _ => ex.Message.Trim()
     };
 }

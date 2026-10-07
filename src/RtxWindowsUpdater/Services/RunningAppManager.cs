@@ -201,33 +201,33 @@ public static class RunningAppManager
         var exe = QueryImagePath(p.ProcessId);
         var exeName = exe is null ? null : Path.GetFileName(exe);
         var name = exeName is null
-            ? (string.IsNullOrWhiteSpace(p.AppName) ? $"İşlem {p.ProcessId}" : p.AppName)
+            ? (string.IsNullOrWhiteSpace(p.AppName) ? L.T($"İşlem {p.ProcessId}", $"Process {p.ProcessId}") : p.AppName)
             : string.IsNullOrWhiteSpace(p.AppName) || p.AppName.Equals(exeName, StringComparison.OrdinalIgnoreCase)
                 ? exeName
                 : $"{exeName} – {p.AppName}";
 
         var type = p.Type switch
         {
-            RestartManager.AppType.MainWindow => "Pencereli uygulama",
-            RestartManager.AppType.OtherWindow => "Uygulama",
-            RestartManager.AppType.Console => "Konsol uygulaması",
-            RestartManager.AppType.Service => "Windows hizmeti",
-            RestartManager.AppType.Explorer => "Windows Gezgini",
-            RestartManager.AppType.Critical => "Kritik sistem işlemi",
-            _ => "Arka plan işlemi"
+            RestartManager.AppType.MainWindow => L.T("Pencereli uygulama", "Windowed app"),
+            RestartManager.AppType.OtherWindow => L.T("Uygulama", "App"),
+            RestartManager.AppType.Console => L.T("Konsol uygulaması", "Console app"),
+            RestartManager.AppType.Service => L.T("Windows hizmeti", "Windows service"),
+            RestartManager.AppType.Explorer => L.T("Windows Gezgini", "Windows Explorer"),
+            RestartManager.AppType.Critical => L.T("Kritik sistem işlemi", "Critical system process"),
+            _ => L.T("Arka plan işlemi", "Background process")
         };
 
         var windows = Environment.GetFolderPath(Environment.SpecialFolder.Windows).TrimEnd('\\') + "\\";
         string? notClosable =
-            p.Type == RestartManager.AppType.Service ? $"Windows hizmeti ({p.ServiceName}) – otomatik kapatılmaz"
-            : p.Type == RestartManager.AppType.Explorer ? "Windows Gezgini – otomatik kapatılmaz"
-            : p.Type == RestartManager.AppType.Critical ? "kritik sistem işlemi – kapatılmaz"
-            : p.ProcessId == Environment.ProcessId ? "bu uygulama"
+            p.Type == RestartManager.AppType.Service ? L.T($"Windows hizmeti ({p.ServiceName}) – otomatik kapatılmaz", $"Windows service ({p.ServiceName}) – never closed automatically")
+            : p.Type == RestartManager.AppType.Explorer ? L.T("Windows Gezgini – otomatik kapatılmaz", "Windows Explorer – never closed automatically")
+            : p.Type == RestartManager.AppType.Critical ? L.T("kritik sistem işlemi – kapatılmaz", "critical system process – never closed")
+            : p.ProcessId == Environment.ProcessId ? L.T("bu uygulama", "this app")
             // Bilgisi okunamayan işlem önce ayırt edilir: Restart Manager listesi alındıktan hemen sonra kapanan bir işlem
             // (ör. arka planda kurulumu biten Squirrel Update.exe) yanlışlıkla "başka bir oturumda" diye etiketlenmesin.
-            : exe is null ? (IsRunning(p.ProcessId, p.StartTime) ? "işlem bilgisi okunamadı – kapatılmaz" : "işlem bu arada kapandı")
-            : p.SessionId != (uint)mySession ? "başka bir kullanıcı oturumunda – kapatılmaz"
-            : exe.StartsWith(windows, StringComparison.OrdinalIgnoreCase) ? "Windows bileşeni – kapatılmaz"
+            : exe is null ? (IsRunning(p.ProcessId, p.StartTime) ? L.T("işlem bilgisi okunamadı – kapatılmaz", "process information unreadable – not closed") : L.T("işlem bu arada kapandı", "the process exited in the meantime"))
+            : p.SessionId != (uint)mySession ? L.T("başka bir kullanıcı oturumunda – kapatılmaz", "in another user's session – not closed")
+            : exe.StartsWith(windows, StringComparison.OrdinalIgnoreCase) ? L.T("Windows bileşeni – kapatılmaz", "Windows component – not closed")
             : null;
 
         return new RunningProcessInfo(p.ProcessId, p.StartTime, name, exe, type, notClosable is null, notClosable);
@@ -246,7 +246,7 @@ public static class RunningAppManager
             var label = $"{p.Name} (PID {p.ProcessId})";
             if (!p.CanClose)
             {
-                report.Add($"{label}: kapatılmadı – {p.NotClosableReason}");
+                report.Add(L.T($"{label}: kapatılmadı – {p.NotClosableReason}", $"{label}: not closed – {p.NotClosableReason}"));
                 continue;
             }
 
@@ -254,8 +254,8 @@ public static class RunningAppManager
             try { proc = Process.GetProcessById(p.ProcessId); }
             catch (ArgumentException)
             {
-                report.Add($"{label}: zaten kapanmış");
-                logger.Info($"{label} zaten kapanmış.");
+                report.Add(L.T($"{label}: zaten kapanmış", $"{label}: already exited"));
+                logger.Info(L.T($"{label} zaten kapanmış.", $"{label} already exited."));
                 continue;
             }
 
@@ -267,8 +267,8 @@ public static class RunningAppManager
                     var start = proc.StartTime.ToFileTime();
                     if (Math.Abs(start - p.StartTime) > TimeSpan.TicksPerSecond)
                     {
-                        report.Add($"{label}: PID artık başka bir işleme ait – dokunulmadı");
-                        logger.Warning($"{label}: PID artık başka bir işleme ait; dokunulmadı.");
+                        report.Add(L.T($"{label}: PID artık başka bir işleme ait – dokunulmadı", $"{label}: the PID now belongs to another process – not touched"));
+                        logger.Warning(L.T($"{label}: PID artık başka bir işleme ait; dokunulmadı.", $"{label}: the PID now belongs to another process; not touched."));
                         continue;
                     }
                 }
@@ -276,11 +276,11 @@ public static class RunningAppManager
                 {
                     if (SafeHasExited(proc))
                     {
-                        report.Add($"{label}: zaten kapanmış");
+                        report.Add(L.T($"{label}: zaten kapanmış", $"{label}: already exited"));
                         continue;
                     }
-                    report.Add($"{label}: işlem doğrulanamadı ({ex.Message}) – dokunulmadı");
-                    logger.Warning($"{label}: işlem doğrulanamadı ({ex.Message}); dokunulmadı.");
+                    report.Add(L.T($"{label}: işlem doğrulanamadı ({ex.Message}) – dokunulmadı", $"{label}: the process could not be verified ({ex.Message}) – not touched"));
+                    logger.Warning(L.T($"{label}: işlem doğrulanamadı ({ex.Message}); dokunulmadı.", $"{label}: the process could not be verified ({ex.Message}); not touched."));
                     continue;
                 }
 
@@ -290,13 +290,13 @@ public static class RunningAppManager
 
                 if (closeRequested && await WaitForExitAsync(proc, GracefulTimeout))
                 {
-                    report.Add($"{label}: normal şekilde kapatıldı");
-                    logger.Info($"{label} normal şekilde kapatıldı.");
+                    report.Add(L.T($"{label}: normal şekilde kapatıldı", $"{label}: closed normally"));
+                    logger.Info(L.T($"{label} normal şekilde kapatıldı.", $"{label} closed normally."));
                     continue;
                 }
                 if (SafeHasExited(proc))
                 {
-                    report.Add($"{label}: kapandı");
+                    report.Add(L.T($"{label}: kapandı", $"{label}: exited"));
                     continue;
                 }
 
@@ -308,24 +308,24 @@ public static class RunningAppManager
                 {
                     if (SafeHasExited(proc))
                     {
-                        report.Add($"{label}: kapandı");
+                        report.Add(L.T($"{label}: kapandı", $"{label}: exited"));
                         continue;
                     }
-                    report.Add($"{label}: sonlandırılamadı – {ex.Message}");
-                    logger.Warning($"{label} sonlandırılamadı: {ex.Message}");
+                    report.Add(L.T($"{label}: sonlandırılamadı – {ex.Message}", $"{label}: could not end it – {ex.Message}"));
+                    logger.Warning(L.T($"{label} sonlandırılamadı: {ex.Message}", $"{label}: could not end it: {ex.Message}"));
                     continue;
                 }
 
                 if (await WaitForExitAsync(proc, TimeSpan.FromSeconds(5)))
                 {
-                    var how = closeRequested ? "normal kapatma isteğine yanıt vermedi, sonlandırıldı" : "sonlandırıldı (Görevi sonlandır)";
+                    var how = closeRequested ? L.T("normal kapatma isteğine yanıt vermedi, sonlandırıldı", "did not respond to the normal close request, ended") : L.T("sonlandırıldı (Görevi sonlandır)", "ended (End task)");
                     report.Add($"{label}: {how}");
                     logger.Warning($"{label} {how}.");
                 }
                 else
                 {
-                    report.Add($"{label}: sonlandırma isteğine rağmen kapanmadı");
-                    logger.Warning($"{label} sonlandırma isteğine rağmen kapanmadı.");
+                    report.Add(L.T($"{label}: sonlandırma isteğine rağmen kapanmadı", $"{label}: did not close despite the end request"));
+                    logger.Warning(L.T($"{label} sonlandırma isteğine rağmen kapanmadı.", $"{label} did not close despite the end request."));
                 }
             }
         }

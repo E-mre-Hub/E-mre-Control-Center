@@ -45,7 +45,7 @@ public static class CmdCommand
     {
         ArgumentNullException.ThrowIfNull(value);
         if (value.IndexOfAny(Forbidden) >= 0)
-            throw new ArgumentException($"Güvensiz karakter içeren argüman reddedildi: {value}");
+            throw new ArgumentException(L.T($"Güvensiz karakter içeren argüman reddedildi: {value}", $"Argument with unsafe characters rejected: {value}"));
         var needsQuotes = alwaysQuote || value.Length == 0 || value.Any(c => char.IsWhiteSpace(c) || c is '(' or ')' or ',' or ';' or '=');
         return needsQuotes ? "\"" + value + "\"" : value;
     }

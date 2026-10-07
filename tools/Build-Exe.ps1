@@ -1,7 +1,7 @@
 ﻿<#
     E-mre Control Center - tek dosya EXE üretimi
     Çıktı: <proje klasörü (E-mre Control Center)>\E-mre Control Center.exe  (klasör, betiğin konumundan bulunur; adı önemli değildir)
-           ve aynı EXE'nin kurulum adıyla kopyası: E-mre Control Center Setup.exe
+           ve aynı EXE'nin kurulum adıyla kopyaları: E-mre Control Center Setup TR.exe (Türkçe) ve E-mre Control Center Setup EN.exe (İngilizce)
 
     Kullanım (proje klasöründe):
         powershell -ExecutionPolicy Bypass -File .\tools\Build-Exe.ps1
@@ -118,14 +118,20 @@ if ($SignThumbprint) {
 #    kendini Program Files'a "E-mre Control Center.exe" olarak kurar (ayrı bir kurulum aracı gerekmez; imzalıysa imza da aynıdır).
 $target = Join-Path $root "$appName.exe"
 Copy-Item $exe $target -Force
-$setup = Join-Path $root "$appName Setup.exe"
+# v2.0.0: Türkçe ve İngilizce kurulum = aynı EXE, adındaki "TR" / "EN" işareti kurulum ve kaldırma ekranlarının dilini belirler.
+$setup = Join-Path $root "$appName Setup TR.exe"
 Copy-Item $exe $setup -Force
-if ((Get-FileHash $target).Hash -ne (Get-FileHash $setup).Hash) { throw "Kurulum dosyası uygulama EXE'siyle aynı değil: $setup" }
+$setupEn = Join-Path $root "$appName Setup EN.exe"
+Copy-Item $exe $setupEn -Force
+foreach ($copy in @($setup, $setupEn)) {
+    if ((Get-FileHash $target).Hash -ne (Get-FileHash $copy).Hash) { throw "Kurulum dosyası uygulama EXE'siyle aynı değil: $copy" }
+}
 
 $size = [Math]::Round((Get-Item $target).Length / 1MB, 1)
 Write-Host ""
 Write-Host "Tamamlandı: $target ($size MB)" -ForegroundColor Green
-Write-Host "Kurulum dosyası: $setup (aynı EXE; çift tıklayınca kurulum ekranı açılır)" -ForegroundColor Green
+Write-Host "Kurulum dosyası: $setup (aynı EXE; çift tıklayınca Türkçe kurulum ekranı açılır)" -ForegroundColor Green
+Write-Host "English setup: $setupEn (aynı EXE; kurulum ekranı İngilizce açılır)" -ForegroundColor Green
 if ($signedBy) {
     Write-Host "İmzalı: $signedBy (zaman damgalı, doğrulandı)" -ForegroundColor Green
 } else {

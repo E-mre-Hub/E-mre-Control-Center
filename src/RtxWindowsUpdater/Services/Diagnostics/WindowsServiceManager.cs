@@ -26,12 +26,12 @@ public sealed record ServiceEntry(
     public string StartModeText => ServiceText.StartMode(StartMode, DelayedStart);
     public string PathText => PathName ?? "—";
     public string PublisherText => Publisher ?? "—";
-    public string DescriptionText => string.IsNullOrWhiteSpace(Description) ? "Açıklama yok" : Description!;
+    public string DescriptionText => string.IsNullOrWhiteSpace(Description) ? L.T("Açıklama yok", "No description") : Description!;
     public bool IsRunning => string.Equals(State, "Running", StringComparison.OrdinalIgnoreCase);
     public bool IsDisabled => string.Equals(StartMode, "Disabled", StringComparison.OrdinalIgnoreCase);
     public bool CanStart => !IsRunning && !IsDisabled;
     public bool CanStop => IsRunning && ProtectedReason is null && AcceptStop != false;
-    public string StopBlockedText => ProtectedReason ?? (AcceptStop == false ? "Hizmet durdurma isteğini kabul etmiyor" : "");
+    public string StopBlockedText => ProtectedReason ?? (AcceptStop == false ? L.T("Hizmet durdurma isteğini kabul etmiyor", "The service does not accept stop requests") : "");
 }
 
 public sealed record ServiceScan(IReadOnlyList<ServiceEntry> Services, string? Error);
@@ -60,7 +60,7 @@ public sealed class WindowsServiceManager(Logger logger)
     public Task<ServiceScan> ListAsync(CancellationToken ct) => Task.Run(() =>
     {
         var r = Wmi.Query(@"\\.\root\cimv2", "SELECT * FROM Win32_Service", TimeSpan.FromSeconds(40));
-        if (!r.Ok) return new ServiceScan([], "Hizmetler okunamadı: " + r.Error);
+        if (!r.Ok) return new ServiceScan([], L.T("Hizmetler okunamadı: ", "Could not read services: ") + r.Error);
         var publishers = new Dictionary<string, string?>(StringComparer.OrdinalIgnoreCase);
         var list = r.Rows.Select(row =>
         {
@@ -78,12 +78,12 @@ public sealed class WindowsServiceManager(Logger logger)
                 row.Str("Description"), path, row.Str("StartName"), pid is > 0 ? (int)pid : null, row.Bool("AcceptStop"), publisher,
                 ProtectedReason(name));
         }).OrderBy(s => s.DisplayName, StringComparer.CurrentCultureIgnoreCase).ToList();
-        logger.Info($"Windows hizmetleri okundu: {list.Count} ({list.Count(s => s.IsRunning)} çalışıyor).");
+        logger.Info(L.T($"Windows hizmetleri okundu: {list.Count} ({list.Count(s => s.IsRunning)} çalışıyor).", $"Windows services read: {list.Count} ({list.Count(s => s.IsRunning)} running)."));
         return new ServiceScan(list, null);
     }, ct);
 
     internal static string? ProtectedReason(string name) =>
-        CriticalServices.Contains(name) ? "Kritik Windows hizmeti – durdurulması engellendi" : null;
+        CriticalServices.Contains(name) ? L.T("Kritik Windows hizmeti – durdurulması engellendi", "Critical Windows service – stopping is blocked") : null;
 
     /// <summary>
     /// Kullanıcının onayladığı işlem. Durdurma / yeniden başlatma kritik hizmette reddedilir. Başarı yalnızca hizmet gerçekten istenen
@@ -91,9 +91,9 @@ public sealed class WindowsServiceManager(Logger logger)
     /// </summary>
     public async Task<(bool Success, string Message)> RunAsync(ServiceEntry service, ServiceAction action, CancellationToken ct)
     {
-        if (!IsSafeName(service.Name)) return (false, "Geçersiz hizmet adı.");
+        if (!IsSafeName(service.Name)) return (false, L.T("Geçersiz hizmet adı.", "Invalid service name."));
         if (action != ServiceAction.Start && ProtectedReason(service.Name) is { } reason) return (false, reason + ".");
-        if (!AdminPrivilegeManager.IsElevated) return (false, "Hizmet başlatma / durdurma yönetici yetkisi gerektirir.");
+        if (!AdminPrivilegeManager.IsElevated) return (false, L.T("Hizmet başlatma / durdurma yönetici yetkisi gerektirir.", "Starting / stopping services requires administrator rights."));
 
         var label = $"{service.DisplayName} ({service.Name})";
         if (action is ServiceAction.Stop or ServiceAction.Restart)
@@ -101,23 +101,23 @@ public sealed class WindowsServiceManager(Logger logger)
             var (ok, msg) = await InvokeAsync(service.Name, "StopService", "Stopped", ct);
             if (!ok)
             {
-                logger.Warning($"Hizmet durdurulamadı: {label}: {msg}");
-                return (false, "Durdurulamadı: " + msg);
+                logger.Warning(L.T($"Hizmet durdurulamadı: {label}: {msg}", $"The service could not be stopped: {label}: {msg}"));
+                return (false, L.T("Durdurulamadı: ", "Could not stop: ") + msg);
             }
             if (action == ServiceAction.Stop)
             {
-                logger.Info($"Hizmet durduruldu: {label}.");
-                return (true, "Hizmet durduruldu.");
+                logger.Info(L.T($"Hizmet durduruldu: {label}.", $"Service stopped: {label}."));
+                return (true, L.T("Hizmet durduruldu.", "Service stopped."));
             }
         }
         var (started, startMsg) = await InvokeAsync(service.Name, "StartService", "Running", ct);
         if (!started)
         {
-            logger.Warning($"Hizmet başlatılamadı: {label}: {startMsg}");
-            return (false, (action == ServiceAction.Restart ? "Durduruldu ancak yeniden başlatılamadı: " : "Başlatılamadı: ") + startMsg);
+            logger.Warning(L.T($"Hizmet başlatılamadı: {label}: {startMsg}", $"The service could not be started: {label}: {startMsg}"));
+            return (false, (action == ServiceAction.Restart ? L.T("Durduruldu ancak yeniden başlatılamadı: ", "Stopped but could not be restarted: ") : L.T("Başlatılamadı: ", "Could not start: ")) + startMsg);
         }
-        logger.Info($"Hizmet {(action == ServiceAction.Restart ? "yeniden başlatıldı" : "başlatıldı")}: {label}.");
-        return (true, action == ServiceAction.Restart ? "Hizmet yeniden başlatıldı." : "Hizmet başlatıldı.");
+        logger.Info(L.T($"Hizmet {(action == ServiceAction.Restart ? "yeniden başlatıldı" : "başlatıldı")}: {label}.", $"Service {(action == ServiceAction.Restart ? "restarted" : "started")}: {label}."));
+        return (true, action == ServiceAction.Restart ? L.T("Hizmet yeniden başlatıldı.", "Service restarted.") : L.T("Hizmet başlatıldı.", "Service started."));
     }
 
     private static Task<(bool, string)> InvokeAsync(string name, string method, string targetState, CancellationToken ct) => Task.Run(async () =>
@@ -126,7 +126,7 @@ public sealed class WindowsServiceManager(Logger logger)
         {
             using var svc = new ManagementObject(new ManagementPath($@"\\.\root\cimv2:Win32_Service.Name='{name}'"));
             var code = Convert.ToUInt32(svc.InvokeMethod(method, null), System.Globalization.CultureInfo.InvariantCulture);
-            if (code == 10 && targetState == "Running") return (true, "zaten çalışıyor");
+            if (code == 10 && targetState == "Running") return (true, L.T("zaten çalışıyor", "already running"));
             if (code != 0 && !(code == 6 && targetState == "Stopped")) return (false, ReturnText(code));
             var sw = Stopwatch.StartNew();
             while (sw.Elapsed < StateTimeout)
@@ -138,7 +138,7 @@ public sealed class WindowsServiceManager(Logger logger)
                 await Task.Delay(500, ct);
             }
             svc.Get();
-            return (false, $"{StateTimeout.TotalSeconds:0} sn içinde istenen duruma geçmedi (şu an: {ServiceText.State(svc["State"] as string)}).");
+            return (false, L.T($"{StateTimeout.TotalSeconds:0} sn içinde istenen duruma geçmedi (şu an: {ServiceText.State(svc["State"] as string)}).", $"did not reach the requested state within {StateTimeout.TotalSeconds:0} sec (now: {ServiceText.State(svc["State"] as string)})."));
         }
         catch (ManagementException ex)
         {
@@ -156,25 +156,25 @@ public sealed class WindowsServiceManager(Logger logger)
     /// <summary>Win32_Service yöntem dönüş kodları (Microsoft belgesi).</summary>
     internal static string ReturnText(uint code) => code switch
     {
-        1 => "istek desteklenmiyor (1)",
-        2 => "erişim reddedildi – yönetici yetkisi gerekiyor (2)",
-        3 => "bu hizmete bağlı çalışan başka hizmetler var; önce onlar durdurulmalı (3)",
-        4 => "geçersiz hizmet denetimi (4)",
-        5 => "hizmet bu isteği şu anda kabul etmiyor (5)",
-        6 => "hizmet çalışmıyor (6)",
-        7 => "hizmet isteğe zamanında yanıt vermedi (7)",
-        8 => "bilinmeyen hata (8)",
-        9 => "hizmet dosyası bulunamadı (9)",
-        10 => "hizmet zaten çalışıyor (10)",
-        11 => "hizmet veritabanı kilitli (11)",
-        12 => "bağımlı olduğu hizmet silinmiş (12)",
-        13 => "bağımlı olduğu hizmet başlatılamadı (13)",
-        14 => "hizmet devre dışı (14)",
-        15 => "hizmet hesabıyla oturum açılamadı (15)",
-        16 => "hizmet silinmek üzere işaretli (16)",
-        17 => "hizmet iş parçacığı oluşturamadı (17)",
-        18 => "döngüsel bağımlılık (18)",
-        _ => $"Windows hata kodu {code}"
+        1 => L.T("istek desteklenmiyor (1)", "request not supported (1)"),
+        2 => L.T("erişim reddedildi – yönetici yetkisi gerekiyor (2)", "access denied – administrator rights required (2)"),
+        3 => L.T("bu hizmete bağlı çalışan başka hizmetler var; önce onlar durdurulmalı (3)", "other running services depend on this service; stop them first (3)"),
+        4 => L.T("geçersiz hizmet denetimi (4)", "invalid service control (4)"),
+        5 => L.T("hizmet bu isteği şu anda kabul etmiyor (5)", "the service cannot accept this request right now (5)"),
+        6 => L.T("hizmet çalışmıyor (6)", "the service is not running (6)"),
+        7 => L.T("hizmet isteğe zamanında yanıt vermedi (7)", "the service did not respond to the request in time (7)"),
+        8 => L.T("bilinmeyen hata (8)", "unknown error (8)"),
+        9 => L.T("hizmet dosyası bulunamadı (9)", "service file not found (9)"),
+        10 => L.T("hizmet zaten çalışıyor (10)", "the service is already running (10)"),
+        11 => L.T("hizmet veritabanı kilitli (11)", "the service database is locked (11)"),
+        12 => L.T("bağımlı olduğu hizmet silinmiş (12)", "a service it depends on has been deleted (12)"),
+        13 => L.T("bağımlı olduğu hizmet başlatılamadı (13)", "a service it depends on could not be started (13)"),
+        14 => L.T("hizmet devre dışı (14)", "the service is disabled (14)"),
+        15 => L.T("hizmet hesabıyla oturum açılamadı (15)", "could not log on with the service account (15)"),
+        16 => L.T("hizmet silinmek üzere işaretli (16)", "the service is marked for deletion (16)"),
+        17 => L.T("hizmet iş parçacığı oluşturamadı (17)", "the service could not create a thread (17)"),
+        18 => L.T("döngüsel bağımlılık (18)", "circular dependency (18)"),
+        _ => L.T($"Windows hata kodu {code}", $"Windows error code {code}")
     };
 
     private static string? ReadPublisher(string exe)

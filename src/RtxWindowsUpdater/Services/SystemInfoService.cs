@@ -36,7 +36,7 @@ public sealed class SystemInfoSnapshot
 /// </summary>
 public sealed class SystemInfoService(Logger logger)
 {
-    public const string NotAvailable = "Bilgi alınamadı";
+    public static string NotAvailable => L.T("Bilgi alınamadı", "Information unavailable");
 
     private readonly object _lock = new();
 
@@ -47,7 +47,7 @@ public sealed class SystemInfoService(Logger logger)
     /// <summary>Ekran kartı listesi gerçekten okundu ve NVIDIA kartı yok (liste okunamadıysa false: "Bilgi alınamadı").</summary>
     private bool _noNvidia;
 
-    private const string NoNvidiaText = "NVIDIA ekran kartı yok";
+    private static string NoNvidiaText => L.T("NVIDIA ekran kartı yok", "No NVIDIA graphics card");
 
     /// <summary>
     /// Sistem bilgilerini döndürür. İlk çağrıda tüm alanlar gerçek kaynaklardan okunur; sonraki çağrılarda (Yenile butonu)
@@ -92,7 +92,7 @@ public sealed class SystemInfoService(Logger logger)
             if (rtx is not null)
             {
                 try { driver = await NvidiaDriverManager.ReadInstalledDriverVersionAsync(rtx, ct, logger); }
-                catch (Exception ex) when (ex is not OperationCanceledException) { logger.Warning($"NVIDIA sürücü sürümü okunamadı: {ex.Message}"); }
+                catch (Exception ex) when (ex is not OperationCanceledException) { logger.Warning(L.T($"NVIDIA sürücü sürümü okunamadı: {ex.Message}", $"Could not read the NVIDIA driver version: {ex.Message}")); }
             }
             Add(driverField, "NVIDIA Driver", () => driver, group: SystemInfoGroups.Gpu);
         }
@@ -107,14 +107,14 @@ public sealed class SystemInfoService(Logger logger)
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or ArgumentException)
         {
-            logger.Warning($"Sistem sürücüsü okunamadı: {ex.Message}");
+            logger.Warning(L.T($"Sistem sürücüsü okunamadı: {ex.Message}", $"Could not read the system drive: {ex.Message}"));
         }
         Add(dynamicTail, "Disk", () => drive is null ? null
             : $"{drive.Name.TrimEnd('\\')} {(string.IsNullOrWhiteSpace(drive.VolumeLabel) ? "" : drive.VolumeLabel + " ")}({drive.DriveFormat})".Replace("  ", " "),
             group: SystemInfoGroups.Storage);
-        Add(dynamicTail, "Boş disk alanı", () => drive is null ? null : FormatBytes(drive.AvailableFreeSpace), primary: true, group: SystemInfoGroups.Storage);
-        Add(dynamicTail, "Toplam disk alanı", () => drive is null ? null : FormatBytes(drive.TotalSize), group: SystemInfoGroups.Storage);
-        Add(dynamicTail, "Çalışma süresi (Uptime)", () => FormatUptime(TimeSpan.FromMilliseconds(Environment.TickCount64)), primary: true,
+        Add(dynamicTail, L.T("Boş disk alanı", "Free disk space"), () => drive is null ? null : FormatBytes(drive.AvailableFreeSpace), primary: true, group: SystemInfoGroups.Storage);
+        Add(dynamicTail, L.T("Toplam disk alanı", "Total disk space"), () => drive is null ? null : FormatBytes(drive.TotalSize), group: SystemInfoGroups.Storage);
+        Add(dynamicTail, L.T("Çalışma süresi (Uptime)", "Uptime"), () => FormatUptime(TimeSpan.FromMilliseconds(Environment.TickCount64)), primary: true,
             group: SystemInfoGroups.Os);
 
         var fields = new List<SystemInfoField>();
@@ -126,12 +126,12 @@ public sealed class SystemInfoService(Logger logger)
         var missing = fields.Count(f => !f.Available);
         if (first)
         {
-            if (missing == 0) logger.Info("Sistem bilgileri okundu.");
-            else logger.Warning($"Sistem bilgileri okundu; {missing} alan alınamadı.");
+            if (missing == 0) logger.Info(L.T("Sistem bilgileri okundu.", "System information read."));
+            else logger.Warning(L.T($"Sistem bilgileri okundu; {missing} alan alınamadı.", $"System information read; {missing} field(s) unavailable."));
         }
         else
         {
-            logger.Info("Sistem bilgileri yenilendi (NVIDIA sürücü sürümü, disk alanı, çalışma süresi; değişmeyen bilgiler yeniden sorgulanmadı).");
+            logger.Info(L.T("Sistem bilgileri yenilendi (NVIDIA sürücü sürümü, disk alanı, çalışma süresi; değişmeyen bilgiler yeniden sorgulanmadı).", "System information refreshed (NVIDIA driver version, disk space, uptime; unchanged information was not queried again)."));
         }
 
         return new SystemInfoSnapshot { Fields = fields };
@@ -144,7 +144,7 @@ public sealed class SystemInfoService(Logger logger)
             var value = read();
             if (string.IsNullOrWhiteSpace(value))
             {
-                logger.Warning($"Sistem bilgisi alınamadı ({label}): kaynak değer döndürmedi.");
+                logger.Warning(L.T($"Sistem bilgisi alınamadı ({label}): kaynak değer döndürmedi.", $"System information unavailable ({label}): the source returned no value."));
                 fields.Add(new SystemInfoField(label, NotAvailable, false, primary, group));
             }
             else
@@ -154,7 +154,7 @@ public sealed class SystemInfoService(Logger logger)
         }
         catch (Exception ex)
         {
-            logger.Warning($"Sistem bilgisi alınamadı ({label}): {ex.Message}");
+            logger.Warning(L.T($"Sistem bilgisi alınamadı ({label}): {ex.Message}", $"System information unavailable ({label}): {ex.Message}"));
             fields.Add(new SystemInfoField(label, NotAvailable, false, primary, group));
         }
     }
@@ -167,10 +167,10 @@ public sealed class SystemInfoService(Logger logger)
         // --- İşletim sistemi (WMI) ---
         Dictionary<string, object?>? os = null;
         try { os = QuerySingle("SELECT Caption, OSArchitecture, BuildNumber FROM Win32_OperatingSystem"); }
-        catch (Exception ex) { logger.Warning($"Win32_OperatingSystem okunamadı: {ex.Message}"); }
+        catch (Exception ex) { logger.Warning(L.T($"Win32_OperatingSystem okunamadı: {ex.Message}", $"Could not read Win32_OperatingSystem: {ex.Message}")); }
 
-        Add(head, "İşletim Sistemi", () => os?["Caption"]?.ToString(), primary: true, group: SystemInfoGroups.Os);
-        Add(head, "Windows sürümü", () =>
+        Add(head, L.T("İşletim Sistemi", "Operating System"), () => os?["Caption"]?.ToString(), primary: true, group: SystemInfoGroups.Os);
+        Add(head, L.T("Windows sürümü", "Windows version"), () =>
         {
             using var key = Registry.LocalMachine.OpenSubKey(@"SOFTWARE\Microsoft\Windows NT\CurrentVersion");
             return (key?.GetValue("DisplayVersion") ?? key?.GetValue("ReleaseId"))?.ToString();
@@ -186,17 +186,17 @@ public sealed class SystemInfoService(Logger logger)
         // --- CPU ---
         Dictionary<string, object?>? cpu = null;
         try { cpu = QuerySingle("SELECT Name, NumberOfCores, NumberOfLogicalProcessors, MaxClockSpeed FROM Win32_Processor"); }
-        catch (Exception ex) { logger.Warning($"Win32_Processor okunamadı: {ex.Message}"); }
+        catch (Exception ex) { logger.Warning(L.T($"Win32_Processor okunamadı: {ex.Message}", $"Could not read Win32_Processor: {ex.Message}")); }
         Add(head, "CPU", () =>
         {
             var name = cpu?["Name"]?.ToString()?.Trim();
             if (string.IsNullOrEmpty(name)) return null;
             var cores = cpu!["NumberOfCores"]?.ToString();
             var threads = cpu["NumberOfLogicalProcessors"]?.ToString();
-            return cores is null ? name : $"{name} ({cores} çekirdek / {threads} iş parçacığı)";
+            return cores is null ? name : L.T($"{name} ({cores} çekirdek / {threads} iş parçacığı)", $"{name} ({cores} cores / {threads} threads)");
         }, primary: true, group: SystemInfoGroups.Cpu);
         // Win32_Processor.MaxClockSpeed: işlemcinin bildirdiği temel (anma) saat hızı, MHz.
-        Add(head, "Temel saat hızı", () => cpu?["MaxClockSpeed"] is { } mhz && Convert.ToDouble(mhz) > 0
+        Add(head, L.T("Temel saat hızı", "Base clock speed"), () => cpu?["MaxClockSpeed"] is { } mhz && Convert.ToDouble(mhz) > 0
             ? $"{Convert.ToDouble(mhz) / 1000:0.00} GHz" : null, group: SystemInfoGroups.Cpu);
 
         // --- RAM (Win32_PhysicalMemory: modül boyutu, hızı, üretici / parça numarası) ---
@@ -220,7 +220,7 @@ public sealed class SystemInfoService(Logger logger)
         catch (Exception ex)
         {
             moduleError = ex.Message;
-            logger.Warning($"Win32_PhysicalMemory okunamadı: {ex.Message}");
+            logger.Warning(L.T($"Win32_PhysicalMemory okunamadı: {ex.Message}", $"Could not read Win32_PhysicalMemory: {ex.Message}"));
         }
         Add(head, "RAM", () =>
         {
@@ -229,14 +229,14 @@ public sealed class SystemInfoService(Logger logger)
             var usable = Convert.ToUInt64(cs["TotalPhysicalMemory"] ?? 0UL);
             if (installed == 0 && usable == 0) return null;
             return installed > 0
-                ? $"{installed / 1073741824.0:0.#} GB (kullanılabilir {usable / 1073741824.0:0.0} GB)"
-                : $"{usable / 1073741824.0:0.0} GB kullanılabilir";
+                ? L.T($"{installed / 1073741824.0:0.#} GB (kullanılabilir {usable / 1073741824.0:0.0} GB)", $"{installed / 1073741824.0:0.#} GB ({usable / 1073741824.0:0.0} GB usable)")
+                : L.T($"{usable / 1073741824.0:0.0} GB kullanılabilir", $"{usable / 1073741824.0:0.0} GB usable");
         }, primary: true, group: SystemInfoGroups.Ram);
-        Add(head, "Bellek modülleri", () => moduleError is not null || modules.Count == 0 ? null
+        Add(head, L.T("Bellek modülleri", "Memory modules"), () => moduleError is not null || modules.Count == 0 ? null
             : string.Join("\n", modules.GroupBy(m => (m.Capacity, m.Maker, m.Part))
                 .Select(g => $"{g.Count()} × {g.Key.Capacity / 1073741824.0:0.#} GB" + DescribeModule(g.Key.Maker, g.Key.Part))),
             group: SystemInfoGroups.Ram);
-        Add(head, "Bellek hızı", () =>
+        Add(head, L.T("Bellek hızı", "Memory speed"), () =>
         {
             var speeds = modules.Where(m => m.Speed > 0).Select(m => m.Speed).Distinct().ToList();
             return speeds.Count == 0 ? null : string.Join(" / ", speeds.Select(v => $"{v} MHz"));
@@ -246,25 +246,25 @@ public sealed class SystemInfoService(Logger logger)
         List<GpuInfo> gpus = [];
         var gpusRead = false;
         try { gpus = SystemRequirementsChecker.GetGpus(); gpusRead = true; }
-        catch (Exception ex) { logger.Warning($"Win32_VideoController okunamadı: {ex.Message}"); }
+        catch (Exception ex) { logger.Warning(L.T($"Win32_VideoController okunamadı: {ex.Message}", $"Could not read Win32_VideoController: {ex.Message}")); }
 
         Add(head, "GPU", () => gpus.Count == 0 ? null : string.Join(" · ", gpus.Select(g => g.Name)), primary: true, group: SystemInfoGroups.Gpu);
         var rtx = gpus.FirstOrDefault(g => g.IsRtx) ?? gpus.FirstOrDefault(g => g.IsNvidia);
         var noNvidia = gpusRead && gpus.Count > 0 && rtx is null;
-        if (noNvidia) head.Add(new SystemInfoField("NVIDIA GPU modeli", NoNvidiaText, true, false, SystemInfoGroups.Gpu));
-        else Add(head, "NVIDIA GPU modeli", () => rtx?.Name, group: SystemInfoGroups.Gpu);
-        Add(head, "Ekran kartı belleği", () => ReadGpuMemory(gpus), group: SystemInfoGroups.Gpu);
+        if (noNvidia) head.Add(new SystemInfoField(L.T("NVIDIA GPU modeli", "NVIDIA GPU model"), NoNvidiaText, true, false, SystemInfoGroups.Gpu));
+        else Add(head, L.T("NVIDIA GPU modeli", "NVIDIA GPU model"), () => rtx?.Name, group: SystemInfoGroups.Gpu);
+        Add(head, L.T("Ekran kartı belleği", "Graphics memory"), () => ReadGpuMemory(gpus), group: SystemInfoGroups.Gpu);
 
         // --- Mimari / bilgisayar adı / depolama aygıtları ---
         var tail = new List<SystemInfoField>();
-        Add(tail, "Sistem mimarisi", () =>
+        Add(tail, L.T("Sistem mimarisi", "System architecture"), () =>
         {
             var arch = os?["OSArchitecture"]?.ToString();
             var rt = System.Runtime.InteropServices.RuntimeInformation.OSArchitecture.ToString();
             return arch is null ? rt : $"{arch} ({rt})";
         }, group: SystemInfoGroups.Os);
-        Add(tail, "Bilgisayar adı", () => Environment.MachineName, group: SystemInfoGroups.Os);
-        Add(tail, "Depolama aygıtları", ReadStorageDevices, group: SystemInfoGroups.Storage);
+        Add(tail, L.T("Bilgisayar adı", "Computer name"), () => Environment.MachineName, group: SystemInfoGroups.Os);
+        Add(tail, L.T("Depolama aygıtları", "Storage devices"), ReadStorageDevices, group: SystemInfoGroups.Storage);
 
         return (head, tail, rtx, noNvidia);
     }
@@ -354,7 +354,7 @@ public sealed class SystemInfoService(Logger logger)
                 return dict;
             }
         }
-        throw new InvalidOperationException($"WMI sorgusu sonuç döndürmedi: {wql}");
+        throw new InvalidOperationException(L.T($"WMI sorgusu sonuç döndürmedi: {wql}", $"The WMI query returned no result: {wql}"));
     }
 
     private static string FormatBytes(long bytes) =>
@@ -362,8 +362,8 @@ public sealed class SystemInfoService(Logger logger)
 
     public static string FormatUptime(TimeSpan t)
     {
-        if (t.TotalDays >= 1) return $"{(int)t.TotalDays} gün {t.Hours} saat";
-        if (t.TotalHours >= 1) return $"{(int)t.TotalHours} saat {t.Minutes} dk";
+        if (t.TotalDays >= 1) return L.T($"{(int)t.TotalDays} gün {t.Hours} saat", $"{(int)t.TotalDays} days {t.Hours} hours");
+        if (t.TotalHours >= 1) return L.T($"{(int)t.TotalHours} saat {t.Minutes} dk", $"{(int)t.TotalHours} hours {t.Minutes} min");
         return $"{Math.Max(0, t.Minutes)} dk";
     }
 }

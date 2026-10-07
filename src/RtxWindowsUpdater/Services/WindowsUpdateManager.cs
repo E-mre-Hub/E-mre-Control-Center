@@ -28,7 +28,7 @@ public sealed class WindowsUpdateManager(Logger logger) : IUpdateModule
             try { return $searcher.Search("__CRITERIA__") }
             catch {
                 $h = $_.Exception.HResult; if ($_.Exception.InnerException) { $h = $_.Exception.InnerException.HResult }
-                if ($h -eq -2145124302) { Write-Log 'Arama ölçütü desteklenmedi, alternatif ölçütle yeniden deneniyor...'; return $searcher.Search("__FALLBACK__") }
+                if ($h -eq -2145124302) { Write-Log '«Arama ölçütü desteklenmedi, alternatif ölçütle yeniden deneniyor...|Search criteria not supported, retrying with alternative criteria...»'; return $searcher.Search("__FALLBACK__") }
                 throw
             }
         }
@@ -42,10 +42,10 @@ public sealed class WindowsUpdateManager(Logger logger) : IUpdateModule
 
     private const string CheckScript = """
         $svc = Get-Service -Name wuauserv -ErrorAction SilentlyContinue
-        if (-not $svc) { Write-Result @{ error = 'Windows Update servisi (wuauserv) bu sistemde bulunamadı.' }; return }
+        if (-not $svc) { Write-Result @{ error = '«Windows Update servisi (wuauserv) bu sistemde bulunamadı.|The Windows Update service (wuauserv) was not found on this system.»' }; return }
         $mode = (Get-CimInstance Win32_Service -Filter "Name='wuauserv'").StartMode
         if ($mode -eq 'Disabled') { Write-Result @{ serviceDisabled = $true }; return }
-        Write-Log ('Windows Update servisi: ' + $svc.Status + ' (başlangıç: ' + $mode + ')')
+        Write-Log ('«Windows Update servisi: |Windows Update service:»' + $svc.Status + '« (başlangıç: | (startup:»' + $mode + ')')
 
         $pending = $false
         try { $pending = [bool](New-Object -ComObject Microsoft.Update.SystemInfo).RebootRequired } catch { }
@@ -54,12 +54,12 @@ public sealed class WindowsUpdateManager(Logger logger) : IUpdateModule
         $session.ClientApplicationID = 'E-mre Control Center'
         $searcher = $session.CreateUpdateSearcher()
         $searcher.Online = $true
-        Write-Log 'Microsoft Update sunucularında arama yapılıyor (birkaç dakika sürebilir)...'
+        Write-Log '«Microsoft Update sunucularında arama yapılıyor (birkaç dakika sürebilir)...|Searching the Microsoft Update servers (this can take a few minutes)...»'
         $res = Invoke-WuSearch $searcher
 
         $list = New-Object System.Collections.ArrayList
         foreach ($u in $res.Updates) {
-            if (Test-Definition $u) { Write-Log ('Defender tanım güncellemesi (Defender bölümünde işlenecek): ' + $u.Title); continue }
+            if (Test-Definition $u) { Write-Log ('«Defender tanım güncellemesi (Defender bölümünde işlenecek): |Defender definition update (handled in the Defender section):»' + $u.Title); continue }
             $cls = ''
             foreach ($c in $u.Categories) { if ($c.Type -eq 'UpdateClassification') { $cls = $c.Name } }
             $kbs = @(); foreach ($k in $u.KBArticleIDs) { $kbs += ('KB' + $k) }
@@ -81,7 +81,7 @@ public sealed class WindowsUpdateManager(Logger logger) : IUpdateModule
         $session.ClientApplicationID = 'E-mre Control Center'
         $searcher = $session.CreateUpdateSearcher()
         $searcher.Online = $true
-        Write-Log 'Güncellemeler Microsoft Update üzerinde yeniden doğrulanıyor...'
+        Write-Log '«Güncellemeler Microsoft Update üzerinde yeniden doğrulanıyor...|Verifying the updates again on Microsoft Update...»'
         $res = Invoke-WuSearch $searcher
 
         $coll = New-Object -ComObject Microsoft.Update.UpdateColl
@@ -97,17 +97,17 @@ public sealed class WindowsUpdateManager(Logger logger) : IUpdateModule
         }
 
         $installer = $session.CreateUpdateInstaller()
-        if ($installer.IsBusy) { Write-Result @{ error = 'Windows Update şu anda başka bir kurulum yapıyor. Tamamlandıktan sonra tekrar deneyin.' }; return }
+        if ($installer.IsBusy) { Write-Result @{ error = '«Windows Update şu anda başka bir kurulum yapıyor. Tamamlandıktan sonra tekrar deneyin.|Windows Update is currently running another installation. Try again after it finishes.»' }; return }
 
         $toDownload = New-Object -ComObject Microsoft.Update.UpdateColl
         foreach ($u in $coll) { if (-not $u.IsDownloaded) { [void]$toDownload.Add($u) } }
         if ($toDownload.Count -gt 0) {
             $mb = 0; foreach ($u in $toDownload) { $mb += $u.MaxDownloadSize }
-            Write-Log ('{0} güncelleme indiriliyor (en fazla {1:N0} MB)...' -f $toDownload.Count, ($mb / 1MB))
+            Write-Log ('«{0} güncelleme indiriliyor (en fazla {1:N0} MB)...|Downloading {0} update(s) (up to {1:N0} MB)...»' -f $toDownload.Count, ($mb / 1MB))
             $dl = $session.CreateUpdateDownloader()
             $dl.Updates = $toDownload
             $dres = $dl.Download()
-            Write-Log ('İndirme tamamlandı (sonuç kodu {0}, 0x{1:X8}).' -f [int]$dres.ResultCode, $dres.HResult)
+            Write-Log ('«İndirme tamamlandı (sonuç kodu {0}, 0x{1:X8}).|Download completed (result code {0}, 0x{1:X8}).»' -f [int]$dres.ResultCode, $dres.HResult)
         }
 
         $toInstall = New-Object -ComObject Microsoft.Update.UpdateColl
@@ -115,41 +115,41 @@ public sealed class WindowsUpdateManager(Logger logger) : IUpdateModule
         foreach ($u in $coll) {
             if ($u.IsDownloaded) { [void]$toInstall.Add($u) }
             else {
-                [void]$items.Add(@{ id = [string]$u.Identity.UpdateID; title = [string]$u.Title; resultCode = 4; hresult = ''; reboot = $false; note = 'indirilemedi' })
-                Write-Log ('İndirilemedi: ' + $u.Title)
+                [void]$items.Add(@{ id = [string]$u.Identity.UpdateID; title = [string]$u.Title; resultCode = 4; hresult = ''; reboot = $false; «note = 'indirilemedi'|note = 'could not be downloaded'» })
+                Write-Log ('«İndirilemedi: |Could not download:»' + $u.Title)
             }
         }
         if ($toInstall.Count -eq 0) { Write-Result @{ resultCode = 4; rebootRequired = $false; items = $items; hresult = '' }; return }
 
-        Write-Log ('{0} güncelleme kuruluyor... (bilgisayarı kapatmayın)' -f $toInstall.Count)
+        Write-Log ('«{0} güncelleme kuruluyor... (bilgisayarı kapatmayın)|Installing {0} update(s)... (do not turn off the computer)»' -f $toInstall.Count)
         $installer.Updates = $toInstall
         $ires = $installer.Install()
         for ($i = 0; $i -lt $toInstall.Count; $i++) {
             $u = $toInstall.Item($i)
             $r = $ires.GetUpdateResult($i)
             [void]$items.Add(@{ id = [string]$u.Identity.UpdateID; title = [string]$u.Title; resultCode = [int]$r.ResultCode; hresult = ('0x{0:X8}' -f $r.HResult); reboot = [bool]$r.RebootRequired; note = '' })
-            Write-Log ('{0} → sonuç kodu {1}' -f $u.Title, [int]$r.ResultCode)
+            Write-Log ('«{0} → sonuç kodu {1}|{0} → result code {1}»' -f $u.Title, [int]$r.ResultCode)
         }
         Write-Result @{ resultCode = [int]$ires.ResultCode; rebootRequired = [bool]$ires.RebootRequired; items = $items; hresult = ('0x{0:X8}' -f $ires.HResult) }
         """;
 
     public async Task<ModuleResult> CheckAsync(CancellationToken ct)
     {
-        logger.Info("Windows Update kontrol ediliyor...");
+        logger.Info(L.T("Windows Update kontrol ediliyor...", "Checking Windows Update..."));
         var ps = await PowerShellRunner.RunAsync(Prepare(CheckScript), SearchTimeout, ct, m => logger.Info("  " + m),
             traceName: "Windows Update Agent – IUpdateSearcher.Search(\"" + Criteria + "\")");
 
         if (!ps.Ok)
         {
             var reason = Explain(ps.DescribeFailure("Windows Update"));
-            logger.Error("Windows Update kontrolü gerçekleştirilemedi: " + reason);
+            logger.Error(L.T("Windows Update kontrolü gerçekleştirilemedi: ", "The Windows Update check could not be performed: ") + reason);
             return ModuleResult.CheckFailed(Key, reason);
         }
 
         var data = ps.Data!.Value;
         if (data.Bool("serviceDisabled") == true)
         {
-            const string reason = "Windows Update servisi (wuauserv) devre dışı bırakılmış. Uygulama sistem ayarlarını değiştirmez; servisi Hizmetler (services.msc) üzerinden siz etkinleştirmelisiniz.";
+            var reason = L.T("Windows Update servisi (wuauserv) devre dışı bırakılmış. Uygulama sistem ayarlarını değiştirmez; servisi Hizmetler (services.msc) üzerinden siz etkinleştirmelisiniz.", "The Windows Update service (wuauserv) has been disabled. The app does not change system settings; you must enable the service yourself in Services (services.msc).");
             logger.Error(reason);
             return ModuleResult.CheckFailed(Key, reason);
         }
@@ -157,13 +157,13 @@ public sealed class WindowsUpdateManager(Logger logger) : IUpdateModule
         var resultCode = data.Long("resultCode") ?? -1;
         if (resultCode is not (2 or 3))
         {
-            var reason = $"Windows Update araması tamamlanamadı (sonuç kodu {resultCode}).";
+            var reason = L.T($"Windows Update araması tamamlanamadı (sonuç kodu {resultCode}).", $"The Windows Update search could not be completed (result code {resultCode}).");
             logger.Error(reason);
             return ModuleResult.CheckFailed(Key, reason);
         }
 
         var pending = data.Bool("rebootPending") == true;
-        ExecutionTrace.Note($"WUA arama sonuç kodu: {resultCode} ({(resultCode == 2 ? "başarılı" : "hatalarla tamamlandı")}); bekleyen yeniden başlatma: {(pending ? "evet" : "hayır")}");
+        ExecutionTrace.Note(L.T($"WUA arama sonuç kodu: {resultCode} ({(resultCode == 2 ? "başarılı" : "hatalarla tamamlandı")}); bekleyen yeniden başlatma: {(pending ? "evet" : "hayır")}", $"WUA search result code: {resultCode} ({(resultCode == 2 ? "succeeded" : "completed with errors")}); pending restart: {(pending ? "yes" : "no")}"));
 
         // Windows güncellemelerinin "mevcut sürümü" yoktur; KB numarası "yeni" sütununda, sınıf ve boyut durum metninde gösterilir.
         var items = data.Arr("updates").Select(u =>
@@ -173,42 +173,42 @@ public sealed class WindowsUpdateManager(Logger logger) : IUpdateModule
                 .Where(s => !string.IsNullOrEmpty(s)));
             return new UpdateItem
             {
-                Name = u.Str("title") ?? "(adsız güncelleme)",
+                Name = u.Str("title") ?? L.T("(adsız güncelleme)", "(unnamed update)"),
                 Id = u.Str("id") ?? string.Empty,
                 CurrentVersion = string.Empty,
                 NewVersion = u.Str("kb") ?? string.Empty,
                 UpdateAvailable = true,
-                StatusText = extra.Length > 0 ? $"Güncelleme mevcut · {extra}" : "Güncelleme mevcut"
+                StatusText = extra.Length > 0 ? L.T($"Güncelleme mevcut · {extra}", $"Update available · {extra}") : L.T("Güncelleme mevcut", "Update available")
             };
         }).ToList();
 
         foreach (var i in items)
-            logger.Info($"  Bulundu: {i.Name}");
+            logger.Info(L.T($"  Bulundu: {i.Name}", $"  Found: {i.Name}"));
 
         if (pending)
-            logger.Warning("Önceki güncellemeler için yeniden başlatma bekleniyor.");
+            logger.Warning(L.T("Önceki güncellemeler için yeniden başlatma bekleniyor.", "A restart is pending for previous updates."));
 
         if (items.Count == 0)
         {
-            logger.Success("Windows Update: güncelleme bulunamadı.");
+            logger.Success(L.T("Windows Update: güncelleme bulunamadı.", "Windows Update: no updates found."));
             return new ModuleResult
             {
                 Key = Key,
                 Status = pending ? ComponentStatus.RebootRequired : ComponentStatus.UpToDate,
-                Summary = pending ? "Güncel – yeniden başlatma bekleniyor" : "Güncel",
-                Details = pending ? "Daha önce kurulan güncellemeler yeniden başlatma bekliyor." : "Bekleyen Windows güncelleştirmesi yok.",
-                Reason = pending ? "Yeniden başlatma gerekiyor." : null,
+                Summary = pending ? L.T("Güncel – yeniden başlatma bekleniyor", "Up to date – restart pending") : L.T("Güncel", "Up to date"),
+                Details = pending ? L.T("Daha önce kurulan güncellemeler yeniden başlatma bekliyor.", "Previously installed updates are waiting for a restart.") : L.T("Bekleyen Windows güncelleştirmesi yok.", "No pending Windows updates."),
+                Reason = pending ? L.T("Yeniden başlatma gerekiyor.", "A restart is required.") : null,
                 RebootRequired = pending
             };
         }
 
-        logger.Warning($"{items.Count} Windows güncellemesi bulundu.");
+        logger.Warning(L.T($"{items.Count} Windows güncellemesi bulundu.", $"{items.Count} Windows update(s) found."));
         return new ModuleResult
         {
             Key = Key,
             Status = ComponentStatus.UpdateAvailable,
-            Summary = $"{items.Count} güncelleme mevcut",
-            Details = "Windows güncelleştirmeleri mevcut" + (pending ? "\nAyrıca yeniden başlatma bekleniyor." : ""),
+            Summary = L.T($"{items.Count} güncelleme mevcut", $"{items.Count} update(s) available"),
+            Details = L.T("Windows güncelleştirmeleri mevcut", "Windows updates available") + (pending ? L.T("\nAyrıca yeniden başlatma bekleniyor.", "\nA restart is also pending.") : ""),
             Items = items,
             ActionableCount = items.Count,
             RebootRequired = pending
@@ -220,7 +220,7 @@ public sealed class WindowsUpdateManager(Logger logger) : IUpdateModule
         var ids = check.Items.Where(i => i.UpdateAvailable).Select(i => i.Id).ToArray();
         if (ids.Length == 0) return check;
 
-        logger.Info($"Windows Update: {ids.Length} güncelleme indirilip kurulacak...");
+        logger.Info(L.T($"Windows Update: {ids.Length} güncelleme indirilip kurulacak...", $"Windows Update: {ids.Length} update(s) will be downloaded and installed..."));
         var script = Prepare(InstallScript.Replace("__IDS__", PowerShellRunner.ToPsLiteral(ids)));
         // Kurulum başladıktan sonra yarıda kesilmemesi için iptal belirteci iletilmez.
         var ps = await PowerShellRunner.RunAsync(script, InstallTimeout, CancellationToken.None, m => logger.Info("  " + m),
@@ -229,7 +229,7 @@ public sealed class WindowsUpdateManager(Logger logger) : IUpdateModule
         if (!ps.Ok)
         {
             var reason = Explain(ps.DescribeFailure("Windows Update"));
-            logger.Error("Windows Update kurulumu başarısız: " + reason);
+            logger.Error(L.T("Windows Update kurulumu başarısız: ", "Windows Update installation failed: ") + reason);
             return ModuleResult.Failed(Key, reason);
         }
 
@@ -238,13 +238,13 @@ public sealed class WindowsUpdateManager(Logger logger) : IUpdateModule
 
         if (data.Bool("noneFound") == true)
         {
-            logger.Info("Seçilen güncellemeler artık listede değil (başka bir işlemle kurulmuş olabilir).");
+            logger.Info(L.T("Seçilen güncellemeler artık listede değil (başka bir işlemle kurulmuş olabilir).", "The selected updates are no longer in the list (they may have been installed by another process)."));
             return new ModuleResult
             {
                 Key = Key,
                 Status = reboot ? ComponentStatus.RebootRequired : ComponentStatus.UpToDate,
-                Summary = reboot ? "Yeniden başlatma gerekiyor" : "Güncel",
-                Reason = reboot ? "Yeniden başlatma gerekiyor." : null,
+                Summary = reboot ? L.T("Yeniden başlatma gerekiyor", "Restart required") : L.T("Güncel", "Up to date"),
+                Reason = reboot ? L.T("Yeniden başlatma gerekiyor.", "A restart is required.") : null,
                 RebootRequired = reboot
             };
         }
@@ -256,7 +256,7 @@ public sealed class WindowsUpdateManager(Logger logger) : IUpdateModule
         foreach (var r in results)
         {
             var code = r.Long("resultCode") ?? 4;
-            var title = r.Str("title") ?? "(adsız)";
+            var title = r.Str("title") ?? L.T("(adsız)", "(unnamed)");
             var success = code is 2 or 3;
             if (success) ok++;
             else failures.Add($"{title}: {ResultCodeText(code)} {r.Str("note")} {r.Str("hresult")}".Trim());
@@ -266,8 +266,8 @@ public sealed class WindowsUpdateManager(Logger logger) : IUpdateModule
                 Id = r.Str("id") ?? string.Empty,
                 UpdateAvailable = !success,
                 StatusText = success
-                    ? (r.Bool("reboot") == true ? "Kuruldu – yeniden başlatma gerekli" : "Kuruldu")
-                    : "Başarısız: " + ResultCodeText(code)
+                    ? (r.Bool("reboot") == true ? L.T("Kuruldu – yeniden başlatma gerekli", "Installed – restart required") : L.T("Kuruldu", "Installed"))
+                    : L.T("Başarısız: ", "Failed: ") + ResultCodeText(code)
             });
         }
 
@@ -276,27 +276,27 @@ public sealed class WindowsUpdateManager(Logger logger) : IUpdateModule
         if (failures.Count == 0)
         {
             status = reboot ? ComponentStatus.RebootRequired : ComponentStatus.Updated;
-            summary = reboot ? $"{ok} güncelleme kuruldu – yeniden başlatma gerekli" : $"{ok} güncelleme kuruldu";
+            summary = reboot ? L.T($"{ok} güncelleme kuruldu – yeniden başlatma gerekli", $"{ok} update(s) installed – restart required") : L.T($"{ok} güncelleme kuruldu", $"{ok} update(s) installed");
             logger.Success("Windows Update: " + summary);
         }
         else
         {
             status = ok > 0 ? ComponentStatus.PartiallyUpdated : ComponentStatus.Failed;
-            summary = ok > 0 ? $"{ok}/{results.Count} kuruldu, {failures.Count} başarısız" : "Güncellemeler kurulamadı";
+            summary = ok > 0 ? L.T($"{ok}/{results.Count} kuruldu, {failures.Count} başarısız", $"{ok}/{results.Count} installed, {failures.Count} failed") : L.T("Güncellemeler kurulamadı", "Updates could not be installed");
             logger.Error("Windows Update: " + summary);
         }
         if (reboot)
-            logger.Warning("Windows güncelleştirmelerinin tamamlanması için yeniden başlatma gerekiyor. Bilgisayar sizin onayınız olmadan yeniden başlatılmayacak.");
+            logger.Warning(L.T("Windows güncelleştirmelerinin tamamlanması için yeniden başlatma gerekiyor. Bilgisayar sizin onayınız olmadan yeniden başlatılmayacak.", "A restart is required to complete the Windows updates. The computer will not restart without your approval."));
 
         var reasons = new List<string>(failures);
-        if (reboot) reasons.Add("Yeniden başlatma gerekiyor.");
+        if (reboot) reasons.Add(L.T("Yeniden başlatma gerekiyor.", "A restart is required."));
 
         return new ModuleResult
         {
             Key = Key,
             Status = status,
             Summary = summary,
-            Details = $"Kurulan: {ok}\nBaşarısız: {failures.Count}",
+            Details = L.T($"Kurulan: {ok}\nBaşarısız: {failures.Count}", $"Installed: {ok}\nFailed: {failures.Count}"),
             Reason = reasons.Count > 0 ? string.Join("\n", reasons) : null,
             Items = items,
             RebootRequired = reboot
@@ -305,13 +305,13 @@ public sealed class WindowsUpdateManager(Logger logger) : IUpdateModule
 
     private static string ResultCodeText(long code) => code switch
     {
-        0 => "başlatılmadı",
-        1 => "devam ediyor",
-        2 => "başarılı",
-        3 => "hatalarla tamamlandı",
-        4 => "başarısız",
-        5 => "iptal edildi",
-        _ => $"bilinmeyen sonuç ({code})"
+        0 => L.T("başlatılmadı", "not started"),
+        1 => L.T("devam ediyor", "in progress"),
+        2 => L.T("başarılı", "succeeded"),
+        3 => L.T("hatalarla tamamlandı", "completed with errors"),
+        4 => L.T("başarısız", "failed"),
+        5 => L.T("iptal edildi", "cancelled"),
+        _ => L.T($"bilinmeyen sonuç ({code})", $"unknown result ({code})")
     };
 
     /// <summary>Sık görülen WUA HRESULT kodlarını anlaşılır açıklamaya çevirir.</summary>
@@ -319,16 +319,16 @@ public sealed class WindowsUpdateManager(Logger logger) : IUpdateModule
     {
         var map = new (string Code, string Text)[]
         {
-            ("0x8024402C", "Windows Update sunucusuna ulaşılamadı (internet bağlantısı yok veya DNS çözümlenemedi)."),
-            ("0x80072EE7", "Sunucu adı çözümlenemedi – internet bağlantınızı kontrol edin."),
-            ("0x80072EFD", "Windows Update sunucusuna bağlanılamadı – internet bağlantınızı kontrol edin."),
-            ("0x80072EE2", "Windows Update sunucusu zaman aşımına uğradı."),
-            ("0x8024401C", "Windows Update sunucusu zaman aşımına uğradı."),
-            ("0x80070422", "Windows Update servisi devre dışı veya başlatılamıyor."),
-            ("0x8024001E", "Windows Update servisi kapanıyor; daha sonra tekrar deneyin."),
-            ("0x80240016", "Başka bir güncelleme kurulumu sürüyor."),
-            ("0x80070005", "Erişim reddedildi – yönetici yetkisi gerekli."),
-            ("0x8024002E", "Windows Update erişimi grup ilkesiyle engellenmiş (WSUS/ilke).")
+            ("0x8024402C", L.T("Windows Update sunucusuna ulaşılamadı (internet bağlantısı yok veya DNS çözümlenemedi).", "Could not reach the Windows Update server (no internet connection or DNS could not resolve).")),
+            ("0x80072EE7", L.T("Sunucu adı çözümlenemedi – internet bağlantınızı kontrol edin.", "The server name could not be resolved – check your internet connection.")),
+            ("0x80072EFD", L.T("Windows Update sunucusuna bağlanılamadı – internet bağlantınızı kontrol edin.", "Could not connect to the Windows Update server – check your internet connection.")),
+            ("0x80072EE2", L.T("Windows Update sunucusu zaman aşımına uğradı.", "The Windows Update server timed out.")),
+            ("0x8024401C", L.T("Windows Update sunucusu zaman aşımına uğradı.", "The Windows Update server timed out.")),
+            ("0x80070422", L.T("Windows Update servisi devre dışı veya başlatılamıyor.", "The Windows Update service is disabled or cannot start.")),
+            ("0x8024001E", L.T("Windows Update servisi kapanıyor; daha sonra tekrar deneyin.", "The Windows Update service is shutting down; try again later.")),
+            ("0x80240016", L.T("Başka bir güncelleme kurulumu sürüyor.", "Another update installation is in progress.")),
+            ("0x80070005", L.T("Erişim reddedildi – yönetici yetkisi gerekli.", "Access denied – administrator rights required.")),
+            ("0x8024002E", L.T("Windows Update erişimi grup ilkesiyle engellenmiş (WSUS/ilke).", "Windows Update access is blocked by group policy (WSUS/policy)."))
         };
         foreach (var (code, text) in map)
             if (message.Contains(code, StringComparison.OrdinalIgnoreCase))

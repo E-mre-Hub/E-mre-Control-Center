@@ -39,7 +39,23 @@ public sealed class UpdateService(Uri latestReleaseUrl, Action<string> log)
 
     public static Uri DefaultLatestReleaseUrl { get; } = new($"https://api.github.com/repos/{AppInfo.ReleasesRepository}/releases/latest");
 
-    private static readonly Regex SetupAssetName = new(@"^E-mre-Control-Center-Setup-v?\d+\.\d+\.\d+\.exe$", RegexOptions.IgnoreCase);
+    /// <summary>
+    /// Yayındaki kurulum dosyaları (v2.0.0): "E-mre-Control-Center-Setup-TR-vX.Y.Z.exe" (Türkçe), "…-Setup-EN-vX.Y.Z.exe" (English) ve
+    /// eski adlı "…-Setup-vX.Y.Z.exe" (v1.9.3 ve önceki sürümlerin uygulama içi güncellemesi YALNIZCA bu adı arar; uyumluluk kopyası).
+    /// Üçü aynı EXE'dir; uygulama seçili dildekini, yoksa Türkçeyi, yoksa eski adlıyı indirir (dil ayrıca "--lang" ile iletilir).
+    /// </summary>
+    private static readonly Regex SetupAssetName = new(@"^E-mre-Control-Center-Setup(?:-(TR|EN))?-v?\d+\.\d+\.\d+\.exe$", RegexOptions.IgnoreCase);
+
+    /// <summary>Kurulum dosyası önceliği: seçili dil 3, Türkçe 2, eski ad 1, diğer dil 0; kurulum dosyası değilse -1.</summary>
+    internal static int SetupAssetRank(string name)
+    {
+        var m = SetupAssetName.Match(name);
+        if (!m.Success) return -1;
+        var lang = m.Groups[1].Value;
+        if (lang.Length == 0) return 1;
+        if (lang.Equals(L.Code, StringComparison.OrdinalIgnoreCase)) return 3;
+        return lang.Equals("TR", StringComparison.OrdinalIgnoreCase) ? 2 : 0;
+    }
     private static readonly TimeSpan CheckTimeout = TimeSpan.FromSeconds(15);
 
     // Koşullu istek: son gerçek yanıtın ETag'i gönderilir; yayın değişmediyse GitHub 304 döner ve bu istek IP başına saatlik
@@ -70,64 +86,65 @@ public sealed class UpdateService(Uri latestReleaseUrl, Action<string> log)
             if (response.StatusCode == HttpStatusCode.NotModified && cached is not null)
                 return cached with { NotModified = true };
             if (response.StatusCode == HttpStatusCode.NotFound)
-                return Fail($"Sürüm deposunda yayımlanmış sürüm bulunamadı (HTTP 404: {AppInfo.ReleasesRepository}).");
+                return Fail(L.T($"Sürüm deposunda yayımlanmış sürüm bulunamadı (HTTP 404: {AppInfo.ReleasesRepository}).", $"No published version was found in the release repository (HTTP 404: {AppInfo.ReleasesRepository})."));
             if (code is 403 or 429 && response.Headers.TryGetValues("x-ratelimit-remaining", out var remaining) && remaining.FirstOrDefault() == "0")
             {
                 var reset = response.Headers.TryGetValues("x-ratelimit-reset", out var r) && long.TryParse(r.FirstOrDefault(), out var epoch)
                     ? DateTimeOffset.FromUnixTimeSeconds(epoch).ToLocalTime().ToString("HH:mm")
-                    : "bir süre";
-                return new UpdateCheckResult(false, null, $"GitHub istek sınırı doldu (HTTP {code}); {reset} sonra yeniden denenebilir.",
+                    : L.T("bir süre", "a while");
+                return new UpdateCheckResult(false, null, L.T($"GitHub istek sınırı doldu (HTTP {code}); {reset} sonra yeniden denenebilir.", $"The GitHub request limit has been reached (HTTP {code}); it can be retried after {reset}."),
                     RetryAt: long.TryParse(response.Headers.TryGetValues("x-ratelimit-reset", out var rr) ? rr.FirstOrDefault() : null, out var at)
                         ? DateTimeOffset.FromUnixTimeSeconds(at)
                         : DateTimeOffset.Now.AddMinutes(15));
             }
-            if (code != 200) return Fail($"GitHub beklenmeyen yanıt verdi (HTTP {code}).");
+            if (code != 200) return Fail(L.T($"GitHub beklenmeyen yanıt verdi (HTTP {code}).", $"GitHub returned an unexpected response (HTTP {code})."));
 
             using var json = JsonDocument.Parse(await response.Content.ReadAsStringAsync(ct));
             var root = json.RootElement;
-            var tag = Str(root, "tag_name") ?? throw new FormatException("tag_name yok");
+            var tag = Str(root, "tag_name") ?? throw new FormatException(L.T("tag_name yok", "no tag_name"));
             if (!Version.TryParse(tag.TrimStart('v', 'V'), out var version))
-                return Fail($"Sürüm etiketi okunamadı: \"{tag}\".");
+                return Fail(L.T($"Sürüm etiketi okunamadı: \"{tag}\".", $"Could not read the version tag: \"{tag}\"."));
             if (Normalize(version) <= Normalize(current))
             {
-                LogOnce($"Güncelleme denetimi: güncel (yüklü {current.ToString(3)}, son yayın {tag}).");
-                return Remember(response, new UpdateCheckResult(true, null, $"Güncel (son yayın {tag})"));
+                LogOnce(L.T($"Güncelleme denetimi: güncel (yüklü {current.ToString(3)}, son yayın {tag}).", $"Update check: up to date (installed {current.ToString(3)}, latest release {tag})."));
+                return Remember(response, new UpdateCheckResult(true, null, L.T($"Güncel (son yayın {tag})", $"Up to date (latest release {tag})")));
             }
 
             var asset = root.TryGetProperty("assets", out var assets) && assets.ValueKind == JsonValueKind.Array
-                ? assets.EnumerateArray().FirstOrDefault(a => SetupAssetName.IsMatch(Str(a, "name") ?? ""))
+                ? assets.EnumerateArray().Where(a => SetupAssetRank(Str(a, "name") ?? "") >= 0)
+                    .OrderByDescending(a => SetupAssetRank(Str(a, "name")!)).FirstOrDefault()
                 : default;
             if (asset.ValueKind != JsonValueKind.Object)
-                return Fail($"Yeni sürüm {tag} yayımlanmış ama kurulum dosyası (E-mre-Control-Center-Setup-{tag}.exe) bulunamadı.");
+                return Fail(L.T($"Yeni sürüm {tag} yayımlanmış ama kurulum dosyası (E-mre-Control-Center-Setup-TR-{tag}.exe) bulunamadı.", $"New version {tag} has been released but the setup file (E-mre-Control-Center-Setup-EN-{tag}.exe) was not found."));
             var digest = Str(asset, "digest");
             if (digest is null || !digest.StartsWith("sha256:", StringComparison.OrdinalIgnoreCase) || digest.Length != 71)
-                return Fail($"Yeni sürüm {tag} bulundu ama GitHub dosyanın SHA-256 özetini bildirmedi; doğrulanamayan dosya indirilmez.");
+                return Fail(L.T($"Yeni sürüm {tag} bulundu ama GitHub dosyanın SHA-256 özetini bildirmedi; doğrulanamayan dosya indirilmez.", $"New version {tag} was found but GitHub did not report the file's SHA-256 hash; an unverifiable file is not downloaded."));
             // İndirme yalnızca HTTPS'ten (yerel testlerde 127.0.0.1 sahte sunucusu); dosya ayrıca SHA-256 ile doğrulanır.
             if (!Uri.TryCreate(Str(asset, "browser_download_url"), UriKind.Absolute, out var url) || url.Scheme != Uri.UriSchemeHttps &&
                 !url.IsLoopback)
-                return Fail("Kurulum dosyasının indirme adresi geçersiz.");
+                return Fail(L.T("Kurulum dosyasının indirme adresi geçersiz.", "The download address of the setup file is invalid."));
             var size = asset.TryGetProperty("size", out var s) && s.TryGetInt64(out var bytes) ? bytes : 0;
-            if (size <= 0) return Fail("Kurulum dosyasının boyutu bildirilmedi.");
+            if (size <= 0) return Fail(L.T("Kurulum dosyasının boyutu bildirilmedi.", "The size of the setup file was not reported."));
 
             var info = new UpdateInfo(
                 Normalize(version), tag, CleanNotes(Str(root, "body") ?? ""),
                 DateTimeOffset.TryParse(Str(root, "published_at"), out var published) ? published : null,
                 Uri.TryCreate(Str(root, "html_url"), UriKind.Absolute, out var page) ? page : latestReleaseUrl,
                 Str(asset, "name")!, url, size, digest[7..].ToUpperInvariant());
-            LogOnce($"Güncelleme denetimi: yeni sürüm {tag} (yüklü {current.ToString(3)}; {info.SetupName}, {size / 1048576.0:0.0} MB).");
-            return Remember(response, new UpdateCheckResult(true, info, $"Yeni sürüm: {tag}"));
+            LogOnce(L.T($"Güncelleme denetimi: yeni sürüm {tag} (yüklü {current.ToString(3)}; {info.SetupName}, {size / 1048576.0:0.0} MB).", $"Update check: new version {tag} (installed {current.ToString(3)}; {info.SetupName}, {size / 1048576.0:0.0} MB)."));
+            return Remember(response, new UpdateCheckResult(true, info, L.T($"Yeni sürüm: {tag}", $"New version: {tag}")));
         }
         catch (TaskCanceledException) when (!ct.IsCancellationRequested)
         {
-            return Fail($"GitHub {CheckTimeout.TotalSeconds:0} saniye içinde yanıt vermedi.");
+            return Fail(L.T($"GitHub {CheckTimeout.TotalSeconds:0} saniye içinde yanıt vermedi.", $"GitHub did not respond within {CheckTimeout.TotalSeconds:0} seconds."));
         }
         catch (HttpRequestException ex)
         {
-            return Fail("İnternete bağlanılamadı: " + ex.Message);
+            return Fail(L.T("İnternete bağlanılamadı: ", "Could not connect to the internet: ") + ex.Message);
         }
         catch (Exception ex) when (ex is JsonException or FormatException or InvalidOperationException or KeyNotFoundException)
         {
-            return Fail("GitHub yanıtı okunamadı: " + ex.Message);
+            return Fail(L.T("GitHub yanıtı okunamadı: ", "Could not read the GitHub response: ") + ex.Message);
         }
 
         // Denetlenemedi sonucunu çağıran taraf günlüğe uyarı olarak yazar (burada yazılırsa satır iki kez görünür).
@@ -164,17 +181,17 @@ public sealed class UpdateService(Uri latestReleaseUrl, Action<string> log)
     public async Task<string> DownloadAsync(UpdateInfo info, string folder, bool protectFolder, IProgress<(long Done, long Total)>? progress,
         CancellationToken ct = default)
     {
-        if (!SetupAssetName.IsMatch(info.SetupName)) throw new InvalidDataException("Kurulum dosyasının adı beklenen biçimde değil.");
+        if (!SetupAssetName.IsMatch(info.SetupName)) throw new InvalidDataException(L.T("Kurulum dosyasının adı beklenen biçimde değil.", "The setup file name is not in the expected format."));
         if (protectFolder) ProtectedDirectory.Create(folder);
         else Directory.CreateDirectory(folder);
         var path = Path.Combine(folder, info.SetupName);
-        log($"Güncelleme indiriliyor: {info.SetupUrl} → {path}");
+        log(L.T($"Güncelleme indiriliyor: {info.SetupUrl} → {path}", $"Downloading the update: {info.SetupUrl} → {path}"));
         try
         {
             using var http = CreateClient(TimeSpan.FromMinutes(15));
             using var response = await http.GetAsync(info.SetupUrl, HttpCompletionOption.ResponseHeadersRead, ct);
             if (!response.IsSuccessStatusCode)
-                throw new InvalidDataException($"İndirme başarısız (HTTP {(int)response.StatusCode}).");
+                throw new InvalidDataException(L.T($"İndirme başarısız (HTTP {(int)response.StatusCode}).", $"Download failed (HTTP {(int)response.StatusCode})."));
             using var hash = IncrementalHash.CreateHash(HashAlgorithmName.SHA256);
             long done = 0;
             await using (var input = await response.Content.ReadAsStreamAsync(ct))
@@ -184,7 +201,7 @@ public sealed class UpdateService(Uri latestReleaseUrl, Action<string> log)
                 int read;
                 while ((read = await input.ReadAsync(buffer, ct)) > 0)
                 {
-                    if (done + read > info.SetupSize) throw new InvalidDataException("İndirilen dosya bildirilen boyuttan büyük.");
+                    if (done + read > info.SetupSize) throw new InvalidDataException(L.T("İndirilen dosya bildirilen boyuttan büyük.", "The downloaded file is larger than the reported size."));
                     hash.AppendData(buffer, 0, read);
                     await output.WriteAsync(buffer.AsMemory(0, read), ct);
                     done += read;
@@ -193,19 +210,19 @@ public sealed class UpdateService(Uri latestReleaseUrl, Action<string> log)
                 await output.FlushAsync(ct);
             }
             if (done != info.SetupSize)
-                throw new InvalidDataException($"İndirilen dosya eksik ({done} / {info.SetupSize} bayt).");
+                throw new InvalidDataException(L.T($"İndirilen dosya eksik ({done} / {info.SetupSize} bayt).", $"The downloaded file is incomplete ({done} / {info.SetupSize} bytes)."));
             var sha = Convert.ToHexString(hash.GetHashAndReset());
             if (!string.Equals(sha, info.Sha256, StringComparison.OrdinalIgnoreCase))
-                throw new InvalidDataException($"SHA-256 özeti GitHub'ın bildirdiğiyle eşleşmedi ({sha[..12]}… ≠ {info.Sha256[..12]}…).");
+                throw new InvalidDataException(L.T($"SHA-256 özeti GitHub'ın bildirdiğiyle eşleşmedi ({sha[..12]}… ≠ {info.Sha256[..12]}…).", $"The SHA-256 hash did not match the one reported by GitHub ({sha[..12]}… ≠ {info.Sha256[..12]}…)."));
 
             var fileInfo = FileVersionInfo.GetVersionInfo(path);
             if (fileInfo.ProductName != AppInfo.Name)
-                throw new InvalidDataException($"İndirilen dosya {AppInfo.Name} kurulum dosyası değil (ürün: {fileInfo.ProductName ?? "yok"}).");
+                throw new InvalidDataException(L.T($"İndirilen dosya {AppInfo.Name} kurulum dosyası değil (ürün: {fileInfo.ProductName ?? "yok"}).", $"The downloaded file is not an {AppInfo.Name} setup file (product: {fileInfo.ProductName ?? "none"})."));
             var fileVersion = new Version(fileInfo.FileMajorPart, fileInfo.FileMinorPart, fileInfo.FileBuildPart);
             if (fileVersion != info.Version)
-                throw new InvalidDataException($"Kurulum dosyasının sürümü {fileVersion}, beklenen {info.Version}.");
+                throw new InvalidDataException(L.T($"Kurulum dosyasının sürümü {fileVersion}, beklenen {info.Version}.", $"The setup file version is {fileVersion}, expected {info.Version}."));
 
-            log($"Güncelleme indirildi ve doğrulandı: {path} ({done} bayt, SHA-256 {sha}).");
+            log(L.T($"Güncelleme indirildi ve doğrulandı: {path} ({done} bayt, SHA-256 {sha}).", $"Update downloaded and verified: {path} ({done} bytes, SHA-256 {sha})."));
             return path;
         }
         catch
@@ -226,7 +243,7 @@ public sealed class UpdateService(Uri latestReleaseUrl, Action<string> log)
                 try
                 {
                     Directory.Delete(dir, true); // .NET bağlantıları (junction) izlemez, yalnızca bağlantıyı siler
-                    log("Eski güncelleme indirmesi silindi: " + dir);
+                    log(L.T("Eski güncelleme indirmesi silindi: ", "Old update download deleted: ") + dir);
                 }
                 catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
                 {
@@ -252,6 +269,14 @@ public sealed class UpdateService(Uri latestReleaseUrl, Action<string> log)
     internal static string CleanNotes(string markdown)
     {
         var text = markdown.Replace("\r", "");
+        // v2.0.0: iki dilli sürüm notu. CHANGELOG bölümünde "**English**" satırından öncesi Türkçe, sonrası İngilizce; pencere yalnızca
+        // seçili dildekini gösterir (GitHub sayfasında ve eski sürümlerin penceresinde ikisi de, "English" başlığıyla ayrılmış görünür).
+        // "<!-- en -->" de kabul edilir. İşaret yoksa tamamı.
+        var marker = Regex.Match(text, @"^[ \t]*(?:<!--[ \t]*en[ \t]*-->|\*\*English\*\*)[ \t]*$", RegexOptions.Multiline | RegexOptions.IgnoreCase);
+        if (marker.Success)
+            text = L.En ? text[(marker.Index + marker.Length)..] : text[..marker.Index];
+        text = Regex.Replace(text, @"^[ \t]*<!--.*?-->[ \t]*$", "", RegexOptions.Multiline);
+        text = Regex.Replace(text, @"^[ \t]*-{3,}[ \t]*$", "", RegexOptions.Multiline);
         text = Regex.Replace(text, @"\n[ \t]{2,}(?![-*] )", " "); // sürüm notunda alt satıra kayan madde devamı → aynı satır
         text = Regex.Replace(text, @"\*\*|__|`", "");
         // GitHub'ın otomatik eklediği satırlar ("Full Changelog: https://…", "What's Changed") pencerede gösterilmez.

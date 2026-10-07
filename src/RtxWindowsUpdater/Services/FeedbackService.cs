@@ -50,20 +50,20 @@ public sealed class FeedbackService(FeedbackForm form, Action<string> log)
         {
             using var response = await http.PostAsync(form.Endpoint, new FormUrlEncodedContent(fields), ct);
             var code = (int)response.StatusCode;
-            log($"Geri bildirim gönderimi: HTTP {code} ({form.Endpoint.Host}); neden sayısı {reasons.Count}, mesaj {message.Trim().Length} karakter.");
+            log(L.T($"Geri bildirim gönderimi: HTTP {code} ({form.Endpoint.Host}); neden sayısı {reasons.Count}, mesaj {message.Trim().Length} karakter.", $"Feedback submission: HTTP {code} ({form.Endpoint.Host}); {reasons.Count} reason(s), message {message.Trim().Length} characters."));
             return code == 200
-                ? new FeedbackResult(true, "Geri bildiriminiz gönderildi. Teşekkürler!")
-                : new FeedbackResult(false, $"Google Formlar geri bildirimi kabul etmedi (HTTP {code}).");
+                ? new FeedbackResult(true, L.T("Geri bildiriminiz gönderildi. Teşekkürler!", "Your feedback was sent. Thank you!"))
+                : new FeedbackResult(false, L.T($"Google Formlar geri bildirimi kabul etmedi (HTTP {code}).", $"Google Forms did not accept the feedback (HTTP {code})."));
         }
         catch (TaskCanceledException) when (!ct.IsCancellationRequested)
         {
-            log("Geri bildirim gönderilemedi: zaman aşımı.");
-            return new FeedbackResult(false, $"Sunucu {Timeout.TotalSeconds:0} saniye içinde yanıt vermedi.");
+            log(L.T("Geri bildirim gönderilemedi: zaman aşımı.", "Could not send feedback: timed out."));
+            return new FeedbackResult(false, L.T($"Sunucu {Timeout.TotalSeconds:0} saniye içinde yanıt vermedi.", $"The server did not respond within {Timeout.TotalSeconds:0} seconds."));
         }
         catch (HttpRequestException ex)
         {
-            log($"Geri bildirim gönderilemedi: {ex.Message}");
-            return new FeedbackResult(false, "İnternete bağlanılamadı: " + ex.Message);
+            log(L.T($"Geri bildirim gönderilemedi: {ex.Message}", $"Could not send feedback: {ex.Message}"));
+            return new FeedbackResult(false, L.T("İnternete bağlanılamadı: ", "Could not connect to the internet: ") + ex.Message);
         }
     }
 

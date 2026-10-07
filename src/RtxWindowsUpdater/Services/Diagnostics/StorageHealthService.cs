@@ -7,7 +7,7 @@ public sealed record VolumeInfo(string Letter, string Label, string FileSystem, 
 {
     public long Used => Total - Free;
     public double UsedPercent => Total > 0 ? Used * 100.0 / Total : 0;
-    public string UsageText => $"{Formats.Bytes(Used)} / {Formats.Bytes(Total)} kullanılıyor · {Formats.Bytes(Free)} boş (%{100 - UsedPercent:0})";
+    public string UsageText => L.T($"{Formats.Bytes(Used)} / {Formats.Bytes(Total)} kullanılıyor · {Formats.Bytes(Free)} boş (%{100 - UsedPercent:0})", $"{Formats.Bytes(Used)} / {Formats.Bytes(Total)} used · {Formats.Bytes(Free)} free ({100 - UsedPercent:0}%)");
 }
 
 public sealed record DiskHealth(
@@ -21,14 +21,14 @@ public sealed record DiskHealth(
     public string Name => Disk.Name;
     public string TypeText => $"{StorageInfo.MediaTypeText(Disk.MediaType)} · {StorageInfo.BusTypeText(Disk.BusType)}";
     public string SizeText => Disk.Size is { } s ? Formats.Bytes(s) : "—";
-    public string TemperatureText => Reliability?.Temperature is { } t ? $"{t:0} °C" + (Reliability.TemperatureMax is { } m ? $" (en yüksek {m:0} °C)" : "") : "Bildirilmedi";
-    public string WearText => Reliability?.Wear is { } w ? $"%{w:0} kullanıldı" : "Bildirilmedi";
-    public string PowerOnText => Reliability?.PowerOnHours is { } h ? $"{h:N0} saat" : "Bildirilmedi";
-    public string ErrorsText => Reliability is null ? "Bildirilmedi"
-        : $"Okuma: {Reliability.ReadErrorsTotal?.ToString() ?? "—"} (düzeltilemeyen {Reliability.ReadErrorsUncorrected?.ToString() ?? "—"}) · " +
-          $"Yazma: {Reliability.WriteErrorsTotal?.ToString() ?? "—"} (düzeltilemeyen {Reliability.WriteErrorsUncorrected?.ToString() ?? "—"})";
-    public string VolumesText => Volumes.Count == 0 ? "Harfli bölüm yok" : string.Join(" · ", Volumes.Select(v => $"{v.Letter} %{v.UsedPercent:0} dolu"));
-    public string FindingsText => Findings.Count == 0 ? "Sorun bulunmadı" : string.Join(" · ", Findings);
+    public string TemperatureText => Reliability?.Temperature is { } t ? $"{t:0} °C" + (Reliability.TemperatureMax is { } m ? L.T($" (en yüksek {m:0} °C)", $" (max {m:0} °C)") : "") : L.T("Bildirilmedi", "Not reported");
+    public string WearText => Reliability?.Wear is { } w ? L.T($"%{w:0} kullanıldı", $"{w:0}% used") : L.T("Bildirilmedi", "Not reported");
+    public string PowerOnText => Reliability?.PowerOnHours is { } h ? L.T($"{h:N0} saat", $"{h:N0} hours") : L.T("Bildirilmedi", "Not reported");
+    public string ErrorsText => Reliability is null ? L.T("Bildirilmedi", "Not reported")
+        : L.T($"Okuma: {Reliability.ReadErrorsTotal?.ToString() ?? "—"} (düzeltilemeyen {Reliability.ReadErrorsUncorrected?.ToString() ?? "—"}) · ", $"Read: {Reliability.ReadErrorsTotal?.ToString() ?? "—"} (uncorrectable {Reliability.ReadErrorsUncorrected?.ToString() ?? "—"}) · ") +
+          L.T($"Yazma: {Reliability.WriteErrorsTotal?.ToString() ?? "—"} (düzeltilemeyen {Reliability.WriteErrorsUncorrected?.ToString() ?? "—"})", $"Write: {Reliability.WriteErrorsTotal?.ToString() ?? "—"} (uncorrectable {Reliability.WriteErrorsUncorrected?.ToString() ?? "—"})");
+    public string VolumesText => Volumes.Count == 0 ? L.T("Harfli bölüm yok", "No lettered partition") : string.Join(" · ", Volumes.Select(v => L.T($"{v.Letter} %{v.UsedPercent:0} dolu", $"{v.Letter} {v.UsedPercent:0}% full")));
+    public string FindingsText => Findings.Count == 0 ? L.T("Sorun bulunmadı", "No problems found") : string.Join(" · ", Findings);
 }
 
 public sealed record StorageScan(IReadOnlyList<DiskHealth> Disks, IReadOnlyList<VolumeInfo> Volumes, string? Error, string? ReliabilityNote)
@@ -52,13 +52,13 @@ public sealed class StorageHealthService(Logger logger)
         var volumes = ReadVolumes();
         var (disks, rawDisks) = StorageInfo.ReadPhysicalDisks(Timeout);
         if (!rawDisks.Ok)
-            return new StorageScan([], volumes, "Fiziksel diskler okunamadı: " + rawDisks.Error, null);
+            return new StorageScan([], volumes, L.T("Fiziksel diskler okunamadı: ", "Could not read the physical disks: ") + rawDisks.Error, null);
         ct.ThrowIfCancellationRequested();
 
         var (counters, rawCounters) = StorageInfo.ReadReliability(Timeout);
         var note = rawCounters.Ok ? null
-            : rawCounters.AccessDenied ? "Güvenilirlik sayaçları (sıcaklık, aşınma, hata sayıları) yönetici yetkisi gerektirir."
-            : "Güvenilirlik sayaçları okunamadı: " + rawCounters.Error;
+            : rawCounters.AccessDenied ? L.T("Güvenilirlik sayaçları (sıcaklık, aşınma, hata sayıları) yönetici yetkisi gerektirir.", "Reliability counters (temperature, wear, error counts) require administrator rights.")
+            : L.T("Güvenilirlik sayaçları okunamadı: ", "Could not read the reliability counters: ") + rawCounters.Error;
         var byId = counters.ToDictionary(c => c.DeviceId, StringComparer.OrdinalIgnoreCase);
 
         // Harfli bölüm → disk numarası (MSFT_Partition); okunamazsa bölümler diske bağlanmaz ama ayrı listede gösterilir.
@@ -84,25 +84,25 @@ public sealed class StorageHealthService(Logger logger)
                 2 => CheckState.Error,
                 _ => CheckState.Unknown
             };
-            if (d.HealthStatus == 1) findings.Add("Windows diski \"Uyarı\" durumunda bildiriyor");
-            if (d.HealthStatus == 2) findings.Add("Windows diski \"Sağlıksız\" olarak bildiriyor – yedek alın");
-            if (rel?.Wear is >= 90) findings.Add($"Aşınma %{rel.Wear:0} (ömrünün sonuna yakın)");
-            if (rel?.Temperature is >= 70) findings.Add($"Sıcaklık {rel.Temperature:0} °C (yüksek)");
-            if (rel?.ReadErrorsUncorrected is > 0) findings.Add($"{rel.ReadErrorsUncorrected} düzeltilemeyen okuma hatası");
-            if (rel?.WriteErrorsUncorrected is > 0) findings.Add($"{rel.WriteErrorsUncorrected} düzeltilemeyen yazma hatası");
+            if (d.HealthStatus == 1) findings.Add(L.T("Windows diski \"Uyarı\" durumunda bildiriyor", "Windows reports the disk in \"Warning\" state"));
+            if (d.HealthStatus == 2) findings.Add(L.T("Windows diski \"Sağlıksız\" olarak bildiriyor – yedek alın", "Windows reports the disk as \"Unhealthy\" – back up your data"));
+            if (rel?.Wear is >= 90) findings.Add(L.T($"Aşınma %{rel.Wear:0} (ömrünün sonuna yakın)", $"Wear {rel.Wear:0}% (near the end of its life)"));
+            if (rel?.Temperature is >= 70) findings.Add(L.T($"Sıcaklık {rel.Temperature:0} °C (yüksek)", $"Temperature {rel.Temperature:0} °C (high)"));
+            if (rel?.ReadErrorsUncorrected is > 0) findings.Add(L.T($"{rel.ReadErrorsUncorrected} düzeltilemeyen okuma hatası", $"{rel.ReadErrorsUncorrected} uncorrectable read error(s)"));
+            if (rel?.WriteErrorsUncorrected is > 0) findings.Add(L.T($"{rel.WriteErrorsUncorrected} düzeltilemeyen yazma hatası", $"{rel.WriteErrorsUncorrected} uncorrectable write error(s)"));
             foreach (var v in vols.Where(v => v.Total > 0 && v.Free * 10 < v.Total))
-                findings.Add($"{v.Letter} boş alan az (%{100 - v.UsedPercent:0})");
+                findings.Add(L.T($"{v.Letter} boş alan az (%{100 - v.UsedPercent:0})", $"{v.Letter} low free space ({100 - v.UsedPercent:0}%)"));
             if (state == CheckState.Healthy && findings.Count > 0) state = CheckState.Warning;
             var text = state switch
             {
-                CheckState.Healthy => "Sağlıklı",
-                CheckState.Warning => "Uyarı",
-                CheckState.Error => "Sağlıksız",
-                _ => "Windows sağlık durumu bildirmedi"
+                CheckState.Healthy => L.T("Sağlıklı", "Healthy"),
+                CheckState.Warning => L.T("Uyarı", "Warning"),
+                CheckState.Error => L.T("Sağlıksız", "Unhealthy"),
+                _ => L.T("Windows sağlık durumu bildirmedi", "Windows did not report a health status")
             };
             result.Add(new DiskHealth(d, rel, vols, state, text, findings));
         }
-        logger.Info($"Depolama sağlığı okundu: {result.Count} disk ({string.Join(", ", result.Select(r => $"{r.Name}: {r.StateText}"))})" +
+        logger.Info(L.T($"Depolama sağlığı okundu: {result.Count} disk ({string.Join(", ", result.Select(r => $"{r.Name}: {r.StateText}"))})", $"Storage health read: {result.Count} disk(s) ({string.Join(", ", result.Select(r => $"{r.Name}: {r.StateText}"))})") +
                     (note is null ? "." : $"; {note}"));
         return new StorageScan(result, volumes, null, note);
     }

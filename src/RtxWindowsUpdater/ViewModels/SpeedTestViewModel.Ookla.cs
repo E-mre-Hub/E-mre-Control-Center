@@ -18,7 +18,7 @@ public sealed class OoklaServerViewModel(OoklaServer server) : ObservableObject
     public int Id => Server.Id;
     public string City => Server.Location;
     public string Sponsor => Server.Sponsor;
-    public string ToolTip => $"{Server.Sponsor} · {Server.Location}, {Server.Country}\nSunucu {Server.Id} · {Server.Host}";
+    public string ToolTip => L.T($"{Server.Sponsor} · {Server.Location}, {Server.Country}\nSunucu {Server.Id} · {Server.Host}", $"{Server.Sponsor} · {Server.Location}, {Server.Country}\nServer {Server.Id} · {Server.Host}");
     public bool IsSelected { get => _isSelected; set => Set(ref _isSelected, value); }
 }
 
@@ -33,7 +33,6 @@ public sealed partial class SpeedTestViewModel
 {
     public const string ProviderCloudflare = "cloudflare";
     public const string ProviderOokla = "ookla";
-    private static readonly CultureInfo Turkish = CultureInfo.GetCultureInfo("tr-TR");
 
     private readonly OoklaSpeedtestService _ookla;
     private string _provider = ProviderCloudflare;
@@ -70,14 +69,14 @@ public sealed partial class SpeedTestViewModel
         _serverName = _state.State.SpeedTestServerName ?? string.Empty;
         InstallOoklaCommand = new AsyncCommand(InstallOoklaAsync,
             () => !IsWorking && !_systemBusy() && OoklaState is OoklaSetupState.NotInstalled or OoklaSetupState.Error,
-            ex => _logger.Error("Ookla aracı kurulamadı: " + ex.Message));
+            ex => _logger.Error(L.T("Ookla aracı kurulamadı: ", "Could not install the Ookla tool: ") + ex.Message));
         AcceptOoklaLicenseCommand = new AsyncCommand(AcceptLicenseAsync, () => OoklaState == OoklaSetupState.NeedsLicense && !IsWorking,
-            ex => _logger.Error("Ookla koşulları kaydedilemedi: " + ex.Message));
+            ex => _logger.Error(L.T("Ookla koşulları kaydedilemedi: ", "Could not save the Ookla terms: ") + ex.Message));
         RevokeOoklaLicenseCommand = new RelayCommand(RevokeLicense, () => _state.State.OoklaLicenseAcceptedAt is not null && !IsWorking);
         RefreshServersCommand = new AsyncCommand(LoadServersAsync, () => OoklaState == OoklaSetupState.Ready && !IsLoadingServers && !IsWorking,
-            ex => _logger.Error("Ookla sunucu listesi alınamadı: " + ex.Message));
+            ex => _logger.Error(L.T("Ookla sunucu listesi alınamadı: ", "Could not get the Ookla server list: ") + ex.Message));
         RetryOoklaCommand = new AsyncCommand(() => EnsureOoklaAsync(force: true), () => !IsWorking && OoklaState != OoklaSetupState.Checking,
-            ex => _logger.Error("Ookla aracı denetlenemedi: " + ex.Message));
+            ex => _logger.Error(L.T("Ookla aracı denetlenemedi: ", "Could not check the Ookla tool: ") + ex.Message));
         AutoSelectServerCommand = new RelayCommand(() => SelectServer(null), () => !IsRunning);
         SelectServerCommand = new RelayCommand(p => SelectServer((p as OoklaServerViewModel)?.Server), _ => !IsRunning);
         OpenLinkCommand = new RelayCommand(p => OpenUrl(p as string));
@@ -95,7 +94,7 @@ public sealed partial class SpeedTestViewModel
             if (IsRunning || value is not (ProviderOokla or ProviderCloudflare) || value == _provider) return;
             _provider = value;
             _state.SetSpeedTestProvider(value);
-            _logger.Info("Hız testi altyapısı: " + (value == ProviderOokla ? SpeedTestProviders.Ookla : SpeedTestProviders.Cloudflare));
+            _logger.Info(L.T("Hız testi altyapısı: ", "Speed test engine: ") + (value == ProviderOokla ? SpeedTestProviders.Ookla : SpeedTestProviders.Cloudflare));
             RaiseProviderChanged();
             if (value == ProviderOokla) _ = EnsureOoklaAsync();
         }
@@ -106,10 +105,10 @@ public sealed partial class SpeedTestViewModel
 
     /// <summary>Seçili altyapıya göre sunucu açıklaması (Hız Testi → Test sunucusu satırı).</summary>
     public string ServerNote => IsOoklaProvider
-        ? "Speedtest by Ookla: sunucuyu Sunucu bölmesinden seçersiniz (Otomatik'te Ookla seçer). Ookla her testin sonucunu (IP adresi dahil) kendi " +
-          "sunucularında saklar ve bir sonuç sayfası üretir."
-        : "Cloudflare: sunucu Cloudflare ağında bağlantınız için otomatik seçilir (anycast); hangi veri merkezine gidileceğini ISS'nizin yönlendirmesi " +
-          "belirler. ISS'nin kendi ağındaki sunucularla test için Sunucu bölmesinden Speedtest by Ookla'yı seçebilirsiniz.";
+        ? L.T("Speedtest by Ookla: sunucuyu Sunucu bölmesinden seçersiniz (Otomatik'te Ookla seçer). Ookla her testin sonucunu (IP adresi dahil) kendi ", "Speedtest by Ookla: you choose the server in the Server section (in Automatic, Ookla chooses). Ookla stores every test result (including the IP address) on its own ") +
+          L.T("sunucularında saklar ve bir sonuç sayfası üretir.", "servers and creates a result page.")
+        : L.T("Cloudflare: sunucu Cloudflare ağında bağlantınız için otomatik seçilir (anycast); hangi veri merkezine gidileceğini ISS'nizin yönlendirmesi ", "Cloudflare: the server is chosen automatically for your connection in the Cloudflare network (anycast); your ISP's routing decides which data center ") +
+          L.T("belirler. ISS'nin kendi ağındaki sunucularla test için Sunucu bölmesinden Speedtest by Ookla'yı seçebilirsiniz.", "is used. To test with servers inside your ISP's own network, choose Speedtest by Ookla in the Server section.");
     public bool IsInstalling { get => _isInstalling; private set { if (Set(ref _isInstalling, value)) OnWorkingChanged(); } }
 
     /// <summary>Test veya araç kurulumu sürüyor (sistem işlemleri bu sırada başlatılamaz).</summary>
@@ -120,11 +119,11 @@ public sealed partial class SpeedTestViewModel
 
     private string? ProviderBlockedReason => !IsOoklaProvider || ProviderReady ? null : OoklaState switch
     {
-        OoklaSetupState.Checking or OoklaSetupState.Unknown => "Ookla aracı denetleniyor...",
-        OoklaSetupState.NotInstalled => "Speedtest by Ookla seçili ancak Ookla aracı kurulu değil. Sunucu bölmesinden kurabilir veya Cloudflare'i seçebilirsiniz.",
-        OoklaSetupState.Installing => "Ookla aracı kuruluyor...",
-        OoklaSetupState.NeedsLicense => "Speedtest by Ookla için Ookla'nın lisans ve gizlilik koşullarını Sunucu bölmesinde kabul etmeniz gerekiyor.",
-        _ => "Ookla aracı kullanılamıyor: " + OoklaMessage
+        OoklaSetupState.Checking or OoklaSetupState.Unknown => L.T("Ookla aracı denetleniyor...", "Checking the Ookla tool..."),
+        OoklaSetupState.NotInstalled => L.T("Speedtest by Ookla seçili ancak Ookla aracı kurulu değil. Sunucu bölmesinden kurabilir veya Cloudflare'i seçebilirsiniz.", "Speedtest by Ookla is selected but the Ookla tool is not installed. You can install it in the Server section or choose Cloudflare."),
+        OoklaSetupState.Installing => L.T("Ookla aracı kuruluyor...", "Installing the Ookla tool..."),
+        OoklaSetupState.NeedsLicense => L.T("Speedtest by Ookla için Ookla'nın lisans ve gizlilik koşullarını Sunucu bölmesinde kabul etmeniz gerekiyor.", "For Speedtest by Ookla you need to accept Ookla's license and privacy terms in the Server section."),
+        _ => L.T("Ookla aracı kullanılamıyor: ", "The Ookla tool is unavailable: ") + OoklaMessage
     };
 
     // ------------------------------------------------------------------ Ookla durumu
@@ -160,7 +159,7 @@ public sealed partial class SpeedTestViewModel
     /// <summary>"Speedtest by Ookla 1.2.0.84 · kabul: 25.09.2026 14:40"</summary>
     public string OoklaToolText => _ooklaCli is null ? string.Empty
         : $"{SpeedTestProviders.Ookla} {_ooklaCli.Version}" +
-          (_state.State.OoklaLicenseAcceptedAt is { } at ? $" · koşullar {at:dd.MM.yyyy HH:mm} tarihinde kabul edildi" : "");
+          (_state.State.OoklaLicenseAcceptedAt is { } at ? L.T($" · koşullar {at:dd.MM.yyyy HH:mm} tarihinde kabul edildi", $" · terms accepted on {at:yyyy-MM-dd HH:mm}") : "");
 
     public bool IsLoadingServers
     {
@@ -183,18 +182,18 @@ public sealed partial class SpeedTestViewModel
     public bool IsAutoSelected => _serverId is null;
 
     /// <summary>"Otomatik Seç" düğmesinin metni: Otomatik zaten seçiliyse bunu açıkça gösterir.</summary>
-    public string AutoSelectText => IsAutoSelected ? "Otomatik seçili" : "Otomatik Seç";
+    public string AutoSelectText => IsAutoSelected ? L.T("Otomatik seçili", "Automatic selected") : L.T("Otomatik Seç", "Select Automatic");
 
     /// <summary>Seçili sunucunun başlığı (ana ekran ve Sunucu bölmesi).</summary>
-    public string SelectionTitle => !IsOoklaProvider ? "Cloudflare" : _serverId is null ? "Otomatik" : SponsorOf(_serverName);
+    public string SelectionTitle => !IsOoklaProvider ? "Cloudflare" : _serverId is null ? L.T("Otomatik", "Automatic") : SponsorOf(_serverName);
 
-    public string SelectionTitleUpper => SelectionTitle.ToUpper(Turkish);
+    public string SelectionTitleUpper => L.Upper(SelectionTitle);
 
     public string SelectionSubtitle => !IsOoklaProvider
-        ? "Otomatik · en yakın Cloudflare veri merkezi"
+        ? L.T("Otomatik · en yakın Cloudflare veri merkezi", "Automatic · nearest Cloudflare data center")
         : _serverId is null
-            ? "Speedtest by Ookla en uygun sunucuyu seçer"
-            : $"{LocationOf(_serverName)} · sunucu {_serverId}";
+            ? L.T("Speedtest by Ookla en uygun sunucuyu seçer", "Speedtest by Ookla chooses the best server")
+            : L.T($"{LocationOf(_serverName)} · sunucu {_serverId}", $"{LocationOf(_serverName)} · server {_serverId}");
 
     private static string SponsorOf(string name) => name.Split(" · ")[0];
     private static string LocationOf(string name) => name.Contains(" · ") ? name[(name.IndexOf(" · ", StringComparison.Ordinal) + 3)..] : string.Empty;
@@ -207,7 +206,7 @@ public sealed partial class SpeedTestViewModel
         _serverName = server is null ? string.Empty : $"{server.Sponsor} · {server.Location}, {server.Country}";
         _state.SetSpeedTestServer(_serverId, _serverName);
         foreach (var s in Servers) s.IsSelected = s.Id == _serverId;
-        _logger.Info("Hız testi sunucusu: " + (server is null ? "Otomatik (Ookla seçer)" : $"{_serverName} (id {server.Id})"));
+        _logger.Info(L.T("Hız testi sunucusu: ", "Speed test server: ") + (server is null ? L.T("Otomatik (Ookla seçer)", "Automatic (Ookla chooses)") : $"{_serverName} (id {server.Id})"));
         RaiseSelectionChanged();
     }
 
@@ -234,8 +233,8 @@ public sealed partial class SpeedTestViewModel
     }
 
     private string IdleStatusText => IsOoklaProvider
-        ? "Hazır. Test yaklaşık 40 saniye sürer; sonuç Ookla'ya kaydedilir."
-        : "Hazır. Test yaklaşık 25 saniye sürer.";
+        ? L.T("Hazır. Test yaklaşık 40 saniye sürer; sonuç Ookla'ya kaydedilir.", "Ready. The test takes about 40 seconds; the result is recorded by Ookla.")
+        : L.T("Hazır. Test yaklaşık 25 saniye sürer.", "Ready. The test takes about 25 seconds.");
 
     // ------------------------------------------------------------------ hazırlık: bul → (kur) → koşullar → sunucular
 
@@ -251,15 +250,15 @@ public sealed partial class SpeedTestViewModel
     private async Task EnsureCoreAsync()
     {
         OoklaState = OoklaSetupState.Checking;
-        OoklaMessage = "Ookla aracı denetleniyor...";
+        OoklaMessage = L.T("Ookla aracı denetleniyor...", "Checking the Ookla tool...");
         _ooklaCli = await Task.Run(() => _ookla.LocateAsync(CancellationToken.None));
         if (_ooklaCli is null)
         {
-            OoklaMessage = "Ookla Speedtest aracı bu bilgisayarda bulunamadı.";
+            OoklaMessage = L.T("Ookla Speedtest aracı bu bilgisayarda bulunamadı.", "The Ookla Speedtest tool was not found on this computer.");
             OoklaState = OoklaSetupState.NotInstalled;
             return;
         }
-        OoklaMessage = $"Bulundu: {_ooklaCli.Path}";
+        OoklaMessage = L.T($"Bulundu: {_ooklaCli.Path}", $"Found: {_ooklaCli.Path}");
         if (_state.State.OoklaLicenseAcceptedAt is null)
         {
             OoklaState = OoklaSetupState.NeedsLicense;
@@ -272,22 +271,22 @@ public sealed partial class SpeedTestViewModel
     private async Task InstallOoklaAsync()
     {
         if (IsWorking || _systemBusy()) return;
-        var go = await _dialog.ShowAsync("Ookla Speedtest aracı kurulsun mu?",
-            "Speedtest sunucularından (ör. İstanbul'daki Turkcell, Turknet, Türksat sunucuları) test yapmak için Ookla'nın resmi komut satırı " +
-            "aracı gerekir. Araç winget ile Microsoft'un paket deposundan kurulur; kurulumdan sonra ayrıca Ookla'nın koşullarını kabul etmeniz istenir.",
-            MainViewModel.Icons.Download, DialogKind.Question, "Kur", "Vazgeç",
+        var go = await _dialog.ShowAsync(L.T("Ookla Speedtest aracı kurulsun mu?", "Install the Ookla Speedtest tool?"),
+            L.T("Speedtest sunucularından (ör. İstanbul'daki Turkcell, Turknet, Türksat sunucuları) test yapmak için Ookla'nın resmi komut satırı ", "Testing with Speedtest servers (e.g. servers of your internet provider) requires Ookla's official command-line ") +
+            L.T("aracı gerekir. Araç winget ile Microsoft'un paket deposundan kurulur; kurulumdan sonra ayrıca Ookla'nın koşullarını kabul etmeniz istenir.", "tool. The tool is installed with winget from Microsoft's package repository; after installation you are also asked to accept Ookla's terms."),
+            MainViewModel.Icons.Download, DialogKind.Question, L.T("Kur", "Install"), L.T("Vazgeç", "Cancel"),
             bullets:
             [
-                $"Paket: {OoklaSpeedtestService.PackageId} (yayıncı: Ookla, yaklaşık 1 MB), kaynak: winget; dosya install.speedtest.net adresinden iner",
-                "Kurulum yeri: %LOCALAPPDATA%\\Microsoft\\WinGet\\Packages (kullanıcı kapsamı, yönetici yetkisi gerekmez)",
-                "Ookla'nın Windows aracı dijital olarak imzalı değildir; indirilen dosya winget tarafından paket bildirimindeki SHA256 özetiyle doğrulanır",
-                "Kaldırmak için: winget uninstall Ookla.Speedtest.CLI"
+                L.T($"Paket: {OoklaSpeedtestService.PackageId} (yayıncı: Ookla, yaklaşık 1 MB), kaynak: winget; dosya install.speedtest.net adresinden iner", $"Package: {OoklaSpeedtestService.PackageId} (publisher: Ookla, about 1 MB), source: winget; the file is downloaded from install.speedtest.net"),
+                L.T("Kurulum yeri: %LOCALAPPDATA%\\Microsoft\\WinGet\\Packages (kullanıcı kapsamı, yönetici yetkisi gerekmez)", "Install location: %LOCALAPPDATA%\\Microsoft\\WinGet\\Packages (user scope, no administrator rights needed)"),
+                L.T("Ookla'nın Windows aracı dijital olarak imzalı değildir; indirilen dosya winget tarafından paket bildirimindeki SHA256 özetiyle doğrulanır", "Ookla's Windows tool is not digitally signed; the downloaded file is verified by winget against the SHA256 hash in the package manifest"),
+                L.T("Kaldırmak için: winget uninstall Ookla.Speedtest.CLI", "To uninstall: winget uninstall Ookla.Speedtest.CLI")
             ]);
         if (!go || IsWorking || _systemBusy()) return;
 
         IsInstalling = true;
         OoklaState = OoklaSetupState.Installing;
-        OoklaMessage = "winget ile kuruluyor...";
+        OoklaMessage = L.T("winget ile kuruluyor...", "Installing with winget...");
         (OoklaCli? Cli, string Message) result;
         try
         {
@@ -312,7 +311,7 @@ public sealed partial class SpeedTestViewModel
     {
         if (OoklaState != OoklaSetupState.NeedsLicense) return;
         _state.SetOoklaLicenseAccepted(DateTime.Now);
-        _logger.Info("Ookla Speedtest lisans, kullanım ve gizlilik koşulları kullanıcı tarafından kabul edildi (" +
+        _logger.Info(L.T("Ookla Speedtest lisans, kullanım ve gizlilik koşulları kullanıcı tarafından kabul edildi (", "The Ookla Speedtest license, terms of use and privacy terms were accepted by the user (") +
                      string.Join(", ", OoklaSpeedtestService.LicenseLinks.Select(l => l.Url)) + ").");
         OoklaState = OoklaSetupState.Ready;
         await LoadServersAsync();
@@ -322,7 +321,7 @@ public sealed partial class SpeedTestViewModel
     {
         if (IsWorking) return;
         _state.SetOoklaLicenseAccepted(null);
-        _logger.Info("Ookla Speedtest koşullarının kabulü geri alındı; araç, koşullar yeniden kabul edilene kadar çalıştırılmayacak.");
+        _logger.Info(L.T("Ookla Speedtest koşullarının kabulü geri alındı; araç, koşullar yeniden kabul edilene kadar çalıştırılmayacak.", "Acceptance of the Ookla Speedtest terms was withdrawn; the tool will not run until the terms are accepted again."));
         _allServers = [];
         ApplyFilter();
         ServersStatusText = string.Empty;
@@ -334,22 +333,22 @@ public sealed partial class SpeedTestViewModel
     {
         if (_ooklaCli is null || OoklaState != OoklaSetupState.Ready || IsLoadingServers) return;
         IsLoadingServers = true;
-        ServersStatusText = "Yakın sunucular alınıyor...";
+        ServersStatusText = L.T("Yakın sunucular alınıyor...", "Getting nearby servers...");
         try
         {
             var path = _ooklaCli.Path;
             var (servers, error) = await Task.Run(() => _ookla.ListServersAsync(path, CancellationToken.None));
             if (servers is null)
             {
-                ServersStatusText = "Sunucu listesi alınamadı: " + error;
-                _logger.Warning("Ookla sunucu listesi alınamadı: " + error);
+                ServersStatusText = L.T("Sunucu listesi alınamadı: ", "Could not get the server list: ") + error;
+                _logger.Warning(L.T("Ookla sunucu listesi alınamadı: ", "Could not get the Ookla server list: ") + error);
                 return;
             }
             _allServers = servers;
             ApplyFilter();
             var missing = _serverId is { } id && servers.All(s => s.Id != id);
-            ServersStatusText = $"{servers.Count} yakın sunucu · {DateTime.Now:HH:mm} itibarıyla Ookla'dan alındı" +
-                                (missing ? $" · seçili sunucu ({_serverId}) bu listede yok, yine de kullanılır" : "");
+            ServersStatusText = L.T($"{servers.Count} yakın sunucu · {DateTime.Now:HH:mm} itibarıyla Ookla'dan alındı", $"{servers.Count} nearby servers · fetched from Ookla at {DateTime.Now:HH:mm}") +
+                                (missing ? L.T($" · seçili sunucu ({_serverId}) bu listede yok, yine de kullanılır", $" · the selected server ({_serverId}) is not in this list but will still be used") : "");
         }
         finally
         {
@@ -377,6 +376,6 @@ public sealed partial class SpeedTestViewModel
         if (url is null || !url.StartsWith("https://www.speedtest.net/", StringComparison.Ordinal)) return;
         // Gezgin üzerinden: uygulama yönetici olarak çalışsa da tarayıcı normal yetkiyle açılır.
         if (ShellOpen.OpenUrl(url) is { } error)
-            _logger.Warning($"Bağlantı açılamadı ({url}): {error}");
+            _logger.Warning(L.T($"Bağlantı açılamadı ({url}): {error}", $"Could not open the link ({url}): {error}"));
     }
 }

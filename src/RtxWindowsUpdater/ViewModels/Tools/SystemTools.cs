@@ -16,16 +16,16 @@ public sealed class DiagnoseViewModel : ToolViewModel
 {
     private readonly DiagnosticOrchestrator _orchestrator;
     private readonly NetworkState _network;
-    private string _countsText = "Tanılama henüz çalıştırılmadı.";
+    private string _countsText = L.T("Tanılama henüz çalıştırılmadı.", "Diagnosis has not run yet.");
 
     public DiagnoseViewModel(IToolHost host, DiagnosticOrchestrator orchestrator, NetworkState network) : base(host)
     {
         _orchestrator = orchestrator;
         _network = network;
         foreach (var s in DiagnosticOrchestrator.Steps)
-            Steps.Add(new CheckRowViewModel(new CheckResult(s.Title, CheckState.NotChecked, "Bekliyor", null, s.TargetCategory, s.TargetSection), host.OpenSection, s.Index));
+            Steps.Add(new CheckRowViewModel(new CheckResult(s.Title, CheckState.NotChecked, L.T("Bekliyor", "Waiting"), null, s.TargetCategory, s.TargetSection), host.OpenSection, s.Index));
         StartCommand = new AsyncCommand(() => RunAsync(DiagnoseAsync), () => !IsBusy && Host.CanStartTool);
-        StatusText = "10 gerçek kontrol sırayla çalışır; hiçbiri sistemde değişiklik yapmaz.";
+        StatusText = L.T("10 gerçek kontrol sırayla çalışır; hiçbiri sistemde değişiklik yapmaz.", "10 real checks run one after another; none of them changes the system.");
     }
 
     public ObservableCollection<CheckRowViewModel> Steps { get; } = [];
@@ -46,7 +46,7 @@ public sealed class DiagnoseViewModel : ToolViewModel
     {
         var sw = Start();
         foreach (var row in Steps)
-            row.Update(row.Result with { State = CheckState.NotChecked, Summary = "Bekliyor", Detail = null });
+            row.Update(row.Result with { State = CheckState.NotChecked, Summary = L.T("Bekliyor", "Waiting"), Detail = null });
         Total = Passed = Warnings = Errors = SkippedCount = Unknown = 0;
         RaiseCounts();
         var dispatcher = Dispatcher.CurrentDispatcher;
@@ -62,8 +62,8 @@ public sealed class DiagnoseViewModel : ToolViewModel
         catch (OperationCanceledException)
         {
             foreach (var row in Steps.Where(r => r.State is CheckState.Checking or CheckState.NotChecked))
-                row.Update(row.Result with { State = CheckState.Skipped, Summary = "İptal edildiği için çalıştırılmadı" });
-            Host.RecordToolOperation("Tek Tıkla Tanıla", CheckState.Skipped, "İptal edildi", sw.Elapsed, null, cancelled: true);
+                row.Update(row.Result with { State = CheckState.Skipped, Summary = L.T("İptal edildiği için çalıştırılmadı", "Not run because it was cancelled") });
+            Host.RecordToolOperation(L.T("Tek Tıkla Tanıla", "One-Click Diagnosis"), CheckState.Skipped, L.T("İptal edildi", "Cancelled"), sw.Elapsed, null, cancelled: true);
             throw;
         }
         // Son durum (BeginInvoke sırası korunur; yine de sonuçlar kesin olarak uygulanır).
@@ -84,16 +84,16 @@ public sealed class DiagnoseViewModel : ToolViewModel
                 "security" => "security", "events" => "events", "crash" => "crash", _ => null };
             if (key is not null) Host.ReportDiagnostic(key, r.Result with { Title = r.Step.Title });
         }
-        StatusText = $"Tamamlandı · {sw.Elapsed.TotalSeconds:0.0} sn · {DateTime.Now:HH:mm:ss}";
+        StatusText = L.T($"Tamamlandı · {sw.Elapsed.TotalSeconds:0.0} sn · {DateTime.Now:HH:mm:ss}", $"Completed · {sw.Elapsed.TotalSeconds:0.0} sec · {DateTime.Now:HH:mm:ss}");
         var worst = CheckStates.Worst(results.Select(r => r.Result.State));
-        Host.RecordToolOperation("Tek Tıkla Tanıla", worst, CountsText, sw.Elapsed,
+        Host.RecordToolOperation(L.T("Tek Tıkla Tanıla", "One-Click Diagnosis"), worst, CountsText, sw.Elapsed,
             Errors > 0 ? string.Join("; ", results.Where(r => r.Result.State == CheckState.Error).Select(r => $"{r.Step.Title}: {r.Result.Summary}")) : null);
     }
 
     private void RaiseCounts()
     {
-        CountsText = Total == 0 ? "Tanılama çalışıyor…"
-            : $"Toplam {Total} kontrol · {Passed} başarılı · {Warnings} uyarı · {Errors} hata · {SkippedCount} atlandı" + (Unknown > 0 ? $" · {Unknown} kontrol edilemedi" : "");
+        CountsText = Total == 0 ? L.T("Tanılama çalışıyor…", "Diagnosis running…")
+            : L.T($"Toplam {Total} kontrol · {Passed} başarılı · {Warnings} uyarı · {Errors} hata · {SkippedCount} atlandı", $"Total {Total} checks · {Passed} passed · {Warnings} warning(s) · {Errors} error(s) · {SkippedCount} skipped") + (Unknown > 0 ? L.T($" · {Unknown} kontrol edilemedi", $" · {Unknown} could not be checked") : "");
         OnPropertyChanged(nameof(Total));
         OnPropertyChanged(nameof(Passed));
         OnPropertyChanged(nameof(Warnings));
@@ -128,20 +128,20 @@ public sealed class StartupViewModel : ToolViewModel
         get => _selected;
         set { Set(ref _selected, value); OnPropertyChanged(nameof(ToggleText)); OnPropertyChanged(nameof(SelectionNote)); CommandManager.InvalidateRequerySuggested(); }
     }
-    public string ToggleText => _selected?.Enabled == false ? "Etkinleştir…" : "Devre dışı bırak…";
-    public string SelectionNote => _selected is null ? "Bir kayıt seçin."
-        : _selected.ProtectedReason ?? _selected.Note ?? (_selected.NeedsAdmin && !Host.IsAdmin ? "Tüm kullanıcılar için olan kayıt yönetici yetkisi gerektirir." : _selected.Command);
+    public string ToggleText => _selected?.Enabled == false ? L.T("Etkinleştir…", "Enable…") : L.T("Devre dışı bırak…", "Disable…");
+    public string SelectionNote => _selected is null ? L.T("Bir kayıt seçin.", "Select an entry.")
+        : _selected.ProtectedReason ?? _selected.Note ?? (_selected.NeedsAdmin && !Host.IsAdmin ? L.T("Tüm kullanıcılar için olan kayıt yönetici yetkisi gerektirir.", "Entries for all users require administrator rights.") : _selected.Command);
 
     protected override async Task LoadAsync(CancellationToken ct)
     {
-        StatusText = "Başlangıç kayıtları okunuyor…";
+        StatusText = L.T("Başlangıç kayıtları okunuyor…", "Reading startup entries…");
         var scan = await Task.Run(() => _service.ScanAsync(ct), ct);
         var keep = _selected;
         Entries.Clear();
         foreach (var e in scan.Entries) Entries.Add(e);
         Selected = Entries.FirstOrDefault(e => keep is not null && e.Name == keep.Name && e.Source == keep.Source);
         if (scan.Errors.Count > 0) ErrorText = string.Join(" ", scan.Errors);
-        StatusText = $"{scan.Entries.Count} kayıt · {scan.Entries.Count(e => e.Enabled)} etkin";
+        StatusText = L.T($"{scan.Entries.Count} kayıt · {scan.Entries.Count(e => e.Enabled)} etkin", $"{scan.Entries.Count} entries · {scan.Entries.Count(e => e.Enabled)} enabled");
     }
 
     /// <summary>Kullanıcı onayıyla, Görev Yöneticisi'nin yöntemiyle (StartupApproved) durum değişikliği; kayıt silinmez.</summary>
@@ -149,16 +149,16 @@ public sealed class StartupViewModel : ToolViewModel
     {
         if (_selected is not { Toggleable: true } e) return;
         var enable = !e.Enabled;
-        var ok = await ConfirmAsync(enable ? "Başlangıçta etkinleştirilsin mi?" : "Başlangıçtan devre dışı bırakılsın mı?",
-            (enable ? "Uygulama bir sonraki oturum açılışında yeniden otomatik başlayacak." : "Uygulama bir sonraki oturum açılışında otomatik başlamayacak.") +
-            " Başlangıç kaydı SİLİNMEZ; yalnızca Windows'un Görev Yöneticisi'nde de kullandığı durum değeri değiştirilir ve istediğiniz zaman geri alınabilir.",
-            enable ? "Etkinleştir" : "Devre dışı bırak", [$"Ad: {e.Name}", $"Kaynak: {e.SourceText}", $"Yayıncı: {e.PublisherText}", $"Komut: {e.Command}"], warning: !enable);
+        var ok = await ConfirmAsync(enable ? L.T("Başlangıçta etkinleştirilsin mi?", "Enable at startup?") : L.T("Başlangıçtan devre dışı bırakılsın mı?", "Disable at startup?"),
+            (enable ? L.T("Uygulama bir sonraki oturum açılışında yeniden otomatik başlayacak.", "The app will start automatically again at the next sign-in.") : L.T("Uygulama bir sonraki oturum açılışında otomatik başlamayacak.", "The app will not start automatically at the next sign-in.")) +
+            L.T(" Başlangıç kaydı SİLİNMEZ; yalnızca Windows'un Görev Yöneticisi'nde de kullandığı durum değeri değiştirilir ve istediğiniz zaman geri alınabilir.", " The startup entry is NOT DELETED; only the state value that Windows Task Manager also uses is changed, and you can undo it at any time."),
+            enable ? L.T("Etkinleştir", "Enable") : L.T("Devre dışı bırak", "Disable"), [$"Ad: {e.Name}", L.T($"Kaynak: {e.SourceText}", $"Source: {e.SourceText}"), L.T($"Yayıncı: {e.PublisherText}", $"Publisher: {e.PublisherText}"), L.T($"Komut: {e.Command}", $"Command: {e.Command}")], warning: !enable);
         if (!ok) return;
         var sw = Start();
         var (success, message) = await Task.Run(() => _service.SetEnabled(e, enable));
-        Host.RecordToolOperation(enable ? "Başlangıç kaydını etkinleştirme" : "Başlangıç kaydını devre dışı bırakma", success ? CheckState.Healthy : CheckState.Error,
+        Host.RecordToolOperation(enable ? L.T("Başlangıç kaydını etkinleştirme", "Enable startup entry") : L.T("Başlangıç kaydını devre dışı bırakma", "Disable startup entry"), success ? CheckState.Healthy : CheckState.Error,
             $"{e.Name}: {message}", sw.Elapsed, success ? null : message);
-        await InformAsync(success ? "Değişiklik uygulandı" : "Değişiklik yapılamadı", message, !success);
+        await InformAsync(success ? L.T("Değişiklik uygulandı", "Change applied") : L.T("Değişiklik yapılamadı", "Change could not be made"), message, !success);
         await RefreshAsync();
     }
 }
@@ -205,22 +205,22 @@ public sealed class ServicesViewModel : ToolViewModel
         get => _selected;
         set { Set(ref _selected, value); OnPropertyChanged(nameof(SelectionNote)); CommandManager.InvalidateRequerySuggested(); }
     }
-    public string SelectionNote => !Host.IsAdmin ? "Hizmet başlatma / durdurma yönetici yetkisi gerektirir."
-        : _selected is null ? "Bir hizmet seçin."
+    public string SelectionNote => !Host.IsAdmin ? L.T("Hizmet başlatma / durdurma yönetici yetkisi gerektirir.", "Starting / stopping services requires administrator rights.")
+        : _selected is null ? L.T("Bir hizmet seçin.", "Select a service.")
         : _selected.IsRunning && !_selected.CanStop ? _selected.StopBlockedText
-        : _selected.IsDisabled ? "Hizmet devre dışı; başlangıç türü bu uygulamadan değiştirilmez."
+        : _selected.IsDisabled ? L.T("Hizmet devre dışı; başlangıç türü bu uygulamadan değiştirilmez.", "The service is disabled; its startup type is not changed from this app.")
         : _selected.DescriptionText;
 
     protected override async Task LoadAsync(CancellationToken ct)
     {
-        StatusText = "Windows hizmetleri okunuyor…";
+        StatusText = L.T("Windows hizmetleri okunuyor…", "Reading Windows services…");
         var scan = await Task.Run(() => _service.ListAsync(ct), ct);
         var keep = _selected?.Name;
         Services.Clear();
         foreach (var s in scan.Services) Services.Add(s);
         Selected = Services.FirstOrDefault(s => s.Name == keep);
         if (scan.Error is not null) ErrorText = scan.Error;
-        StatusText = $"{scan.Services.Count} hizmet · {scan.Services.Count(s => s.IsRunning)} çalışıyor";
+        StatusText = L.T($"{scan.Services.Count} hizmet · {scan.Services.Count(s => s.IsRunning)} çalışıyor", $"{scan.Services.Count} services · {scan.Services.Count(s => s.IsRunning)} running");
     }
 
     private async Task ActAsync(ServiceAction action)
@@ -228,22 +228,22 @@ public sealed class ServicesViewModel : ToolViewModel
         if (_selected is not { } s) return;
         var (title, verb) = action switch
         {
-            ServiceAction.Start => ("Hizmet başlatılsın mı?", "Başlat"),
-            ServiceAction.Stop => ("Hizmet durdurulsun mu?", "Durdur"),
-            _ => ("Hizmet yeniden başlatılsın mı?", "Yeniden başlat")
+            ServiceAction.Start => (L.T("Hizmet başlatılsın mı?", "Start the service?"), L.T("Başlat", "Start")),
+            ServiceAction.Stop => (L.T("Hizmet durdurulsun mu?", "Stop the service?"), L.T("Durdur", "Stop")),
+            _ => (L.T("Hizmet yeniden başlatılsın mı?", "Restart the service?"), L.T("Yeniden başlat", "Restart"))
         };
         var ok = await ConfirmAsync(title,
-            action == ServiceAction.Start ? "Hizmet Windows Hizmet Denetimi Yöneticisi ile başlatılacak; başlangıç türü değişmez."
-                : "Hizmeti kullanan uygulamalar etkilenebilir. Kritik Windows hizmetleri bu uygulamadan durdurulamaz; başlangıç türü değişmez.",
-            verb, [$"Hizmet: {s.DisplayName} ({s.Name})", $"Durum: {s.StateText} · Başlangıç: {s.StartModeText}", $"Yayıncı: {s.PublisherText}", $"Dosya: {s.PathText}"],
+            action == ServiceAction.Start ? L.T("Hizmet Windows Hizmet Denetimi Yöneticisi ile başlatılacak; başlangıç türü değişmez.", "The service will be started with the Windows Service Control Manager; its startup type does not change.")
+                : L.T("Hizmeti kullanan uygulamalar etkilenebilir. Kritik Windows hizmetleri bu uygulamadan durdurulamaz; başlangıç türü değişmez.", "Apps using the service may be affected. Critical Windows services cannot be stopped from this app; the startup type does not change."),
+            verb, [L.T($"Hizmet: {s.DisplayName} ({s.Name})", $"Service: {s.DisplayName} ({s.Name})"), L.T($"Durum: {s.StateText} · Başlangıç: {s.StartModeText}", $"Status: {s.StateText} · Startup: {s.StartModeText}"), L.T($"Yayıncı: {s.PublisherText}", $"Publisher: {s.PublisherText}"), L.T($"Dosya: {s.PathText}", $"File: {s.PathText}")],
             warning: action != ServiceAction.Start);
         if (!ok) return;
         var sw = Start();
         (bool Success, string Message) result = (false, "");
         await RunAsync(async ct => result = await _service.RunAsync(s, action, ct));
-        Host.RecordToolOperation($"Hizmet: {verb.ToLowerInvariant()} – {s.DisplayName}", result.Success ? CheckState.Healthy : CheckState.Error, result.Message, sw.Elapsed,
+        Host.RecordToolOperation(L.T($"Hizmet: {verb.ToLowerInvariant()} – {s.DisplayName}", $"Service: {verb.ToLowerInvariant()} – {s.DisplayName}"), result.Success ? CheckState.Healthy : CheckState.Error, result.Message, sw.Elapsed,
             result.Success ? null : result.Message);
-        await InformAsync(result.Success ? "İşlem tamamlandı" : "İşlem başarısız", $"{s.DisplayName}: {result.Message}", !result.Success);
+        await InformAsync(result.Success ? L.T("İşlem tamamlandı", "Operation completed") : L.T("İşlem başarısız", "Operation failed"), $"{s.DisplayName}: {result.Message}", !result.Success);
         await RefreshAsync();
     }
 
@@ -260,7 +260,7 @@ public sealed class ServicesViewModel : ToolViewModel
         }
         catch (Exception ex) when (ex is System.ComponentModel.Win32Exception or InvalidOperationException)
         {
-            Logger.Warning("Hizmetler konsolu açılamadı: " + ex.Message);
+            Logger.Warning(L.T("Hizmetler konsolu açılamadı: ", "Could not open the Services console: ") + ex.Message);
         }
     }
 }
@@ -334,7 +334,7 @@ public sealed class ProcessesViewModel : ToolViewModel
         get => _selected;
         set { Set(ref _selected, value); OnPropertyChanged(nameof(SelectionNote)); CommandManager.InvalidateRequerySuggested(); }
     }
-    public string SelectionNote => _selected is null ? "Bir işlem seçin." : _selected.ProtectedReason ?? _selected.Path;
+    public string SelectionNote => _selected is null ? L.T("Bir işlem seçin.", "Select a process.") : _selected.ProtectedReason ?? _selected.Path;
 
     /// <summary>Örnekleme yalnızca bu ekran açıkken 2 saniyede bir (ekran kapanınca durur).</summary>
     public override void Activate()
@@ -343,7 +343,7 @@ public sealed class ProcessesViewModel : ToolViewModel
         _timer = new DispatcherTimer(DispatcherPriority.Background) { Interval = Interval };
         _timer.Tick += async (_, _) => await SampleAsync();
         _timer.Start();
-        Logger.Info("İşlemler: izleme başladı (2 saniyede bir).");
+        Logger.Info(L.T("İşlemler: izleme başladı (2 saniyede bir).", "Processes: monitoring started (every 2 seconds)."));
         _ = SampleAsync();
     }
 
@@ -353,7 +353,7 @@ public sealed class ProcessesViewModel : ToolViewModel
         _timer.Stop();
         _timer = null;
         _service.Reset();
-        Logger.Info("İşlemler: izleme durdu.");
+        Logger.Info(L.T("İşlemler: izleme durdu.", "Processes: monitoring stopped."));
     }
 
     public bool IsMonitoring => _timer is not null;
@@ -395,12 +395,12 @@ public sealed class ProcessesViewModel : ToolViewModel
                 _rows.Remove(gone);
             }
             GpuNote = snap.GpuNote;
-            TotalsText = $"{snap.Processes.Count} işlem · toplam CPU %{snap.TotalCpuPercent:0} · {DateTime.Now:HH:mm:ss}";
-            StatusText = "Canlı · 2 saniyede bir güncellenir";
+            TotalsText = L.T($"{snap.Processes.Count} işlem · toplam CPU %{snap.TotalCpuPercent:0} · {DateTime.Now:HH:mm:ss}", $"{snap.Processes.Count} processes · total CPU {snap.TotalCpuPercent:0}% · {DateTime.Now:HH:mm:ss}");
+            StatusText = L.T("Canlı · 2 saniyede bir güncellenir", "Live · updated every 2 seconds");
         }
         catch (Exception ex)
         {
-            ErrorText = "İşlem listesi okunamadı: " + ex.Message;
+            ErrorText = L.T("İşlem listesi okunamadı: ", "Could not read the process list: ") + ex.Message;
         }
         finally
         {
@@ -414,14 +414,14 @@ public sealed class ProcessesViewModel : ToolViewModel
     {
         if (_selected is not { CanEnd: true } row) return;
         var e = row.Entry;
-        var ok = await ConfirmAsync("İşlem sonlandırılsın mı?",
-            "Önce normal kapatma istenir; yanıt vermezse işlem sonlandırılır. Kaydedilmemiş veriler kaybolabilir.", "İşlemi sonlandır",
-            [$"İşlem: {e.Name} (PID {e.Pid})", $"Konum: {e.PathText}", $"Yayıncı: {e.PublisherText}", $"Bellek: {e.MemoryText} · CPU: {e.CpuText}"]);
+        var ok = await ConfirmAsync(L.T("İşlem sonlandırılsın mı?", "End the process?"),
+            L.T("Önce normal kapatma istenir; yanıt vermezse işlem sonlandırılır. Kaydedilmemiş veriler kaybolabilir.", "A normal close is requested first; if it does not respond, the process is ended. Unsaved data may be lost."), L.T("İşlemi sonlandır", "End process"),
+            [L.T($"İşlem: {e.Name} (PID {e.Pid})", $"Process: {e.Name} (PID {e.Pid})"), L.T($"Konum: {e.PathText}", $"Location: {e.PathText}"), L.T($"Yayıncı: {e.PublisherText}", $"Publisher: {e.PublisherText}"), L.T($"Bellek: {e.MemoryText} · CPU: {e.CpuText}", $"Memory: {e.MemoryText} · CPU: {e.CpuText}")]);
         if (!ok) return;
         var sw = Start();
         var (success, message) = await _service.EndAsync(e);
-        Host.RecordToolOperation($"İşlem sonlandırma – {e.Name}", success ? CheckState.Healthy : CheckState.Error, message, sw.Elapsed, success ? null : message);
-        await InformAsync(success ? "İşlem kapatıldı" : "İşlem kapatılamadı", message, !success);
+        Host.RecordToolOperation(L.T($"İşlem sonlandırma – {e.Name}", $"End process – {e.Name}"), success ? CheckState.Healthy : CheckState.Error, message, sw.Elapsed, success ? null : message);
+        await InformAsync(success ? L.T("İşlem kapatıldı", "Process closed") : L.T("İşlem kapatılamadı", "Process could not be closed"), message, !success);
         await SampleAsync();
     }
 }
@@ -445,7 +445,7 @@ public sealed class SecurityViewModel : ToolViewModel
 
     protected override async Task LoadAsync(CancellationToken ct)
     {
-        StatusText = "Güvenlik durumu okunuyor…";
+        StatusText = L.T("Güvenlik durumu okunuyor…", "Reading security status…");
         var r = await Task.Run(() => _service.ReadAsync(ct), ct);
         Checks.Clear();
         foreach (var c in r.Checks) Checks.Add(new CheckRowViewModel(c, Host.OpenSection));
@@ -454,9 +454,9 @@ public sealed class SecurityViewModel : ToolViewModel
         Overall = r.Overall;
         OnPropertyChanged(nameof(Overall));
         var issues = r.Checks.Where(c => c.State is CheckState.Warning or CheckState.Error).ToList();
-        StatusText = issues.Count == 0 ? "Sorun bulunmadı (yalnızca okuma yapıldı)" : $"{issues.Count} konu dikkat gerektiriyor";
-        Host.ReportDiagnostic("security", new CheckResult("Güvenlik", r.Overall,
-            issues.Count == 0 ? "Virüsten koruma ve güvenlik duvarı etkin" : string.Join(" · ", issues.Select(i => $"{i.Title}: {i.Summary}")), null, Nav.SystemTools, Nav.Security));
+        StatusText = issues.Count == 0 ? L.T("Sorun bulunmadı (yalnızca okuma yapıldı)", "No problems found (read-only)") : L.T($"{issues.Count} konu dikkat gerektiriyor", $"{issues.Count} item(s) need attention");
+        Host.ReportDiagnostic("security", new CheckResult(L.T("Güvenlik", "Security"), r.Overall,
+            issues.Count == 0 ? L.T("Virüsten koruma ve güvenlik duvarı etkin", "Antivirus and firewall are on") : string.Join(" · ", issues.Select(i => $"{i.Title}: {i.Summary}")), null, Nav.SystemTools, Nav.Security));
     }
 }
 
@@ -484,17 +484,17 @@ public sealed class ReportViewModel : ToolViewModel
         _network = network;
         Parts =
         [
-            new(ReportParts.Windows, "Windows"), new(ReportParts.Hardware, "Donanım (CPU / GPU / RAM / Disk)"), new(ReportParts.Storage, "Depolama sağlığı"),
-            new(ReportParts.Network, "Ağ"), new(ReportParts.Drivers, "Sürücüler"), new(ReportParts.Security, "Güvenlik"), new(ReportParts.Services, "Hizmetler"),
-            new(ReportParts.Startup, "Başlangıç uygulamaları"), new(ReportParts.Events, "Olay günlüğü hataları"), new(ReportParts.Crashes, "Çökme kayıtları"),
-            new(ReportParts.Battery, "Batarya")
+            new(ReportParts.Windows, "Windows"), new(ReportParts.Hardware, L.T("Donanım (CPU / GPU / RAM / Disk)", "Hardware (CPU / GPU / RAM / Disk)")), new(ReportParts.Storage, L.T("Depolama sağlığı", "Storage health")),
+            new(ReportParts.Network, L.T("Ağ", "Network")), new(ReportParts.Drivers, L.T("Sürücüler", "Drivers")), new(ReportParts.Security, L.T("Güvenlik", "Security")), new(ReportParts.Services, L.T("Hizmetler", "Services")),
+            new(ReportParts.Startup, L.T("Başlangıç uygulamaları", "Startup apps")), new(ReportParts.Events, L.T("Olay günlüğü hataları", "Event log errors")), new(ReportParts.Crashes, L.T("Çökme kayıtları", "Crash records")),
+            new(ReportParts.Battery, L.T("Batarya", "Battery"))
         ];
         CreateCommand = new AsyncCommand(() => RunAsync(CreateAsync), () => !IsBusy && Parts.Any(p => p.IsChecked));
         SaveTextCommand = new AsyncCommand(() => SaveAsync("txt"), () => _document is not null && !IsBusy);
         SaveHtmlCommand = new AsyncCommand(() => SaveAsync("html"), () => _document is not null && !IsBusy);
         SaveJsonCommand = new AsyncCommand(() => SaveAsync("json"), () => _document is not null && !IsBusy);
         ShowSavedCommand = new RelayCommand(() => ShowInExplorer(_savedPath), () => _savedPath is not null);
-        StatusText = "Rapor yalnızca bu bilgisayarda oluşturulur; kaydetmediğiniz sürece hiçbir yere yazılmaz ve gönderilmez.";
+        StatusText = L.T("Rapor yalnızca bu bilgisayarda oluşturulur; kaydetmediğiniz sürece hiçbir yere yazılmaz ve gönderilmez.", "The report is created only on this computer; it is not written anywhere or sent unless you save it.");
     }
 
     public IReadOnlyList<ReportPartViewModel> Parts { get; }
@@ -521,10 +521,10 @@ public sealed class ReportViewModel : ToolViewModel
         _document = doc;
         Preview = SystemReportService.ToText(doc);
         SavedPath = null;
-        var failed = doc.Sections.Count(s => s.Note?.StartsWith("Bu bölüm okunamadı", StringComparison.Ordinal) == true);
-        StatusText = $"Rapor hazır: {doc.Sections.Count} bölüm · {sw.Elapsed.TotalSeconds:0.0} sn" + (failed > 0 ? $" · {failed} bölüm okunamadı" : "") + ". Kaydetmek için bir biçim seçin.";
-        Host.RecordToolOperation("Sistem raporu oluşturma", failed > 0 ? CheckState.Warning : CheckState.Healthy, $"{doc.Sections.Count} bölüm", sw.Elapsed,
-            failed > 0 ? string.Join("; ", doc.Sections.Where(s => s.Note?.StartsWith("Bu bölüm okunamadı", StringComparison.Ordinal) == true).Select(s => $"{s.Title}: {s.Note}")) : null);
+        var failed = doc.Sections.Count(s => s.Note?.StartsWith(L.T("Bu bölüm okunamadı", "This section could not be read"), StringComparison.Ordinal) == true);
+        StatusText = L.T($"Rapor hazır: {doc.Sections.Count} bölüm · {sw.Elapsed.TotalSeconds:0.0} sn", $"Report ready: {doc.Sections.Count} sections · {sw.Elapsed.TotalSeconds:0.0} sec") + (failed > 0 ? L.T($" · {failed} bölüm okunamadı", $" · {failed} section(s) could not be read") : "") + L.T(". Kaydetmek için bir biçim seçin.", ". Choose a format to save it.");
+        Host.RecordToolOperation(L.T("Sistem raporu oluşturma", "Create system report"), failed > 0 ? CheckState.Warning : CheckState.Healthy, L.T($"{doc.Sections.Count} bölüm", $"{doc.Sections.Count} sections"), sw.Elapsed,
+            failed > 0 ? string.Join("; ", doc.Sections.Where(s => s.Note?.StartsWith(L.T("Bu bölüm okunamadı", "This section could not be read"), StringComparison.Ordinal) == true).Select(s => $"{s.Title}: {s.Note}")) : null);
     }
 
     private async Task SaveAsync(string format)
@@ -532,9 +532,9 @@ public sealed class ReportViewModel : ToolViewModel
         if (_document is not { } doc) return;
         var dialog = new Microsoft.Win32.SaveFileDialog
         {
-            Title = "Sistem raporunu kaydet",
-            FileName = $"E-mre-Sistem-Raporu-{doc.CreatedAt:yyyyMMdd-HHmm}.{format}",
-            Filter = format switch { "html" => "HTML dosyası (*.html)|*.html", "json" => "JSON dosyası (*.json)|*.json", _ => "Metin dosyası (*.txt)|*.txt" },
+            Title = L.T("Sistem raporunu kaydet", "Save the system report"),
+            FileName = L.T($"E-mre-Sistem-Raporu-{doc.CreatedAt:yyyyMMdd-HHmm}.{format}", $"E-mre-System-Report-{doc.CreatedAt:yyyyMMdd-HHmm}.{format}"),
+            Filter = format switch { "html" => L.T("HTML dosyası (*.html)|*.html", "HTML file (*.html)|*.html"), "json" => L.T("JSON dosyası (*.json)|*.json", "JSON file (*.json)|*.json"), _ => L.T("Metin dosyası (*.txt)|*.txt", "Text file (*.txt)|*.txt") },
             AddExtension = true,
             OverwritePrompt = true
         };
@@ -545,12 +545,12 @@ public sealed class ReportViewModel : ToolViewModel
             await File.WriteAllTextAsync(dialog.FileName, content, new System.Text.UTF8Encoding(true));
             var size = new FileInfo(dialog.FileName).Length;
             SavedPath = dialog.FileName;
-            StatusText = $"Kaydedildi: {dialog.FileName} ({Formats.Bytes(size)})";
-            Logger.Info($"Sistem raporu kaydedildi: {dialog.FileName} ({size} bayt)");
+            StatusText = L.T($"Kaydedildi: {dialog.FileName} ({Formats.Bytes(size)})", $"Saved: {dialog.FileName} ({Formats.Bytes(size)})");
+            Logger.Info(L.T($"Sistem raporu kaydedildi: {dialog.FileName} ({size} bayt)", $"System report saved: {dialog.FileName} ({size} bytes)"));
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
         {
-            ErrorText = "Rapor kaydedilemedi: " + ex.Message;
+            ErrorText = L.T("Rapor kaydedilemedi: ", "Could not save the report: ") + ex.Message;
             Logger.Error(ErrorText);
         }
     }
@@ -580,7 +580,7 @@ public sealed class SupportPackageViewModel : ToolViewModel
         Items = SupportPackageService.Items.Select(i => new SupportItemViewModel(i)).ToList();
         CreateCommand = new AsyncCommand(CreateAsync, () => !IsBusy && Items.Any(i => i.IsChecked));
         ShowCommand = new RelayCommand(() => ShowInExplorer(_result?.Path), () => _result?.Path is not null);
-        StatusText = "Paket yalnızca seçtiğiniz konuma kaydedilir; hiçbir yere gönderilmez.";
+        StatusText = L.T("Paket yalnızca seçtiğiniz konuma kaydedilir; hiçbir yere gönderilmez.", "The package is saved only to the location you choose; it is not sent anywhere.");
     }
 
     public IReadOnlyList<SupportItemViewModel> Items { get; }
@@ -588,7 +588,7 @@ public sealed class SupportPackageViewModel : ToolViewModel
     public ICommand CreateCommand { get; }
     public ICommand ShowCommand { get; }
     public string ResultText => _result is null ? string.Empty
-        : _result.Success ? $"{_result.Message}\n{_result.Path}\n{_result.Entries.Count} dosya · {Formats.Bytes(_result.Size)}" : _result.Message;
+        : _result.Success ? L.T($"{_result.Message}\n{_result.Path}\n{_result.Entries.Count} dosya · {Formats.Bytes(_result.Size)}", $"{_result.Message}\n{_result.Path}\n{_result.Entries.Count} files · {Formats.Bytes(_result.Size)}") : _result.Message;
     public bool HasResult => _result is not null;
     public bool ResultOk => _result?.Success == true;
     public override bool ShowRefresh => false;
@@ -600,9 +600,9 @@ public sealed class SupportPackageViewModel : ToolViewModel
     {
         var dialog = new Microsoft.Win32.SaveFileDialog
         {
-            Title = "Destek paketini kaydet",
-            FileName = $"E-mre-Destek-Paketi-{DateTime.Now:yyyyMMdd-HHmm}.zip",
-            Filter = "ZIP arşivi (*.zip)|*.zip",
+            Title = L.T("Destek paketini kaydet", "Save the support package"),
+            FileName = L.T($"E-mre-Destek-Paketi-{DateTime.Now:yyyyMMdd-HHmm}.zip", $"E-mre-Support-Package-{DateTime.Now:yyyyMMdd-HHmm}.zip"),
+            Filter = L.T("ZIP arşivi (*.zip)|*.zip", "ZIP archive (*.zip)|*.zip"),
             AddExtension = true,
             OverwritePrompt = true
         };
@@ -617,10 +617,10 @@ public sealed class SupportPackageViewModel : ToolViewModel
             OnPropertyChanged(nameof(ResultText));
             OnPropertyChanged(nameof(HasResult));
             OnPropertyChanged(nameof(ResultOk));
-            StatusText = r.Success ? "Destek paketi hazır." : "Destek paketi oluşturulamadı.";
+            StatusText = r.Success ? L.T("Destek paketi hazır.", "Support package ready.") : L.T("Destek paketi oluşturulamadı.", "Support package could not be created.");
             if (!r.Success) ErrorText = r.Message;
-            Host.RecordToolOperation("Destek paketi oluşturma", r.Success ? CheckState.Healthy : CheckState.Error,
-                r.Success ? $"{r.Entries.Count} dosya, {Formats.Bytes(r.Size)}" : r.Message, sw.Elapsed, r.Success ? null : r.Message);
+            Host.RecordToolOperation(L.T("Destek paketi oluşturma", "Create support package"), r.Success ? CheckState.Healthy : CheckState.Error,
+                r.Success ? L.T($"{r.Entries.Count} dosya, {Formats.Bytes(r.Size)}", $"{r.Entries.Count} files, {Formats.Bytes(r.Size)}") : r.Message, sw.Elapsed, r.Success ? null : r.Message);
         });
     }
 }

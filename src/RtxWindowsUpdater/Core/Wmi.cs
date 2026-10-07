@@ -49,19 +49,19 @@ public static class Wmi
     {
         ManagementException m => m.ErrorCode switch
         {
-            ManagementStatus.AccessDenied => "Erişim reddedildi (yönetici yetkisi gerekiyor olabilir).",
-            ManagementStatus.InvalidNamespace => "Bu Windows'ta ilgili WMI ad alanı yok (özellik desteklenmiyor).",
-            ManagementStatus.InvalidClass => "Bu Windows'ta ilgili WMI sınıfı yok (özellik desteklenmiyor).",
-            ManagementStatus.NotSupported => "Bu sistemde desteklenmiyor.",
-            ManagementStatus.Timedout => "WMI yanıtı zaman aşımına uğradı.",
-            ManagementStatus.ProviderLoadFailure => "WMI sağlayıcısı yüklenemedi.",
-            _ => $"WMI hatası: {m.Message.Trim()} ({m.ErrorCode})."
+            ManagementStatus.AccessDenied => L.T("Erişim reddedildi (yönetici yetkisi gerekiyor olabilir).", "Access denied (administrator rights may be required)."),
+            ManagementStatus.InvalidNamespace => L.T("Bu Windows'ta ilgili WMI ad alanı yok (özellik desteklenmiyor).", "The related WMI namespace does not exist on this Windows (feature not supported)."),
+            ManagementStatus.InvalidClass => L.T("Bu Windows'ta ilgili WMI sınıfı yok (özellik desteklenmiyor).", "The related WMI class does not exist on this Windows (feature not supported)."),
+            ManagementStatus.NotSupported => L.T("Bu sistemde desteklenmiyor.", "Not supported on this system."),
+            ManagementStatus.Timedout => L.T("WMI yanıtı zaman aşımına uğradı.", "The WMI response timed out."),
+            ManagementStatus.ProviderLoadFailure => L.T("WMI sağlayıcısı yüklenemedi.", "The WMI provider could not be loaded."),
+            _ => L.T($"WMI hatası: {m.Message.Trim()} ({m.ErrorCode}).", $"WMI error: {m.Message.Trim()} ({m.ErrorCode}).")
         },
-        UnauthorizedAccessException => "Erişim reddedildi (yönetici yetkisi gerekiyor).",
-        COMException c when (uint)c.HResult == 0x80070005 => "Erişim reddedildi (yönetici yetkisi gerekiyor).",
-        COMException c when (uint)c.HResult == 0x80041010 => "Bu Windows'ta ilgili WMI sınıfı yok (özellik desteklenmiyor).",
-        COMException c => $"COM hatası: {c.Message.Trim()} (0x{(uint)c.HResult:X8}).",
-        TimeoutException => "WMI yanıtı zaman aşımına uğradı.",
+        UnauthorizedAccessException => L.T("Erişim reddedildi (yönetici yetkisi gerekiyor).", "Access denied (administrator rights required)."),
+        COMException c when (uint)c.HResult == 0x80070005 => L.T("Erişim reddedildi (yönetici yetkisi gerekiyor).", "Access denied (administrator rights required)."),
+        COMException c when (uint)c.HResult == 0x80041010 => L.T("Bu Windows'ta ilgili WMI sınıfı yok (özellik desteklenmiyor).", "The related WMI class does not exist on this Windows (feature not supported)."),
+        COMException c => L.T($"COM hatası: {c.Message.Trim()} (0x{(uint)c.HResult:X8}).", $"COM error: {c.Message.Trim()} (0x{(uint)c.HResult:X8})."),
+        TimeoutException => L.T("WMI yanıtı zaman aşımına uğradı.", "The WMI response timed out."),
         _ => ex.Message
     };
 

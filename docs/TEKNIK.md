@@ -37,7 +37,7 @@ kendi bakım araçlarını (SFC, DISM CheckHealth / onayla RestoreHealth, MRT h�
 - **Şeffaflık:** Sistem Sağlık Özeti, Sistem Bilgileri, her kartta son çalıştırılma zamanı, Detaylı Sonuç paneli
   (gerçek komut, çıkış kodu, stdout/stderr, süre), Son İşlem özeti, işlem geçmişi, Windows bildirimleri ve Log Yönetimi.
 
-- **Kurulum ve kaldırma:** `E-mre-Control-Center-Setup-vX.Y.Z.exe` ile gerçek bir Windows programı gibi kurulur (Program Files,
+- **Kurulum ve kaldırma:** `E-mre-Control-Center-Setup-TR-vX.Y.Z.exe` (Türkçe) veya `…-Setup-EN-vX.Y.Z.exe` (English) ile gerçek bir Windows programı gibi kurulur (Program Files,
   Başlat menüsü, isteğe bağlı masaüstü kısayolu, Ayarlar → Uygulamalar kaydı). Windows'tan kaldırılırken veda ekranı ve isteğe
   bağlı geri bildirim ("Neden kaldırıyorsunuz?") açılır (bkz. [Kurulum ve kaldırma](#kurulum-güncelleme-ve-kaldırma)).
 - **Uygulama içi güncelleme:** yeni sürüm yayınlandığında "Yeni sürüm yayınlandı" penceresi gelir – açılışta ve uygulama açıkken de
@@ -207,8 +207,10 @@ git tag v1.9.3
 git push origin v1.9.3
 ```
 
-3. GitHub Actions (`.github/workflows/release.yml`) EXE'yi Windows sunucusunda derler ve **Releases** sayfasına iki dosya ekler:
-   `E-mre-Control-Center-Setup-v1.9.3.exe` (kurulum) ve `E-mre-Control-Center-v1.9.3.zip` (taşınabilir). Arkadaşlar oradan indirir;
+3. GitHub Actions (`.github/workflows/release.yml`) EXE'yi Windows sunucusunda derler ve **Releases** sayfasına ekler:
+   `E-mre-Control-Center-Setup-TR-vX.Y.Z.exe` (Türkçe kurulum), `E-mre-Control-Center-Setup-EN-vX.Y.Z.exe` (English setup),
+   `E-mre-Control-Center-vX.Y.Z.zip` (taşınabilir) ve eski sürümlerin otomatik güncellemesi için aynı EXE'nin eski adlı kopyası
+   `E-mre-Control-Center-Setup-vX.Y.Z.exe` (v1.9.3 ve öncesi yalnızca bu adı arar). Arkadaşlar oradan indirir;
    yüklü uygulamalar bu yayını "Yeni sürüm yayınlandı" olarak görür (v1.7.2 ve sonrası).
    Etiketteki sürüm (v1.9.3) EXE'nin sürümü olarak kullanılır; csproj'daki `<Version>` ile aynı olmalıdır. Yayının metni yalnızca
    CHANGELOG.md'deki `### v1.9.3` bölümüdür (uygulamadaki güncelleme penceresinde de bu metin görünür); bu bölüm etiketten önce yazılmalıdır.
@@ -416,7 +418,7 @@ Hiçbir hata başarılı gibi gösterilmez; nedeni kartta, sonuç ekranında ve 
 
 ### Kurulum, güncelleme ve kaldırma
 
-**Kurulum** (`E-mre-Control-Center-Setup-vX.Y.Z.exe`):
+**Kurulum** (`E-mre-Control-Center-Setup-TR-vX.Y.Z.exe` – Türkçe, `E-mre-Control-Center-Setup-EN-vX.Y.Z.exe` – English; bkz. [Dil ve tema](#dil-ve-tema-v200)):
 
 - Kurulum dosyası uygulamanın kendisidir: adında "Setup" geçtiği için kurulum ekranıyla açılır ve kendini
   `C:\Program Files\E-mre Control Center\E-mre Control Center.exe` olarak kopyalar (ayrı kurulum aracı, internetten indirme yok).
@@ -485,7 +487,7 @@ taşınabilir mi olduğu yazar.
 - Taşınabilir (ZIP) kopyadan güncelleme, uygulamayı Program Files'a kurar (pencerede yazar); sonra Başlat menüsünden açılır.
 - v1.6.0 ve öncesinde bu özellik yoktur. **v1.7.0 – v1.7.1** ise hiç oluşturulmamış ayrı bir sürüm deposuna
   (`E-mre-Hub/E-mre-Control-Center-Releases`) baktığı için "Denetlenemedi (HTTP 404)" gösterir ve yeni sürümü göremez. Bu sürümleri
-  kullananlar v1.7.2'yi (veya daha yenisini) **bir kez** Setup ile kurmalıdır (Releases → `E-mre-Control-Center-Setup-vX.Y.Z.exe` →
+  kullananlar v1.7.2'yi (veya daha yenisini) **bir kez** Setup ile kurmalıdır (Releases → `E-mre-Control-Center-Setup-TR-vX.Y.Z.exe` →
   Güncelle); sonraki sürümler uygulama içinden gelir.
 
 ### Kontrol Merkezi (ana sayfa ve kategoriler)
@@ -722,6 +724,49 @@ eski klasörlerde kalır (`%LOCALAPPDATA%\E-mre Hub\Logs\`, `%LOCALAPPDATA%\RTX 
 - Geçmiş dosyası: `%LOCALAPPDATA%\E-mre Control Center\state.json`. Yeni klasörde geçmiş yoksa önceki sürümün geçmişi
   (önce `%LOCALAPPDATA%\E-mre Hub\state.json`, o yoksa `%LOCALAPPDATA%\RTX Windows Updater\state.json`) ilk açılışta bir kez
   kopyalanır; eski dosyalar silinmez.
+
+### Dil ve tema (v2.0.0)
+
+**Dil (Türkçe / English)**
+
+- Her metin kullanıldığı yerde iki dilde yazılıdır: C#'ta `L.T("Türkçe", "English")` (`Core/Loc.cs`), XAML'da
+  `{l:T 'Türkçe', 'English'}` (`Views/LocExtension.cs`). Ayrı bir kaynak dosyası yoktur; yeni metin eklerken iki dil birlikte yazılır.
+- PowerShell betiklerinin günlüğe yazdığı satırlar `«Türkçe|English»` işaretiyle yazılır; `PowerShellRunner` betiği çalıştırmadan
+  önce seçili dili bırakır (`L.Pick`).
+- Dil, ilk pencere oluşmadan önce bir kez belirlenir: `state.json` → `Language` (`tr` / `en`). Kayıt yoksa (ilk açılış veya
+  v2.0.0'a güncelleme) "Dil ve görünüm" ekranı (`Views/WelcomeWindow`) açılır; kurulumun ilettiği dil (`--lang`) veya Windows'un
+  görüntüleme dili önerilir. Genel Ayarlar → Kolay Ayar'dan değiştirilince seçim kaydedilir ve uygulama aynı yetkiyle yeniden
+  başlatılır (`AppLifetime.Restart`, `--accepted --restarted`); kontrol, güncelleme veya hız testi sürerken değiştirilmez.
+- İngilizcede sayı / tarih kültürü en-US'tir ve tarihler `yyyy-MM-dd` biçimindedir; Türkçede sistemin biçimi korunur. Büyük harfe
+  çevirme dile göre yapılır (`L.Upper`: Türkçede "i → İ", İngilizcede "DEVICE").
+- **Çevrilmeyenler (bilerek):** araçların çıktısını ayrıştırmak için kullanılan metinler (SFC'nin İngilizce iletileri, DISM `/English`
+  çıktısı, winget'in "Downloading" / "Successfully installed" satırları, WMI / kayıt defteri adları), iç anahtarlar ve klasör adları
+  (`E-mre Control Center Kaldırma <guid>`, `… Güncelleme`, `… Kurulum.log` – eski sürümlerin temizliği aynı adları arar) ve bildirim
+  alanı penceresinin başlığı (ikinci örneğin pencereyi bulması için sabit).
+- Ekranda gösterilen bir metni kodda karşılaştıran yerler (ör. "Bu bölüm okunamadı", Windows bağlantı durumu, kapatma raporu)
+  karşılaştırmada da `L.T` kullanır; iki dilde de aynı sonuç alınır.
+- Sürüm notu iki dillidir: CHANGELOG bölümünde `**English**` satırından öncesi Türkçe, sonrası İngilizce; güncelleme penceresi
+  seçili dildekini gösterir (`UpdateService.CleanNotes`).
+
+**Kurulum dosyaları**
+
+- `E-mre-Control-Center-Setup-TR-vX.Y.Z.exe` (Türkçe) ve `E-mre-Control-Center-Setup-EN-vX.Y.Z.exe` (English) aynı EXE'dir. Kurulum
+  ekranının dili: `--lang` → dosya adındaki işaret (`TR` / `EN`, `English`) → uygulamada seçilen dil → Türkçe
+  (`LaunchModes.SetupLanguage`). Yerel derleme (`tools\Build-Exe.ps1`) `E-mre Control Center Setup TR.exe` ve `… Setup EN.exe` üretir.
+- Yayında ayrıca aynı EXE'nin eski adlı kopyası `E-mre-Control-Center-Setup-vX.Y.Z.exe` bulunur: v1.9.3 ve önceki sürümlerin uygulama
+  içi güncellemesi YALNIZCA bu adı arar; kaldırılırsa o sürümlerdeki kullanıcılar yeni sürümü göremez. v2.0.0 ve sonrası seçili dildeki
+  dosyayı (yoksa TR'yi, yoksa eski adlıyı) indirir ve dili / temayı ayrıca `--lang` / `--theme` ile iletir (`UpdateService.SetupAssetRank`).
+- Seçili dil ve tema UAC sonrası örneğe, geçici kaldırıcı kopyasına, kurulan uygulamaya ve güncelleme kurulumuna iletilir
+  (`LaunchModes.PreferenceArgs`).
+
+**Tema (koyu / açık)**
+
+- Renkler iki sözlükte aynı anahtarlarla tanımlıdır: `Themes/Colors.Dark.xaml` ve `Themes/Colors.Light.xaml`. Stiller ve ekranlar
+  renkleri `DynamicResource` ile kullanır; `Views/ThemeManager` seçilen sözlüğü uygulama kaynaklarının sonuna ekler, açık pencereler
+  anında yeni renklere geçer (pencere çerçevesi de: `WindowFrame`). Kodla çizilen denetimler (`SpeedGauge`, `RingGauge`, durum
+  renkleri) `ThemeManager.Changed` ile yenilenir.
+- Varsayılan koyu temadır. Seçim `state.json` → `Theme` (`dark` / `light`); kurulum ve kaldırma pencerelerinin başlık çubuğundaki
+  düğmeyle de değiştirilir ve kurulan uygulamaya iletilir.
 
 ### Windows bildirimleri
 

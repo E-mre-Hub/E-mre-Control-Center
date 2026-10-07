@@ -1,0 +1,134 @@
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                    xmlns:sys="clr-namespace:System;assembly=mscorlib">
+
+    <!-- ============================================================ -->
+    <!--  KOYU TEMA (varsayılan) – siyah / koyu lacivert / neon mavi    -->
+    <!--  Colors.Light.xaml AYNI anahtarları tanımlar; ekranlar renkleri  -->
+    <!--  DynamicResource ile kullanır (tema anında değişir).            -->
+    <!-- ============================================================ -->
+    <sys:String x:Key="Theme.Id">dark</sys:String>
+
+    <Color x:Key="C.Bg0">#FF020307</Color>
+    <Color x:Key="C.Bg1">#FF070C18</Color>
+    <Color x:Key="C.Bg2">#FF0B1426</Color>
+    <Color x:Key="C.Surface">#FF0C1424</Color>
+    <Color x:Key="C.SurfaceHi">#FF111C33</Color>
+    <Color x:Key="C.Border">#FF1A2742</Color>
+    <Color x:Key="C.BorderHi">#FF24365C</Color>
+    <Color x:Key="C.Neon">#FF1FB6FF</Color>
+    <Color x:Key="C.Neon2">#FF3D6BFF</Color>
+    <Color x:Key="C.Text">#FFE7EEF9</Color>
+    <Color x:Key="C.Text2">#FFA7B5CF</Color>
+    <Color x:Key="C.Text3">#FF7887A5</Color>
+    <Color x:Key="C.Green">#FF2BD67B</Color>
+    <Color x:Key="C.Orange">#FFFFA63D</Color>
+    <Color x:Key="C.Red">#FFFF4D61</Color>
+    <Color x:Key="C.Gray">#FF5D6A84</Color>
+    <Color x:Key="C.Blue">#FF3DA5FF</Color>
+    <Color x:Key="C.Glow">#FF1FB6FF</Color>
+    <Color x:Key="C.Shadow">#FF000000</Color>
+
+    <SolidColorBrush x:Key="B.Bg0" Color="#FF020307" />
+    <SolidColorBrush x:Key="B.Surface" Color="#FF0C1424" />
+    <SolidColorBrush x:Key="B.SurfaceHi" Color="#FF111C33" />
+    <SolidColorBrush x:Key="B.Border" Color="#FF1A2742" />
+    <SolidColorBrush x:Key="B.BorderHi" Color="#FF24365C" />
+    <SolidColorBrush x:Key="B.Neon" Color="#FF1FB6FF" />
+    <SolidColorBrush x:Key="B.Neon2" Color="#FF3D6BFF" />
+    <SolidColorBrush x:Key="B.Text" Color="#FFE7EEF9" />
+    <SolidColorBrush x:Key="B.Text2" Color="#FFA7B5CF" />
+    <SolidColorBrush x:Key="B.Text3" Color="#FF7887A5" />
+    <SolidColorBrush x:Key="B.Green" Color="#FF2BD67B" />
+    <SolidColorBrush x:Key="B.Orange" Color="#FFFFA63D" />
+    <SolidColorBrush x:Key="B.Red" Color="#FFFF4D61" />
+    <SolidColorBrush x:Key="B.Gray" Color="#FF5D6A84" />
+    <SolidColorBrush x:Key="B.Blue" Color="#FF3DA5FF" />
+
+    <!-- Pencere zemini: neredeyse siyah; üst ortada (logo / başlık) çok hafif lacivert aydınlık. -->
+    <RadialGradientBrush x:Key="B.WindowBg" Center="0.5,0" GradientOrigin="0.5,0" RadiusX="0.9" RadiusY="0.85">
+        <GradientStop Color="#FF081226" Offset="0" />
+        <GradientStop Color="#FF040811" Offset="0.5" />
+        <GradientStop Color="#FF020307" Offset="1" />
+    </RadialGradientBrush>
+
+    <!-- Parlak neon (ana sayfa simgeleri ve arama kutusu) -->
+    <SolidColorBrush x:Key="B.NeonBright" Color="#FF4CCBFF" />
+
+    <LinearGradientBrush x:Key="B.NeonGradient" StartPoint="0,0" EndPoint="1,1">
+        <GradientStop Color="#FF1FB6FF" Offset="0" />
+        <GradientStop Color="#FF3D6BFF" Offset="1" />
+    </LinearGradientBrush>
+
+    <LinearGradientBrush x:Key="B.CardBg" StartPoint="0,0" EndPoint="0,1">
+        <GradientStop Color="#FF0C1528" Offset="0" />
+        <GradientStop Color="#FF080F1D" Offset="1" />
+    </LinearGradientBrush>
+
+    <!-- Neon / renkli zemin üzerindeki metin ve simgeler (her iki temada beyaz) -->
+    <SolidColorBrush x:Key="B.OnAccent" Color="#FFFFFFFF" />
+
+    <!-- Denetimler: ikincil buton, giriş kutusu, onay kutusu, satır, ipucu, menü -->
+    <SolidColorBrush x:Key="B.Control" Color="#FF0F1A30" />
+    <SolidColorBrush x:Key="B.ControlHover" Color="#FF12213D" />
+    <SolidColorBrush x:Key="B.ControlPressed" Color="#FF0B1528" />
+    <SolidColorBrush x:Key="B.HoverFill" Color="#FF132038" />
+    <SolidColorBrush x:Key="B.SelectedFill" Color="#FF12264A" />
+    <SolidColorBrush x:Key="B.InputBg" Color="#FF0A1222" />
+    <SolidColorBrush x:Key="B.InputBorder" Color="#FF34496F" />
+    <SolidColorBrush x:Key="B.TrackBg" Color="#FF101B31" />
+    <SolidColorBrush x:Key="B.ScrollThumb" Color="#FF26375A" />
+    <SolidColorBrush x:Key="B.ScrollThumbHover" Color="#FF3A5687" />
+    <SolidColorBrush x:Key="B.PrimaryDisabled" Color="#FF15203A" />
+    <SolidColorBrush x:Key="B.TileBg" Color="#FF0E1A30" />
+    <SolidColorBrush x:Key="B.TileBorder" Color="#FF1E3A66" />
+    <SolidColorBrush x:Key="B.ChipBg" Color="#FF0B1426" />
+    <SolidColorBrush x:Key="B.ReadOnlyBg" Color="#FF070D19" />
+    <SolidColorBrush x:Key="B.RowBg" Color="#FF0A1222" />
+    <SolidColorBrush x:Key="B.RowBorder" Color="#FF16223A" />
+    <SolidColorBrush x:Key="B.AltRow" Color="#0AFFFFFF" />
+    <SolidColorBrush x:Key="B.LinkHover" Color="#FF8BDBFF" />
+    <SolidColorBrush x:Key="B.CardBorderHover" Color="#FF245C9C" />
+    <SolidColorBrush x:Key="B.MenuBg" Color="#FF0B1222" />
+    <SolidColorBrush x:Key="B.PanelBg" Color="#FF070C18" />
+    <SolidColorBrush x:Key="B.DeepBg" Color="#FF060A14" />
+    <SolidColorBrush x:Key="B.InfoBoxBg" Color="#B30A1426" />
+    <SolidColorBrush x:Key="B.InfoBoxBorder" Color="#FF1E3050" />
+    <SolidColorBrush x:Key="B.Overlay" Color="#D9020409" />
+    <SolidColorBrush x:Key="B.OverlayStrong" Color="#CC02040A" />
+    <SolidColorBrush x:Key="B.WaveLine" Color="#FF2E4468" />
+    <SolidColorBrush x:Key="B.GaugeTrack" Color="#FF16223A" />
+    <SolidColorBrush x:Key="B.Needle" Color="#FFE7EEF9" />
+    <SolidColorBrush x:Key="B.Subtle" Color="#14FFFFFF" />
+
+    <LinearGradientBrush x:Key="B.BadgeBg" StartPoint="0,0" EndPoint="1,1">
+        <GradientStop Color="#FF13264A" Offset="0" />
+        <GradientStop Color="#FF0B1528" Offset="1" />
+    </LinearGradientBrush>
+    <LinearGradientBrush x:Key="B.SearchBg" StartPoint="0,0" EndPoint="1,0">
+        <GradientStop Color="#FF0A2032" Offset="0" />
+        <GradientStop Color="#FF050A13" Offset="1" />
+    </LinearGradientBrush>
+    <RadialGradientBrush x:Key="B.GoFill">
+        <GradientStop Color="#FF0E1C36" Offset="0" />
+        <GradientStop Color="#FF070C18" Offset="1" />
+    </RadialGradientBrush>
+    <SolidColorBrush x:Key="B.PopupBg" Color="#FF0E1930" />
+    <SolidColorBrush x:Key="B.DialogIconBg" Color="#FF0F1C34" />
+    <SolidColorBrush x:Key="B.CommandBg" Color="#FF0A1730" />
+    <SolidColorBrush x:Key="B.NavHover" Color="#FF0F1A2E" />
+    <SolidColorBrush x:Key="B.NavSelected" Color="#FF12203A" />
+    <SolidColorBrush x:Key="B.Timestamp" Color="#FF3E5078" />
+
+    <!-- Yeşil vurgulu "Tümünü Güncelle" butonu -->
+    <LinearGradientBrush x:Key="B.AccentBg" StartPoint="0,0" EndPoint="1,1">
+        <GradientStop Color="#FF0F3A2A" Offset="0" />
+        <GradientStop Color="#FF0C2A26" Offset="1" />
+    </LinearGradientBrush>
+    <SolidColorBrush x:Key="B.AccentDisabledBg" Color="#FF0D1628" />
+
+    <DropShadowEffect x:Key="Fx.IconGlow" BlurRadius="20" ShadowDepth="0" Opacity="0.85" Color="#1FB6FF" />
+    <DropShadowEffect x:Key="Fx.CardShadow" BlurRadius="28" ShadowDepth="6" Direction="270" Opacity="0.55" Color="#000000" />
+    <DropShadowEffect x:Key="Fx.NeonGlow" BlurRadius="22" ShadowDepth="0" Opacity="0.75" Color="#1FB6FF" />
+    <DropShadowEffect x:Key="Fx.SoftGlow" BlurRadius="14" ShadowDepth="0" Opacity="0.45" Color="#1FB6FF" />
+</ResourceDictionary>

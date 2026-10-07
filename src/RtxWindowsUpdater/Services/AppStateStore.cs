@@ -72,7 +72,7 @@ public sealed class CardSnapshot
     }
 
     private static string Tail(string s) =>
-        s.Length <= MaxOutputChars ? s : "… (baştaki kısım kısaltıldı)\n" + s[^MaxOutputChars..];
+        s.Length <= MaxOutputChars ? s : L.T("… (baştaki kısım kısaltıldı)\n", "… (beginning shortened)\n") + s[^MaxOutputChars..];
 }
 
 public sealed class ItemSnapshot
@@ -124,11 +124,11 @@ public sealed class OperationRecord
     /// <summary>Başarısız / uyarılı işlemin gerçek hata metni (v1.8.0; eski kayıtlarda boş).</summary>
     public string? ErrorText { get; set; }
 
-    [JsonIgnore] public string TimeText => CompletedAt.ToString("dd.MM.yyyy HH:mm");
+    [JsonIgnore] public string TimeText => CompletedAt.ToString(L.T("dd.MM.yyyy HH:mm", "yyyy-MM-dd HH:mm"));
     [JsonIgnore] public string DurationText => UpdateOrchestrator.FormatDuration(TimeSpan.FromMilliseconds(DurationMs));
 
     /// <summary>Sonuç sütunu: özet + (varsa) gerçek hata metni.</summary>
-    [JsonIgnore] public string ResultText => string.IsNullOrEmpty(ErrorText) ? SummaryText : $"{SummaryText} · Hata: {ErrorText}";
+    [JsonIgnore] public string ResultText => string.IsNullOrEmpty(ErrorText) ? SummaryText : L.T($"{SummaryText} · Hata: {ErrorText}", $"{SummaryText} · Error: {ErrorText}");
 
     /// <summary>Özet rengi için durum (hata > uyarı/güncelleme > başarılı).</summary>
     [JsonIgnore]
@@ -165,7 +165,7 @@ public sealed class SpeedTestRecord
     public long DurationMs { get; set; }
     public string? Error { get; set; }
 
-    [JsonIgnore] public string TimeText => CompletedAt.ToString("dd.MM.yyyy HH:mm");
+    [JsonIgnore] public string TimeText => CompletedAt.ToString(L.T("dd.MM.yyyy HH:mm", "yyyy-MM-dd HH:mm"));
     [JsonIgnore] public string DownloadText => FormatMbps(DownloadMbps);
     [JsonIgnore] public string UploadText => FormatMbps(UploadMbps);
     [JsonIgnore] public string PingText => PingMs is { } p ? $"{p:0}" : "—";
@@ -173,17 +173,17 @@ public sealed class SpeedTestRecord
     [JsonIgnore] public string JitterText => JitterMs is { } j ? $"{j:0.0}" : "—";
     [JsonIgnore] public string PacketLossText => PacketLossPercent is { } l ? $"%{l:0.#}" : "—";
     [JsonIgnore] public bool IsOokla => Provider == "Speedtest by Ookla";
-    [JsonIgnore] public string ConnectionsText => IsOokla ? "Ookla" : MultipleConnections ? $"Cloudflare · {Streams}" : "Cloudflare · tek";
+    [JsonIgnore] public string ConnectionsText => IsOokla ? "Ookla" : MultipleConnections ? $"Cloudflare · {Streams}" : L.T("Cloudflare · tek", "Cloudflare · single");
     [JsonIgnore] public string DataText => $"{DataUsedBytes / 1_000_000.0:0} MB";
     [JsonIgnore] public string ServerShort => Server.StartsWith("Cloudflare · ") ? Server["Cloudflare · ".Length..] : Server;
-    [JsonIgnore] public string ResultText => Error ?? (DownloadMbps is null || UploadMbps is null ? "Kısmen ölçüldü" : "Tamamlandı");
+    [JsonIgnore] public string ResultText => Error ?? (DownloadMbps is null || UploadMbps is null ? L.T("Kısmen ölçüldü", "Partially measured") : L.T("Tamamlandı", "Completed"));
 
     [JsonIgnore]
     public string SummaryText =>
-        $"İndirme {DownloadText} Mbps · Yükleme {UploadText} Mbps · Ping {PingText} ms (yük altında ↓/↑ {LoadedPingText} ms) · " +
-        $"Titreşim {JitterText} ms · Paket kaybı {PacketLossText}\n" +
-        $"ISS: {(Isp.Length > 0 ? Isp : "—")} · Sunucu: {(Server.Length > 0 ? Server : "—")} · Altyapı: {ConnectionsText} · Veri: {DataText} · " +
-        $"Süre: {DurationMs / 1000.0:0} sn" + (ResultUrl is null ? "" : "\nSonuç sayfası: " + ResultUrl) + (Error is null ? "" : "\n" + Error);
+        L.T($"İndirme {DownloadText} Mbps · Yükleme {UploadText} Mbps · Ping {PingText} ms (yük altında ↓/↑ {LoadedPingText} ms) · ", $"Download {DownloadText} Mbps · Upload {UploadText} Mbps · Ping {PingText} ms (under load ↓/↑ {LoadedPingText} ms) · ") +
+        L.T($"Titreşim {JitterText} ms · Paket kaybı {PacketLossText}\n", $"Jitter {JitterText} ms · Packet loss {PacketLossText}\n") +
+        L.T($"ISS: {(Isp.Length > 0 ? Isp : "—")} · Sunucu: {(Server.Length > 0 ? Server : "—")} · Altyapı: {ConnectionsText} · Veri: {DataText} · ", $"ISP: {(Isp.Length > 0 ? Isp : "—")} · Server: {(Server.Length > 0 ? Server : "—")} · Engine: {ConnectionsText} · Data: {DataText} · ") +
+        L.T($"Süre: {DurationMs / 1000.0:0} sn", $"Duration: {DurationMs / 1000.0:0} sec") + (ResultUrl is null ? "" : L.T("\nSonuç sayfası: ", "\nResult page: ") + ResultUrl) + (Error is null ? "" : "\n" + Error);
 
     [JsonIgnore]
     public ComponentStatus Status =>
@@ -203,6 +203,12 @@ public sealed class AppState
 
     /// <summary>Açılışta 30 günden eski oturum günlükleri silinir (v1.9.0; varsayılan KAPALI – kullanıcı açar).</summary>
     public bool AutoDeleteOldLogs { get; set; }
+
+    /// <summary>Arayüz dili "tr" / "en" (v2.0.0). null = henüz seçilmedi → ilk açılışta dil ve görünüm ekranı.</summary>
+    public string? Language { get; set; }
+
+    /// <summary>Tema "dark" / "light" (v2.0.0). null = varsayılan (koyu).</summary>
+    public string? Theme { get; set; }
 
     /// <summary>Kabul edilen Kullanım Koşulları / Gizlilik Politikası sürümü ve zamanı (v1.9.0; yalnızca yerel kayıt).</summary>
     public string? LegalAcceptedVersion { get; set; }
@@ -280,11 +286,11 @@ public sealed class AppStateStore
             if (File.Exists(_path)) return;
             Directory.CreateDirectory(Path.GetDirectoryName(_path)!);
             File.Copy(legacyPath, _path, overwrite: false);
-            _logger.Info($"Önceki sürümün işlem geçmişi kopyalandı: {legacyPath} → {_path} (eski dosya silinmedi).");
+            _logger.Info(L.T($"Önceki sürümün işlem geçmişi kopyalandı: {legacyPath} → {_path} (eski dosya silinmedi).", $"The previous version's operation history was copied: {legacyPath} → {_path} (the old file was not deleted)."));
         }
         catch (Exception ex)
         {
-            _logger.Warning($"Önceki sürümün işlem geçmişi kopyalanamadı ({legacyPath}): {ex.Message}");
+            _logger.Warning(L.T($"Önceki sürümün işlem geçmişi kopyalanamadı ({legacyPath}): {ex.Message}", $"Could not copy the previous version's operation history ({legacyPath}): {ex.Message}"));
         }
     }
 
@@ -303,7 +309,7 @@ public sealed class AppStateStore
         }
         catch (Exception ex)
         {
-            _logger.Warning($"Kayıtlı işlem geçmişi okunamadı, yeni geçmiş başlatılıyor: {ex.Message}");
+            _logger.Warning(L.T($"Kayıtlı işlem geçmişi okunamadı, yeni geçmiş başlatılıyor: {ex.Message}", $"Could not read the saved operation history, starting a new history: {ex.Message}"));
             return new AppState();
         }
     }
@@ -367,6 +373,18 @@ public sealed class AppStateStore
     public void SetAutoDeleteOldLogs(bool enabled)
     {
         lock (_lock) State.AutoDeleteOldLogs = enabled;
+        SaveInBackground();
+    }
+
+    public void SetLanguage(string code)
+    {
+        lock (_lock) State.Language = code;
+        SaveInBackground();
+    }
+
+    public void SetTheme(string code)
+    {
+        lock (_lock) State.Theme = code;
         SaveInBackground();
     }
 
@@ -468,7 +486,7 @@ public sealed class AppStateStore
             }
             catch (Exception ex)
             {
-                _logger.Warning($"İşlem geçmişi kaydedilemedi: {ex.Message}");
+                _logger.Warning(L.T($"İşlem geçmişi kaydedilemedi: {ex.Message}", $"Could not save the operation history: {ex.Message}"));
             }
         }
     }

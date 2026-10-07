@@ -19,9 +19,9 @@ public sealed class ComponentCardViewModel(string key, string title, string glyp
     private bool _snapshotFromHistory;
     private string? _unavailableReason;
 
-    private const string NotCheckedText = "Henüz çalıştırılmadı";
-    public const string UnavailableText = "Kullanım dışı";
-    private const string NotRunThisSessionText = "Bu oturumda çalıştırılmadı";
+    private static string NotCheckedText => L.T("Henüz çalıştırılmadı", "Not run yet");
+    public static string UnavailableText => L.T("Kullanım dışı", "Unavailable");
+    private static string NotRunThisSessionText => L.T("Bu oturumda çalıştırılmadı", "Not run in this session");
 
     public string Key { get; } = key;
     public string Title { get; } = title;
@@ -42,7 +42,7 @@ public sealed class ComponentCardViewModel(string key, string title, string glyp
     /// <summary>"?" bilgi butonunda gösterilen metin.</summary>
     public string InfoText { get; init; } = string.Empty;
 
-    public string ActionText { get; init; } = "Kontrol Et";
+    public string ActionText { get; init; } = L.T("Kontrol Et", "Check");
     public string ActionGlyph { get; init; } = "";
     public ICommand? ActionCommand { get; set; }
 
@@ -145,15 +145,15 @@ public sealed class ComponentCardViewModel(string key, string title, string glyp
     public string LastRunText => _lastSnapshot is null
         ? string.Empty
         : $"{LastRunLabel(Key, _lastSnapshot.Operation)}: {_lastSnapshot.CompletedAt:dd.MM.yyyy HH:mm}" +
-          (_snapshotFromHistory ? " · önceki oturum" : string.Empty);
+          (_snapshotFromHistory ? L.T(" · önceki oturum", " · previous session") : string.Empty);
 
     /// <summary>İşlem türüne uygun "son ..." ifadesi.</summary>
     public static string LastRunLabel(string key, OperationKind op) => (key, op) switch
     {
-        (ComponentKeys.Sfc or ComponentKeys.Mrt, _) => "Son tarama",
-        (ComponentKeys.RecycleBin, OperationKind.Update) => "Son temizlik",
-        (_, OperationKind.Update) => "Son güncelleme",
-        _ => "Son kontrol"
+        (ComponentKeys.Sfc or ComponentKeys.Mrt, _) => L.T("Son tarama", "Last scan"),
+        (ComponentKeys.RecycleBin, OperationKind.Update) => L.T("Son temizlik", "Last cleanup"),
+        (_, OperationKind.Update) => L.T("Son güncelleme", "Last update"),
+        _ => L.T("Son kontrol", "Last check")
     };
 
     /// <summary>Uygulama açılırken kayıtlı geçmişten son sonucu yükler (durum "çalıştırılmadı" olarak kalır).</summary>
@@ -170,29 +170,29 @@ public sealed class ComponentCardViewModel(string key, string title, string glyp
     /// <summary>Sistem Sağlık Özeti'nde gösterilen kısa ve gerçek duruma dayanan metin.</summary>
     public string HealthText => Status switch
     {
-        ComponentStatus.NotChecked => Key is ComponentKeys.Sfc or ComponentKeys.Mrt ? "Taranmadı" : "Kontrol edilmedi",
-        ComponentStatus.Checking or ComponentStatus.Updating => "Çalışıyor...",
+        ComponentStatus.NotChecked => Key is ComponentKeys.Sfc or ComponentKeys.Mrt ? L.T("Taranmadı", "Not scanned") : L.T("Kontrol edilmedi", "Not checked"),
+        ComponentStatus.Checking or ComponentStatus.Updating => L.T("Çalışıyor...", "Running..."),
         ComponentStatus.UpToDate => Key switch
         {
-            ComponentKeys.Sfc or ComponentKeys.Dism => "Sağlıklı",
-            ComponentKeys.Mrt => "Tehdit bulunmadı",
-            ComponentKeys.RecycleBin => "Boş",
-            _ => "Güncel"
+            ComponentKeys.Sfc or ComponentKeys.Dism => L.T("Sağlıklı", "Healthy"),
+            ComponentKeys.Mrt => L.T("Tehdit bulunmadı", "No threats found"),
+            ComponentKeys.RecycleBin => L.T("Boş", "Empty"),
+            _ => L.T("Güncel", "Up to date")
         },
         ComponentStatus.Updated => Key switch
         {
-            ComponentKeys.RecycleBin => "Temizlendi",
-            ComponentKeys.Sfc => "Onarıldı",
-            ComponentKeys.Mrt => "Temizlendi",
-            _ => "Güncellendi"
+            ComponentKeys.RecycleBin => L.T("Temizlendi", "Cleaned"),
+            ComponentKeys.Sfc => L.T("Onarıldı", "Repaired"),
+            ComponentKeys.Mrt => L.T("Temizlendi", "Cleaned"),
+            _ => L.T("Güncellendi", "Updated")
         },
         ComponentStatus.UpdateAvailable or ComponentStatus.Attention => Summary,
-        ComponentStatus.PartiallyUpdated => "Kısmen tamamlandı",
-        ComponentStatus.RebootRequired => "Yeniden başlatma gerekli",
-        ComponentStatus.AdminRequired => "Yönetici izni gerekli",
-        ComponentStatus.CheckFailed => "Kontrol edilemedi",
-        ComponentStatus.Failed => "Başarısız",
-        ComponentStatus.Skipped => "Atlandı",
+        ComponentStatus.PartiallyUpdated => L.T("Kısmen tamamlandı", "Partially completed"),
+        ComponentStatus.RebootRequired => L.T("Yeniden başlatma gerekli", "Restart required"),
+        ComponentStatus.AdminRequired => L.T("Yönetici izni gerekli", "Administrator permission required"),
+        ComponentStatus.CheckFailed => L.T("Kontrol edilemedi", "Could not be checked"),
+        ComponentStatus.Failed => L.T("Başarısız", "Failed"),
+        ComponentStatus.Skipped => L.T("Atlandı", "Skipped"),
         ComponentStatus.Unavailable => UnavailableText,
         _ => Summary
     };
@@ -271,7 +271,7 @@ public enum RequirementState { Pending, Ok, Failed, Warning }
 public sealed class RequirementRowViewModel(string title, string glyph) : ObservableObject
 {
     private RequirementState _state = RequirementState.Pending;
-    private string _detail = "Kontrol ediliyor...";
+    private string _detail = L.T("Kontrol ediliyor...", "Checking...");
 
     public string Title { get; } = title;
     public string Glyph { get; } = glyph;

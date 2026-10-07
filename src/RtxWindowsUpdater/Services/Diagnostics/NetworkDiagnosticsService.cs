@@ -31,17 +31,17 @@ public sealed record AdapterInfo(
         NetworkInterfaceType.Wireless80211 => "Wi-Fi",
         NetworkInterfaceType.Ethernet or NetworkInterfaceType.GigabitEthernet or NetworkInterfaceType.FastEthernetT
             or NetworkInterfaceType.FastEthernetFx or NetworkInterfaceType.Ethernet3Megabit => "Ethernet",
-        NetworkInterfaceType.Ppp => "PPP / çevirmeli",
-        NetworkInterfaceType.Wwanpp or NetworkInterfaceType.Wwanpp2 => "Mobil geniş bant",
+        NetworkInterfaceType.Ppp => L.T("PPP / çevirmeli", "PPP / dial-up"),
+        NetworkInterfaceType.Wwanpp or NetworkInterfaceType.Wwanpp2 => L.T("Mobil geniş bant", "Mobile broadband"),
         _ => Type.ToString()
     };
     public string StatusText => Status switch
     {
-        OperationalStatus.Up => "Bağlı",
-        OperationalStatus.Down => "Bağlı değil",
-        OperationalStatus.Dormant => "Beklemede",
-        OperationalStatus.NotPresent => "Aygıt yok",
-        OperationalStatus.LowerLayerDown => "Alt katman bağlı değil",
+        OperationalStatus.Up => L.T("Bağlı", "Connected"),
+        OperationalStatus.Down => L.T("Bağlı değil", "Not connected"),
+        OperationalStatus.Dormant => L.T("Beklemede", "Dormant"),
+        OperationalStatus.NotPresent => L.T("Aygıt yok", "No device"),
+        OperationalStatus.LowerLayerDown => L.T("Alt katman bağlı değil", "Lower layer down"),
         _ => Status.ToString()
     };
     public string SpeedText => SpeedBitsPerSecond is > 0 and var s ? s >= 1_000_000_000 ? $"{s / 1e9:0.#} Gbps" : $"{s / 1e6:0} Mbps" : "—";
@@ -51,8 +51,8 @@ public sealed record AdapterInfo(
     public string DnsText => DnsServers.Count == 0 ? "—" : string.Join(", ", DnsServers);
     public string DhcpText => DhcpEnabled switch
     {
-        true => DhcpServers.Count > 0 ? $"Açık ({string.Join(", ", DhcpServers)})" : "Açık",
-        false => "Kapalı (elle yapılandırılmış)",
+        true => DhcpServers.Count > 0 ? L.T($"Açık ({string.Join(", ", DhcpServers)})", $"On ({string.Join(", ", DhcpServers)})") : L.T("Açık", "On"),
+        false => L.T("Kapalı (elle yapılandırılmış)", "Off (configured manually)"),
         _ => "—"
     };
     public string MacText => Mac ?? "—";
@@ -97,7 +97,7 @@ public sealed class NetworkDiagnosticsService(Logger logger)
         }
         catch (NetworkInformationException ex)
         {
-            return new NetworkSnapshot([], null, "Ağ bağdaştırıcıları okunamadı: " + ex.Message, null);
+            return new NetworkSnapshot([], null, L.T("Ağ bağdaştırıcıları okunamadı: ", "Could not read network adapters: ") + ex.Message, null);
         }
     }, ct);
 
@@ -117,7 +117,7 @@ public sealed class NetworkDiagnosticsService(Logger logger)
             {
                 if (u.Address.AddressFamily == AddressFamily.InterNetwork) v4.Add($"{u.Address}/{u.PrefixLength}");
                 else if (u.Address.AddressFamily == AddressFamily.InterNetworkV6)
-                    v6.Add(u.Address.IsIPv6LinkLocal ? $"{Strip(u.Address)} (bağlantı yerel)" : u.Address.ToString());
+                    v6.Add(u.Address.IsIPv6LinkLocal ? L.T($"{Strip(u.Address)} (bağlantı yerel)", $"{Strip(u.Address)} (link-local)") : u.Address.ToString());
             }
             var gateways = props?.GatewayAddresses.Select(g => g.Address).Where(a => !a.Equals(IPAddress.Any) && !a.Equals(IPAddress.IPv6Any)).ToList() ?? [];
             var dns = props?.DnsAddresses.ToList() ?? [];
@@ -150,19 +150,19 @@ public sealed class NetworkDiagnosticsService(Logger logger)
         try
         {
             var profile = Windows.Networking.Connectivity.NetworkInformation.GetInternetConnectionProfile();
-            if (profile is null) return ("Windows: etkin internet bağlantısı yok", null);
+            if (profile is null) return (L.T("Windows: etkin internet bağlantısı yok", "Windows: no active internet connection"), null);
             var text = profile.GetNetworkConnectivityLevel() switch
             {
-                Windows.Networking.Connectivity.NetworkConnectivityLevel.InternetAccess => "Windows: internet erişimi var",
-                Windows.Networking.Connectivity.NetworkConnectivityLevel.ConstrainedInternetAccess => "Windows: kısıtlı internet erişimi – oturum açma sayfası olabilir",
-                Windows.Networking.Connectivity.NetworkConnectivityLevel.LocalAccess => "Windows: yalnızca yerel ağ",
-                _ => "Windows: bağlantı yok"
+                Windows.Networking.Connectivity.NetworkConnectivityLevel.InternetAccess => L.T("Windows: internet erişimi var", "Windows: internet access available"),
+                Windows.Networking.Connectivity.NetworkConnectivityLevel.ConstrainedInternetAccess => L.T("Windows: kısıtlı internet erişimi – oturum açma sayfası olabilir", "Windows: limited internet access – may be a sign-in page"),
+                Windows.Networking.Connectivity.NetworkConnectivityLevel.LocalAccess => L.T("Windows: yalnızca yerel ağ", "Windows: local network only"),
+                _ => L.T("Windows: bağlantı yok", "Windows: no connection")
             };
             return (text, profile.ProfileName);
         }
         catch (Exception ex)
         {
-            return ("Windows bağlantı durumu okunamadı: " + ex.Message, null);
+            return (L.T("Windows bağlantı durumu okunamadı: ", "Could not read the Windows connection status: ") + ex.Message, null);
         }
     }
 
@@ -177,40 +177,40 @@ public sealed class NetworkDiagnosticsService(Logger logger)
         var connected = primary is not null;
 
         // 1) Ağ geçidi
-        progress?.Report("Ağ geçidi test ediliyor…");
+        progress?.Report(L.T("Ağ geçidi test ediliyor…", "Testing the gateway…"));
         var gw = primary?.Gateways.FirstOrDefault(g => g.AddressFamily == AddressFamily.InterNetwork) ?? primary?.Gateways.FirstOrDefault();
         if (gw is null)
-            results.Add(new NetTestResult("Ağ geçidi (yönlendirici)", CheckState.Skipped,
-                connected ? "Varsayılan ağ geçidi yok" : "Etkin ağ bağlantısı yok", null, null, null));
+            results.Add(new NetTestResult(L.T("Ağ geçidi (yönlendirici)", "Gateway (router)"), CheckState.Skipped,
+                connected ? L.T("Varsayılan ağ geçidi yok", "No default gateway") : L.T("Etkin ağ bağlantısı yok", "No active network connection"), null, null, null));
         else
-            results.Add(Summarize("Ağ geçidi (yönlendirici)", $"{gw}", await IcmpProbe.RunAsync(gw, 10, TimeSpan.FromMilliseconds(100), 1000, ct),
+            results.Add(Summarize(L.T("Ağ geçidi (yönlendirici)", "Gateway (router)"), $"{gw}", await IcmpProbe.RunAsync(gw, 10, TimeSpan.FromMilliseconds(100), 1000, ct),
                 warnMs: 20, local: true));
 
         // 2) İnternet (ICMP 1.1.1.1) – gecikme + paket kaybı
-        progress?.Report("İnternet bağlantısı test ediliyor…");
+        progress?.Report(L.T("İnternet bağlantısı test ediliyor…", "Testing the internet connection…"));
         var inet = await IcmpProbe.RunAsync(InternetProbe, 20, TimeSpan.FromMilliseconds(100), 1500, ct);
-        results.Add(Summarize("İnternet gecikmesi ve paket kaybı", "1.1.1.1 (Cloudflare)", inet, warnMs: 100, local: false));
+        results.Add(Summarize(L.T("İnternet gecikmesi ve paket kaybı", "Internet latency and packet loss"), "1.1.1.1 (Cloudflare)", inet, warnMs: 100, local: false));
 
         // 3) Windows internet değerlendirmesi
         var conn = snapshot.ConnectivityText;
-        results.Add(new NetTestResult("Windows internet erişimi", conn switch
+        results.Add(new NetTestResult(L.T("Windows internet erişimi", "Windows internet access"), conn switch
         {
             null => CheckState.Unknown,
-            _ when conn.Contains("internet erişimi var", StringComparison.Ordinal) => CheckState.Healthy,
-            _ when conn.Contains("okunamadı", StringComparison.Ordinal) => CheckState.Unknown,
-            _ when conn.Contains("kısıtlı", StringComparison.Ordinal) || conn.Contains("yerel", StringComparison.Ordinal) => CheckState.Warning,
+            _ when conn.Contains(L.T("internet erişimi var", "internet access available"), StringComparison.Ordinal) => CheckState.Healthy,
+            _ when conn.Contains(L.T("okunamadı", "Could not read"), StringComparison.Ordinal) => CheckState.Unknown,
+            _ when conn.Contains(L.T("kısıtlı", "limited"), StringComparison.Ordinal) || conn.Contains(L.T("yerel", "local"), StringComparison.Ordinal) => CheckState.Warning,
             _ => CheckState.Error
-        }, conn ?? "Okunamadı", "Windows Ağ Bağlantısı Durum Göstergesi (NCSI) sonucu", null, null));
+        }, conn ?? L.T("Okunamadı", "Unreadable"), L.T("Windows Ağ Bağlantısı Durum Göstergesi (NCSI) sonucu", "Result of the Windows Network Connectivity Status Indicator (NCSI)"), null, null));
 
         // 4) DNS çözümleme (sistem çözümleyicisi)
-        progress?.Report("DNS çözümleme test ediliyor…");
+        progress?.Report(L.T("DNS çözümleme test ediliyor…", "Testing DNS resolution…"));
         results.Add(await ResolveTestAsync(ct));
 
         // 5) HTTPS
-        progress?.Report("HTTPS bağlantısı test ediliyor…");
+        progress?.Report(L.T("HTTPS bağlantısı test ediliyor…", "Testing the HTTPS connection…"));
         results.Add(await HttpsTestAsync(ct));
 
-        logger.Info("Ağ testleri: " + string.Join(" | ", results.Select(r => $"{r.Title}: {r.StateText} – {r.Summary}")));
+        logger.Info(L.T("Ağ testleri: ", "Network tests: ") + string.Join(" | ", results.Select(r => $"{r.Title}: {r.StateText} – {r.Summary}")));
         return results;
     }
 
@@ -218,14 +218,14 @@ public sealed class NetworkDiagnosticsService(Logger logger)
     {
         if (r.Received == 0)
             return new NetTestResult(title, local ? CheckState.Warning : CheckState.Error,
-                r.Error is not null ? "ICMP gönderilemedi" : "Yanıt yok",
-                r.Error ?? $"{target}: {r.Sent} isteğin hiçbirine yanıt gelmedi (ICMP engelleniyor olabilir ya da bağlantı yok); kayıp oranı hesaplanmadı.",
+                r.Error is not null ? L.T("ICMP gönderilemedi", "Could not send ICMP") : L.T("Yanıt yok", "No reply"),
+                r.Error ?? L.T($"{target}: {r.Sent} isteğin hiçbirine yanıt gelmedi (ICMP engelleniyor olabilir ya da bağlantı yok); kayıp oranı hesaplanmadı.", $"{target}: none of the {r.Sent} requests got a reply (ICMP may be blocked or there is no connection); no loss rate was calculated."),
                 null, null);
         var median = SpeedTestMath.Median(r.RttsMs);
         var loss = r.LossPercent ?? 0;
         var state = loss >= 10 ? CheckState.Error : loss > 0 || median > warnMs ? CheckState.Warning : CheckState.Healthy;
-        return new NetTestResult(title, state, $"{median:0} ms · %{loss:0.#} kayıp",
-            $"{target}: {r.Received}/{r.Sent} yanıt, en düşük {r.RttsMs.Min():0} ms, en yüksek {r.RttsMs.Max():0} ms", median, loss);
+        return new NetTestResult(title, state, L.T($"{median:0} ms · %{loss:0.#} kayıp", $"{median:0} ms · {loss:0.#}% loss"),
+            L.T($"{target}: {r.Received}/{r.Sent} yanıt, en düşük {r.RttsMs.Min():0} ms, en yüksek {r.RttsMs.Max():0} ms", $"{target}: {r.Received}/{r.Sent} replies, min {r.RttsMs.Min():0} ms, max {r.RttsMs.Max():0} ms"), median, loss);
     }
 
     private static async Task<NetTestResult> ResolveTestAsync(CancellationToken ct)
@@ -240,12 +240,12 @@ public sealed class NetworkDiagnosticsService(Logger logger)
             try
             {
                 var addrs = await Dns.GetHostAddressesAsync(host, timeout.Token);
-                if (addrs.Length == 0) failures.Add($"{host}: adres dönmedi");
+                if (addrs.Length == 0) failures.Add(L.T($"{host}: adres dönmedi", $"{host}: no address returned"));
                 else times.Add(sw.Elapsed.TotalMilliseconds);
             }
             catch (OperationCanceledException) when (!ct.IsCancellationRequested)
             {
-                failures.Add($"{host}: 5 sn içinde çözümlenemedi");
+                failures.Add(L.T($"{host}: 5 sn içinde çözümlenemedi", $"{host}: could not resolve within 5 sec"));
             }
             catch (SocketException ex)
             {
@@ -253,12 +253,12 @@ public sealed class NetworkDiagnosticsService(Logger logger)
             }
         }
         if (times.Count == 0)
-            return new NetTestResult("DNS çözümleme", CheckState.Error, "Alan adları çözümlenemedi", string.Join("\n", failures), null, null);
+            return new NetTestResult(L.T("DNS çözümleme", "DNS resolution"), CheckState.Error, L.T("Alan adları çözümlenemedi", "Domain names could not be resolved"), string.Join("\n", failures), null, null);
         var median = SpeedTestMath.Median(times);
-        return new NetTestResult("DNS çözümleme", failures.Count > 0 ? CheckState.Warning : CheckState.Healthy,
-            $"{times.Count}/{ResolveHosts.Length} başarılı · {median:0} ms",
+        return new NetTestResult(L.T("DNS çözümleme", "DNS resolution"), failures.Count > 0 ? CheckState.Warning : CheckState.Healthy,
+            L.T($"{times.Count}/{ResolveHosts.Length} başarılı · {median:0} ms", $"{times.Count}/{ResolveHosts.Length} succeeded · {median:0} ms"),
             (failures.Count > 0 ? string.Join("\n", failures) + "\n" : "") +
-            "Windows çözümleyicisi kullanıldı (önbellekteki adlar daha hızlı döner). Sunucu bazında ölçüm: DNS Tanılama.", median, null);
+            L.T("Windows çözümleyicisi kullanıldı (önbellekteki adlar daha hızlı döner). Sunucu bazında ölçüm: DNS Tanılama.", "The Windows resolver was used (cached names return faster). Per-server measurement: DNS Diagnostics."), median, null);
     }
 
     private static async Task<NetTestResult> HttpsTestAsync(CancellationToken ct)
@@ -277,11 +277,11 @@ public sealed class NetworkDiagnosticsService(Logger logger)
                 using var req = new HttpRequestMessage(HttpMethod.Head, uri);
                 using var resp = await http.SendAsync(req, HttpCompletionOption.ResponseHeadersRead, ct);
                 times.Add(sw.Elapsed.TotalMilliseconds);
-                ok.Add($"{uri.Host}: HTTP {(int)resp.StatusCode} · {sw.Elapsed.TotalMilliseconds:0} ms");
+                ok.Add(L.T($"{uri.Host}: HTTP {(int)resp.StatusCode} · {sw.Elapsed.TotalMilliseconds:0} ms", $"{uri.Host}: HTTP {(int)resp.StatusCode} · {sw.Elapsed.TotalMilliseconds:0} ms"));
             }
             catch (OperationCanceledException) when (!ct.IsCancellationRequested)
             {
-                failed.Add($"{uri.Host}: zaman aşımı");
+                failed.Add(L.T($"{uri.Host}: zaman aşımı", $"{uri.Host}: timed out"));
             }
             catch (HttpRequestException ex)
             {
@@ -289,9 +289,9 @@ public sealed class NetworkDiagnosticsService(Logger logger)
             }
         }
         if (ok.Count == 0)
-            return new NetTestResult("HTTPS bağlantısı", CheckState.Error, "Güvenli bağlantı kurulamadı", string.Join("\n", failed), null, null);
-        return new NetTestResult("HTTPS bağlantısı", failed.Count > 0 ? CheckState.Warning : CheckState.Healthy,
-            $"{ok.Count}/{HttpsTargets.Length} sunucu yanıt verdi · {SpeedTestMath.Median(times):0} ms",
+            return new NetTestResult(L.T("HTTPS bağlantısı", "HTTPS connection"), CheckState.Error, L.T("Güvenli bağlantı kurulamadı", "A secure connection could not be established"), string.Join("\n", failed), null, null);
+        return new NetTestResult(L.T("HTTPS bağlantısı", "HTTPS connection"), failed.Count > 0 ? CheckState.Warning : CheckState.Healthy,
+            L.T($"{ok.Count}/{HttpsTargets.Length} sunucu yanıt verdi · {SpeedTestMath.Median(times):0} ms", $"{ok.Count}/{HttpsTargets.Length} servers responded · {SpeedTestMath.Median(times):0} ms"),
             string.Join("\n", ok.Concat(failed)), SpeedTestMath.Median(times), null);
     }
 }

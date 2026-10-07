@@ -19,7 +19,7 @@ namespace RtxWindowsUpdater.Services;
 public sealed class SfcManager(Logger logger) : IMaintenanceModule, IProgressReportingModule
 {
     public string Key => ComponentKeys.Sfc;
-    public string DisplayName => "Windows Sistem Dosyası Kontrolü";
+    public string DisplayName => L.T("Windows Sistem Dosyası Kontrolü", "Windows System File Check");
 
     public event Action<ModuleProgress>? ProgressChanged;
 
@@ -79,15 +79,15 @@ public sealed class SfcManager(Logger logger) : IMaintenanceModule, IProgressRep
     {
         var mode = repair ? "/scannow" : "/verifyonly";
         if (!File.Exists(SfcPath))
-            return Done(Fail(repair, "sfc.exe bulunamadı: " + SfcPath));
+            return Done(Fail(repair, L.T("sfc.exe bulunamadı: ", "sfc.exe not found: ") + SfcPath));
         if (!AdminPrivilegeManager.IsElevated)
             return Done(AdminRequired());
 
         logger.Info(repair
-            ? "[SFC] Sistem dosyası taraması başlatılıyor (sfc /scannow – bozuk dosyalar onarılmaya çalışılır)..."
-            : "[SFC] Sistem dosyası doğrulaması başlatılıyor (sfc /verifyonly – yalnızca tarama, onarım yapılmaz)...");
-        logger.Info("[SFC] Bu işlem 10-30 dakika sürebilir.");
-        Report(repair ? "Tarama başlatılıyor..." : "Doğrulama başlatılıyor...", 0);
+            ? L.T("[SFC] Sistem dosyası taraması başlatılıyor (sfc /scannow – bozuk dosyalar onarılmaya çalışılır)...", "[SFC] Starting the system file scan (sfc /scannow – tries to repair corrupt files)...")
+            : L.T("[SFC] Sistem dosyası doğrulaması başlatılıyor (sfc /verifyonly – yalnızca tarama, onarım yapılmaz)...", "[SFC] Starting the system file verification (sfc /verifyonly – scan only, no repair)..."));
+        logger.Info(L.T("[SFC] Bu işlem 10-30 dakika sürebilir.", "[SFC] This can take 10-30 minutes."));
+        Report(repair ? L.T("Tarama başlatılıyor...", "Starting the scan...") : L.T("Doğrulama başlatılıyor...", "Starting the verification..."), 0);
 
         var percentRegex = SystemMessages.BuildPercentRegex(Message(MsgVerificationPercent)) ??
                            SystemMessages.BuildPercentRegex(English[MsgVerificationPercent]);
@@ -107,7 +107,7 @@ public sealed class SfcManager(Logger logger) : IMaintenanceModule, IProgressRep
                 {
                     if (pct == lastPercent) return;
                     lastPercent = pct;
-                    Report($"Doğrulama %{pct} tamamlandı", pct);
+                    Report(L.T($"Doğrulama %{pct} tamamlandı", $"Verification {pct}% complete"), pct);
                     if (pct / 10 > lastLoggedPercent / 10 || pct == 100)
                     {
                         lastLoggedPercent = pct;
@@ -127,11 +127,11 @@ public sealed class SfcManager(Logger logger) : IMaintenanceModule, IProgressRep
         if (!r.Started)
             return Done(r.StartErrorCode == 740 ? AdminRequired() : Fail(repair, r.StartError!));
         if (r.TimedOut)
-            return Done(Fail(repair, "SFC zaman aşımına uğradı ve sonlandırıldı (90 dk)."));
+            return Done(Fail(repair, L.T("SFC zaman aşımına uğradı ve sonlandırıldı (90 dk).", "SFC timed out and was ended (90 min).")));
         if (r.Cancelled)
-            return Done(new ModuleResult { Key = Key, Status = ComponentStatus.Skipped, Summary = "İptal edildi", Reason = "SFC doğrulaması kullanıcı tarafından iptal edildi." });
+            return Done(new ModuleResult { Key = Key, Status = ComponentStatus.Skipped, Summary = L.T("İptal edildi", "Cancelled"), Reason = L.T("SFC doğrulaması kullanıcı tarafından iptal edildi.", "The SFC verification was cancelled by the user.") });
 
-        logger.Info($"[SFC] Tarama tamamlandı. Çıkış kodu: {r.ExitCode}");
+        logger.Info(L.T($"[SFC] Tarama tamamlandı. Çıkış kodu: {r.ExitCode}", $"[SFC] Scan completed. Exit code: {r.ExitCode}"));
         var output = SystemMessages.Normalize(r.StdOut.Replace("\0", string.Empty));
         return Done(Interpret(output, repair, r));
     }
@@ -150,31 +150,31 @@ public sealed class SfcManager(Logger logger) : IMaintenanceModule, IProgressRep
             {
                 Key = Key,
                 Status = ComponentStatus.RebootRequired,
-                Summary = "Bekleyen bir sistem onarımı var",
-                Details = "Windows: yeniden başlatma gerektiren bir sistem onarımı bekliyor.",
-                Reason = "Bilgisayarı yeniden başlatın ve SFC'yi tekrar çalıştırın.",
+                Summary = L.T("Bekleyen bir sistem onarımı var", "A system repair is pending"),
+                Details = L.T("Windows: yeniden başlatma gerektiren bir sistem onarımı bekliyor.", "Windows: a system repair that requires a restart is pending."),
+                Reason = L.T("Bilgisayarı yeniden başlatın ve SFC'yi tekrar çalıştırın.", "Restart the computer and run SFC again."),
                 RebootRequired = true
             };
 
         if (Has(MsgAnotherOperation))
-            return Fail(repair, "Başka bir bakım veya onarım işlemi çalışıyor (ör. Windows Update). Bitmesini bekleyip tekrar deneyin.");
+            return Fail(repair, L.T("Başka bir bakım veya onarım işlemi çalışıyor (ör. Windows Update). Bitmesini bekleyip tekrar deneyin.", "Another servicing or repair operation is running (e.g. Windows Update). Wait for it to finish and try again."));
 
         if (Has(MsgCouldNotStartService))
-            return Fail(repair, "Windows Kaynak Koruması onarım hizmetini (TrustedInstaller) başlatamadı.");
+            return Fail(repair, L.T("Windows Kaynak Koruması onarım hizmetini (TrustedInstaller) başlatamadı.", "Windows Resource Protection could not start the repair service (TrustedInstaller)."));
 
         if (Has(MsgCouldNotPerform))
-            return Fail(repair, "Windows Kaynak Koruması istenen işlemi gerçekleştiremedi.");
+            return Fail(repair, L.T("Windows Kaynak Koruması istenen işlemi gerçekleştiremedi.", "Windows Resource Protection could not perform the requested operation."));
 
         if (Has(MsgFoundSomeUnfixed))
             return new ModuleResult
             {
                 Key = Key,
                 Status = repair ? ComponentStatus.PartiallyUpdated : ComponentStatus.UpdateAvailable,
-                Summary = "Bozuk dosyalar bulundu ancak bazıları onarılamadı",
-                Details = "Ayrıntılar: %windir%\\Logs\\CBS\\CBS.log",
-                Reason = "Onarılamayan dosyalar için DISM /Online /Cleanup-Image /RestoreHealth ile bileşen deposunun onarılması gerekebilir " +
-                         "(Windows Image Sağlık Kontrolü kartı bileşen deposunu \"onarılabilir\" bulursa onayınızla onarır; onaysız çalışmaz). " +
-                         "Onarımdan sonra SFC taramasını tekrarlayın.",
+                Summary = L.T("Bozuk dosyalar bulundu ancak bazıları onarılamadı", "Corrupt files were found but some of them could not be repaired"),
+                Details = L.T("Ayrıntılar: %windir%\\Logs\\CBS\\CBS.log", "Details: %windir%\\Logs\\CBS\\CBS.log"),
+                Reason = L.T("Onarılamayan dosyalar için DISM /Online /Cleanup-Image /RestoreHealth ile bileşen deposunun onarılması gerekebilir ", "For files that could not be repaired, the component store may need to be repaired with DISM /Online /Cleanup-Image /RestoreHealth ") +
+                         L.T("(Windows Image Sağlık Kontrolü kartı bileşen deposunu \"onarılabilir\" bulursa onayınızla onarır; onaysız çalışmaz). ", "(if the Windows Image Health Check card finds the component store \"repairable\", it repairs it with your approval; never without it). ") +
+                         L.T("Onarımdan sonra SFC taramasını tekrarlayın.", "Run the SFC scan again after the repair."),
                 RebootRequired = reboot
             };
 
@@ -183,8 +183,8 @@ public sealed class SfcManager(Logger logger) : IMaintenanceModule, IProgressRep
             {
                 Key = Key,
                 Status = ComponentStatus.RebootRequired,
-                Summary = "Onarım sıraya alındı – yeniden başlatma gerekli",
-                Reason = "Yeniden başlattıktan sonra kalan dosyalar için SFC'yi tekrar çalıştırın.",
+                Summary = L.T("Onarım sıraya alındı – yeniden başlatma gerekli", "Repair queued – restart required"),
+                Reason = L.T("Yeniden başlattıktan sonra kalan dosyalar için SFC'yi tekrar çalıştırın.", "After restarting, run SFC again for the remaining files."),
                 RebootRequired = true
             };
 
@@ -193,8 +193,8 @@ public sealed class SfcManager(Logger logger) : IMaintenanceModule, IProgressRep
             {
                 Key = Key,
                 Status = ComponentStatus.PartiallyUpdated,
-                Summary = "Dosyaların bir kısmı onarıldı",
-                Reason = "Kalan bozuk dosyalar için SFC'yi tekrar çalıştırın."
+                Summary = L.T("Dosyaların bir kısmı onarıldı", "Some of the files were repaired"),
+                Reason = L.T("Kalan bozuk dosyalar için SFC'yi tekrar çalıştırın.", "Run SFC again for the remaining corrupt files.")
             };
 
         if (Has(MsgFoundAndRepaired))
@@ -202,9 +202,9 @@ public sealed class SfcManager(Logger logger) : IMaintenanceModule, IProgressRep
             {
                 Key = Key,
                 Status = reboot ? ComponentStatus.RebootRequired : ComponentStatus.Updated,
-                Summary = "Bozuk dosyalar bulundu ve onarıldı",
-                Details = "Ayrıntılar: %windir%\\Logs\\CBS\\CBS.log",
-                Reason = reboot ? "Onarımlar bir sonraki yeniden başlatmada etkinleşecek." : null,
+                Summary = L.T("Bozuk dosyalar bulundu ve onarıldı", "Corrupt files were found and repaired"),
+                Details = L.T("Ayrıntılar: %windir%\\Logs\\CBS\\CBS.log", "Details: %windir%\\Logs\\CBS\\CBS.log"),
+                Reason = reboot ? L.T("Onarımlar bir sonraki yeniden başlatmada etkinleşecek.", "The repairs take effect at the next restart.") : null,
                 RebootRequired = reboot
             };
 
@@ -213,9 +213,9 @@ public sealed class SfcManager(Logger logger) : IMaintenanceModule, IProgressRep
             {
                 Key = Key,
                 Status = ComponentStatus.UpdateAvailable,
-                Summary = "Bozuk sistem dosyası bulundu",
-                Details = "sfc /verifyonly bütünlük ihlali buldu (onarım yapılmadı).\nAyrıntılar: %windir%\\Logs\\CBS\\CBS.log",
-                Reason = "Onarmak için kartın \"Tarama Başlat\" butonunu (sfc /scannow) veya güncelleme butonlarını kullanın.",
+                Summary = L.T("Bozuk sistem dosyası bulundu", "Corrupt system files found"),
+                Details = L.T("sfc /verifyonly bütünlük ihlali buldu (onarım yapılmadı).\nAyrıntılar: %windir%\\Logs\\CBS\\CBS.log", "sfc /verifyonly found integrity violations (no repair was made).\nDetails: %windir%\\Logs\\CBS\\CBS.log"),
+                Reason = L.T("Onarmak için kartın \"Tarama Başlat\" butonunu (sfc /scannow) veya güncelleme butonlarını kullanın.", "To repair, use the card's \"Start Scan\" button (sfc /scannow) or the update buttons."),
                 ActionableCount = 1
             };
 
@@ -224,9 +224,9 @@ public sealed class SfcManager(Logger logger) : IMaintenanceModule, IProgressRep
             {
                 Key = Key,
                 Status = ComponentStatus.Attention,
-                Summary = "Dikkat: İhlal yok, ancak bileşen meta verisi bozuk",
-                Reason = "Windows, sistem bütünlüğünü garanti edemediğini bildirdi. DISM /Online /Cleanup-Image /RestoreHealth önerilir " +
-                         "(Windows Image Sağlık Kontrolü kartı \"onarılabilir\" bulursa onayınızla onarır; onaysız çalışmaz)."
+                Summary = L.T("Dikkat: İhlal yok, ancak bileşen meta verisi bozuk", "Attention: No violations, but component metadata is corrupt"),
+                Reason = L.T("Windows, sistem bütünlüğünü garanti edemediğini bildirdi. DISM /Online /Cleanup-Image /RestoreHealth önerilir ", "Windows reported that it cannot guarantee system integrity. DISM /Online /Cleanup-Image /RestoreHealth is recommended ") +
+                         L.T("(Windows Image Sağlık Kontrolü kartı \"onarılabilir\" bulursa onayınızla onarır; onaysız çalışmaz).", "(if the Windows Image Health Check card finds it \"repairable\", it repairs it with your approval; never without it).")
             };
 
         if (Has(MsgNoViolations))
@@ -234,13 +234,13 @@ public sealed class SfcManager(Logger logger) : IMaintenanceModule, IProgressRep
             {
                 Key = Key,
                 Status = ComponentStatus.UpToDate,
-                Summary = repair ? "Tarama başarılı – bozuk dosya bulunamadı" : "Bozuk dosya bulunamadı",
-                Details = $"Son işlem: {command}"
+                Summary = repair ? L.T("Tarama başarılı – bozuk dosya bulunamadı", "Scan succeeded – no corrupt files found") : L.T("Bozuk dosya bulunamadı", "No corrupt files found"),
+                Details = L.T($"Son işlem: {command}", $"Last operation: {command}")
             };
 
         // Bilinen hiçbir Windows mesajı eşleşmedi: sonucu uydurma, gerçek çıktıyı göster.
-        var last = ProcessRunner.LastMeaningfulLine(r.StdOut.Replace("\0", string.Empty)) ?? "(çıktı yok)";
-        return Fail(repair, $"SFC sonucu yorumlanamadı (çıkış kodu {r.ExitCode}). Windows'un son mesajı: {last}");
+        var last = ProcessRunner.LastMeaningfulLine(r.StdOut.Replace("\0", string.Empty)) ?? L.T("(çıktı yok)", "(no output)");
+        return Fail(repair, L.T($"SFC sonucu yorumlanamadı (çıkış kodu {r.ExitCode}). Windows'un son mesajı: {last}", $"The SFC result could not be interpreted (exit code {r.ExitCode}). Windows' last message: {last}"));
     }
 
     private static string? Message(uint id) =>
@@ -270,8 +270,8 @@ public sealed class SfcManager(Logger logger) : IMaintenanceModule, IProgressRep
         {
             Key = Key,
             Status = ComponentStatus.AdminRequired,
-            Summary = "Yönetici izni gerekli",
-            Reason = "SFC yalnızca yönetici yetkisiyle çalışır."
+            Summary = L.T("Yönetici izni gerekli", "Administrator permission required"),
+            Reason = L.T("SFC yalnızca yönetici yetkisiyle çalışır.", "SFC only runs with administrator rights.")
         };
     }
 
@@ -281,7 +281,7 @@ public sealed class SfcManager(Logger logger) : IMaintenanceModule, IProgressRep
         {
             Key = Key,
             Status = repair ? ComponentStatus.Failed : ComponentStatus.CheckFailed,
-            Summary = "İşlem başarısız",
+            Summary = L.T("İşlem başarısız", "Operation failed"),
             Reason = reason
         };
     }
@@ -294,7 +294,7 @@ public sealed class SfcManager(Logger logger) : IMaintenanceModule, IProgressRep
     /// <summary>Sonucu durumuna uygun renkte günlüğe yazar (bakım modülleri ortak kullanır).</summary>
     internal static void LogResult(Logger logger, string tag, ModuleResult result)
     {
-        var text = $"[{tag}] Sonuç: {result.Summary}" + (string.IsNullOrWhiteSpace(result.Reason) ? "" : $" – {result.Reason}");
+        var text = L.T($"[{tag}] Sonuç: {result.Summary}", $"[{tag}] Result: {result.Summary}") + (string.IsNullOrWhiteSpace(result.Reason) ? "" : $" – {result.Reason}");
         switch (result.Status)
         {
             case ComponentStatus.UpToDate or ComponentStatus.Updated:

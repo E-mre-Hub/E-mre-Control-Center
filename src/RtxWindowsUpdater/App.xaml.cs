@@ -38,7 +38,8 @@ public partial class App : Application
 
         // Aynı anda iki örneğin güncelleme yapmasını engelle. Yönetici olarak yeniden başlatılan örnek,
         // önceki örneğin kapanmasını birkaç saniye bekler.
-        var relaunched = e.Args.Contains(AdminPrivilegeManager.ArgElevated, StringComparer.OrdinalIgnoreCase);
+        var relaunched = e.Args.Contains(AdminPrivilegeManager.ArgElevated, StringComparer.OrdinalIgnoreCase) ||
+                         e.Args.Contains(LaunchModes.ArgRestarted, StringComparer.OrdinalIgnoreCase);
         if (!TryAcquireSingleInstance(SingleInstanceMutexName, relaunched ? TimeSpan.FromSeconds(10) : TimeSpan.Zero))
         {
             // Uygulama zaten çalışıyor (penceresi bildirim alanına gizlenmiş olabilir): o örneğin penceresi öne getirilir.
@@ -47,7 +48,7 @@ public partial class App : Application
                 Shutdown();
                 return;
             }
-            MessageBox.Show(AppInfo.Name + " zaten çalışıyor.", AppInfo.Name,
+            MessageBox.Show(AppInfo.Name + L.T(" zaten çalışıyor.", " is already running."), AppInfo.Name,
                 MessageBoxButton.OK, MessageBoxImage.Information);
             Shutdown();
             return;
@@ -59,16 +60,21 @@ public partial class App : Application
         DispatcherUnhandledException += OnDispatcherUnhandledException;
         TaskScheduler.UnobservedTaskException += (_, args) =>
         {
-            _logger.Error("Arka plan görevinde beklenmeyen hata: " + args.Exception.GetBaseException().Message);
+            _logger.Error(L.T("Arka plan görevinde beklenmeyen hata: ", "Unexpected error in a background task: ") + args.Exception.GetBaseException().Message);
             args.SetObserved();
         };
         AppDomain.CurrentDomain.UnhandledException += (_, args) =>
-            _logger.Error("Kritik hata: " + (args.ExceptionObject as Exception)?.Message);
+            _logger.Error(L.T("Kritik hata: ", "Critical error: ") + (args.ExceptionObject as Exception)?.Message);
 
         var accepted = e.Args.Contains(AdminPrivilegeManager.ArgAccepted, StringComparer.OrdinalIgnoreCase);
         var startCheck = e.Args.Contains(AdminPrivilegeManager.ArgStartCheck, StringComparer.OrdinalIgnoreCase);
 
         var state = _state = new AppStateStore(_logger);
+        if (!ApplyLanguageAndTheme(state, e.Args))
+        {
+            Shutdown(); // ilk açılış ekranı kapatıldı: uygulama açılmaz
+            return;
+        }
         var notifications = new NotificationService(_logger);
         notifications.Register(ExtractNotificationIcon());
 
@@ -84,10 +90,39 @@ public partial class App : Application
         {
             AppLifetime.MarkExiting(); // Windows kapanırken pencere gizlenmez, uygulama kapanır
             _logger?.Info(args.ReasonSessionEnding == ReasonSessionEnding.Shutdown
-                ? "Windows kapatılıyor / yeniden başlatılıyor; uygulama kapanacak."
-                : "Windows oturumu kapatılıyor; uygulama kapanacak.");
+                ? L.T("Windows kapatılıyor / yeniden başlatılıyor; uygulama kapanacak.", "Windows is shutting down / restarting; the app will close.")
+                : L.T("Windows oturumu kapatılıyor; uygulama kapanacak.", "The Windows session is ending; the app will close."));
         };
         window.Show();
+    }
+
+    /// <summary>
+    /// Dil ve tema (v2.0.0) ilk ana pencere oluşmadan belirlenir: metinler pencereler ve görünüm modeli oluşurken seçilen dilde okunur.
+    /// Dil kaydı yoksa (ilk açılış veya v2.0.0'a güncelleme) "Dil ve görünüm" ekranı açılır; kurulumun ilettiği dil / tema ("--lang",
+    /// "--theme") veya Windows dili önerilir. Ekran kapatılırsa false.
+    /// </summary>
+    private bool ApplyLanguageAndTheme(AppStateStore state, string[] args)
+    {
+        var language = L.Parse(state.State.Language);
+        var theme = ThemeManager.Parse(state.State.Theme) ?? ThemeManager.Parse(LaunchModes.ArgValue(args, LaunchModes.ArgTheme));
+        if (language is null)
+        {
+            var welcome = new WelcomeViewModel(L.Parse(LaunchModes.ArgValue(args, LaunchModes.ArgLang)) ?? L.SystemDefault, theme ?? AppTheme.Dark);
+            ThemeManager.Apply(welcome.Theme);
+            ShutdownMode = ShutdownMode.OnExplicitShutdown; // seçim penceresi kapanınca uygulama kapanmasın
+            var confirmed = new WelcomeWindow(welcome).ShowDialog() == true;
+            ShutdownMode = ShutdownMode.OnMainWindowClose;
+            if (!confirmed) return false;
+            language = welcome.Language;
+            theme = welcome.Theme;
+            state.SetLanguage(language == AppLanguage.English ? "en" : "tr");
+            state.SetTheme(ThemeManager.Code(theme.Value));
+        }
+        L.Set(language.Value);
+        ThemeManager.Apply(theme ?? AppTheme.Dark);
+        _logger?.Info(L.T($"Dil: Türkçe · Tema: {(ThemeManager.IsLight ? "Açık" : "Koyu")}",
+                          $"Language: English · Theme: {(ThemeManager.IsLight ? "Light" : "Dark")}"));
+        return true;
     }
 
     /// <summary>
@@ -96,21 +131,27 @@ public partial class App : Application
     /// </summary>
     private void StartSetup(LaunchMode mode, string[] args)
     {
+        // Dil ve tema (v2.0.0): "--lang" / dosya adındaki İngilizce işareti ("…Setup-EN-…") / uygulamada seçilen dil; tema "--theme" /
+        // uygulamada seçilen tema / koyu. Seçim UAC sonrası örneğe, geçici kaldırıcı kopyasına ve kurulan uygulamaya iletilir.
+        var prefs = AppPreferences.TryRead();
+        L.Set(LaunchModes.SetupLanguage(args, Environment.ProcessPath, L.Parse(prefs.Language)));
+        ThemeManager.Apply(ThemeManager.Parse(LaunchModes.ArgValue(args, LaunchModes.ArgTheme)) ?? ThemeManager.Parse(prefs.Theme) ?? AppTheme.Dark);
+
         var relaunched = args.Contains(AdminPrivilegeManager.ArgElevated, StringComparer.OrdinalIgnoreCase);
         if (!TryAcquireSingleInstance(SetupMutexName, relaunched ? TimeSpan.FromSeconds(10) : TimeSpan.Zero))
         {
-            MessageBox.Show("Kurulum veya kaldırma penceresi zaten açık.", AppInfo.Name, MessageBoxButton.OK, MessageBoxImage.Information);
+            MessageBox.Show(L.T("Kurulum veya kaldırma penceresi zaten açık.", "The setup or uninstall window is already open."), AppInfo.Name, MessageBoxButton.OK, MessageBoxImage.Information);
             Shutdown();
             return;
         }
 
-        var exe = Environment.ProcessPath ?? throw new InvalidOperationException("Uygulamanın dosya yolu belirlenemedi.");
+        var exe = Environment.ProcessPath ?? throw new InvalidOperationException(L.T("Uygulamanın dosya yolu belirlenemedi.", "The app's file path could not be determined."));
         var log = new SetupLog();
-        log.Info($"=== {mode} · {AppInfo.Name} {AppInfo.Version} · yönetici: {(AdminPrivilegeManager.IsElevated ? "evet" : "hayır")} · {exe}");
+        log.Info(L.T($"=== {mode} · {AppInfo.Name} {AppInfo.Version} · yönetici: {(AdminPrivilegeManager.IsElevated ? "evet" : "hayır")} · {exe}", $"=== {mode} · {AppInfo.Name} {AppInfo.Version} · administrator: {(AdminPrivilegeManager.IsElevated ? "yes" : "no")} · {exe}"));
         DispatcherUnhandledException += (_, ev) =>
         {
-            log.Info("Beklenmeyen arayüz hatası: " + ev.Exception);
-            MessageBox.Show("Beklenmeyen bir hata oluştu:\n\n" + ev.Exception.Message + "\n\nAyrıntılar: " + log.FilePath,
+            log.Info(L.T("Beklenmeyen arayüz hatası: ", "Unexpected UI error: ") + ev.Exception);
+            MessageBox.Show(L.T("Beklenmeyen bir hata oluştu:\n\n", "An unexpected error occurred:\n\n") + ev.Exception.Message + L.T("\n\nAyrıntılar: ", "\n\nDetails: ") + log.FilePath,
                 AppInfo.Name, MessageBoxButton.OK, MessageBoxImage.Warning);
             ev.Handled = true;
         };
@@ -126,13 +167,13 @@ public partial class App : Application
             if (!AdminPrivilegeManager.IsElevated)
             {
                 var (outcome, error) = AdminPrivilegeManager.RelaunchElevated(LaunchModes.ArgUninstall);
-                log.Info($"Kaldırma için yönetici olarak yeniden başlatma: {outcome}{(error is null ? "" : " – " + error)}");
+                log.Info(L.T($"Kaldırma için yönetici olarak yeniden başlatma: {outcome}{(error is null ? "" : " – " + error)}", $"Restart as administrator for uninstall: {outcome}{(error is null ? "" : " – " + error)}"));
                 if (outcome != ElevationOutcome.Started)
                 {
                     MessageBox.Show(outcome == ElevationOutcome.Declined
-                            ? "Kaldırma için yönetici izni gerekiyor. İzin verilmediği için hiçbir şey değiştirilmedi."
-                            : error ?? "Kaldırma yönetici olarak başlatılamadı.",
-                        AppInfo.Name + " Kaldırma", MessageBoxButton.OK, MessageBoxImage.Warning);
+                            ? L.T("Kaldırma için yönetici izni gerekiyor. İzin verilmediği için hiçbir şey değiştirilmedi.", "Administrator permission is required to uninstall. Because permission was not granted, nothing was changed.")
+                            : error ?? L.T("Kaldırma yönetici olarak başlatılamadı.", "Uninstall could not be started as administrator."),
+                        AppInfo.Name + L.T(" Kaldırma", " Uninstall"), MessageBoxButton.OK, MessageBoxImage.Warning);
                 }
                 Shutdown();
                 return;
@@ -149,7 +190,7 @@ public partial class App : Application
                 }
                 catch (Exception ex)
                 {
-                    log.Info("Geçici kopya hazırlanamadı; kaldırma kurulu EXE'den yapılacak (EXE yeniden başlatmada silinir): " + ex.Message);
+                    log.Info(L.T("Geçici kopya hazırlanamadı; kaldırma kurulu EXE'den yapılacak (EXE yeniden başlatmada silinir): ", "The temporary copy could not be prepared; uninstall will run from the installed EXE (the EXE is deleted at restart): ") + ex.Message);
                 }
             }
 
@@ -188,7 +229,7 @@ public partial class App : Application
         {
             using var launcher = Process.GetProcessById(pid);
             var exited = launcher.WaitForExit(10000);
-            log.Info($"Başlatan işlem (PID {pid}) {(exited ? "kapandı" : "10 sn içinde kapanmadı")}.");
+            log.Info(L.T($"Başlatan işlem (PID {pid}) {(exited ? "kapandı" : "10 sn içinde kapanmadı")}.", $"Launching process (PID {pid}) {(exited ? "exited" : "did not exit within 10 sec")}."));
         }
         catch (ArgumentException)
         {
@@ -198,10 +239,10 @@ public partial class App : Application
 
     private void OnDispatcherUnhandledException(object sender, DispatcherUnhandledExceptionEventArgs e)
     {
-        _logger?.Error("Beklenmeyen arayüz hatası: " + e.Exception.Message);
+        _logger?.Error(L.T("Beklenmeyen arayüz hatası: ", "Unexpected UI error: ") + e.Exception.Message);
         MessageBox.Show(
-            "Beklenmeyen bir hata oluştu ve kaydedildi:\n\n" + e.Exception.Message +
-            "\n\nUygulama çalışmaya devam edecek. Ayrıntılar için işlem günlüğüne bakın.",
+            L.T("Beklenmeyen bir hata oluştu ve kaydedildi:\n\n", "An unexpected error occurred and was logged:\n\n") + e.Exception.Message +
+            L.T("\n\nUygulama çalışmaya devam edecek. Ayrıntılar için işlem günlüğüne bakın.", "\n\nThe app will keep running. See the operation log for details."),
             AppInfo.Name, MessageBoxButton.OK, MessageBoxImage.Warning);
         e.Handled = true;
     }
@@ -228,7 +269,7 @@ public partial class App : Application
         }
         catch (Exception ex)
         {
-            _logger?.Warning($"Bildirim ikonu hazırlanamadı: {ex.Message}");
+            _logger?.Warning(L.T($"Bildirim ikonu hazırlanamadı: {ex.Message}", $"Could not prepare the notification icon: {ex.Message}"));
             return null;
         }
     }
@@ -257,13 +298,13 @@ public partial class App : Application
     protected override void OnExit(ExitEventArgs e)
     {
         // Normal kapanış günlüğe yazılır: günlük bu satırsız biterse uygulama dışarıdan sonlandırılmış (ör. Görev Yöneticisi) demektir.
-        if (_viewModel is not null) _logger?.Info($"Uygulama kapanıyor (çıkış kodu {e.ApplicationExitCode}).");
+        if (_viewModel is not null) _logger?.Info(L.T($"Uygulama kapanıyor (çıkış kodu {e.ApplicationExitCode}).", $"The app is closing (exit code {e.ApplicationExitCode})."));
         _tray?.Dispose();
         _viewModel?.Dispose();
         // Kontrol amaçlı (iptal edilebilir) araç süreçleri kapanışta kesin sonlandırılır; iptalin kendi sonlandırma adımı arka
         // planda koştuğu için kapanışa yetişmeyebilir. Kurulum / onarım süreçlerine dokunulmaz (hepsi iptal edilemez başlatılır).
         var killed = ProcessRunner.KillCancellableProcesses();
-        if (killed.Count > 0) _logger?.Info("Kapanışta sonlandırılan kontrol araçları: " + string.Join(", ", killed));
+        if (killed.Count > 0) _logger?.Info(L.T("Kapanışta sonlandırılan kontrol araçları: ", "Check tools ended at shutdown: ") + string.Join(", ", killed));
         _state?.Flush(); // bekleyen ayar / geçmiş yazımı (yeni örnek kilidi almadan önce diske yazılmış olur)
         _logger?.Dispose();
         try { _instanceMutex?.ReleaseMutex(); } catch { /* sahip değilsek sorun değil */ }

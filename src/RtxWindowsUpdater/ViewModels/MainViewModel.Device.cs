@@ -13,7 +13,7 @@ public sealed partial class MainViewModel
     private DeviceMonitorService? _monitorInstance;
     private DispatcherTimer? _monitorTimer;
     private bool _sampling;
-    private string _deviceStatusTime = "Ölçülüyor...";
+    private string _deviceStatusTime = L.T("Ölçülüyor...", "Measuring...");
 
     private DeviceMonitorService Monitor => _monitorInstance ??= new DeviceMonitorService(_logger);
 
@@ -30,11 +30,11 @@ public sealed partial class MainViewModel
     {
         (string Group, string Title, string Glyph)[] layout =
         [
-            (SystemInfoGroups.Cpu, "İşlemci Bilgileri", ""),
-            (SystemInfoGroups.Gpu, "Ekran Kartı Bilgileri", ""),
-            (SystemInfoGroups.Ram, "Bellek Bilgileri", ""),
-            (SystemInfoGroups.Storage, "Depolama Aygıtı Bilgileri", ""),
-            (SystemInfoGroups.Os, "İşletim Sistemi", "")
+            (SystemInfoGroups.Cpu, L.T("İşlemci Bilgileri", "Processor Information"), ""),
+            (SystemInfoGroups.Gpu, L.T("Ekran Kartı Bilgileri", "Graphics Card Information"), ""),
+            (SystemInfoGroups.Ram, L.T("Bellek Bilgileri", "Memory Information"), ""),
+            (SystemInfoGroups.Storage, L.T("Depolama Aygıtı Bilgileri", "Storage Device Information"), ""),
+            (SystemInfoGroups.Os, L.T("İşletim Sistemi", "Operating System"), "")
         ];
         DeviceSections.Clear();
         foreach (var (group, title, glyph) in layout)
@@ -43,7 +43,7 @@ public sealed partial class MainViewModel
             if (fields.Count > 0) DeviceSections.Add(new DeviceInfoSectionViewModel(title, glyph, fields));
         }
         var other = SystemInfoFields.Where(f => layout.All(l => l.Group != f.Group)).ToList();
-        if (other.Count > 0) DeviceSections.Add(new DeviceInfoSectionViewModel("Diğer", "", other));
+        if (other.Count > 0) DeviceSections.Add(new DeviceInfoSectionViewModel(L.T("Diğer", "Other"), "", other));
     }
 
     // ------------------------------------------------------------------ canlı ölçüm (yalnızca Cihaz Durumu bölmesi açıkken)
@@ -57,8 +57,8 @@ public sealed partial class MainViewModel
     private void StartDeviceMonitoring()
     {
         if (_monitorTimer is not null) return;
-        _logger.Info("Cihaz Durumu: canlı ölçüm başladı (2 saniyede bir).");
-        DeviceStatusTime = "Ölçülüyor...";
+        _logger.Info(L.T("Cihaz Durumu: canlı ölçüm başladı (2 saniyede bir).", "Device Status: live measurement started (every 2 seconds)."));
+        DeviceStatusTime = L.T("Ölçülüyor...", "Measuring...");
         _monitorTimer = new DispatcherTimer(DispatcherPriority.Background) { Interval = TimeSpan.FromSeconds(2) };
         _monitorTimer.Tick += OnMonitorTick;
         _monitorTimer.Start();
@@ -74,7 +74,7 @@ public sealed partial class MainViewModel
         // NVML serbest bırakılır (ekran kartı uyku durumuna geçebilir). Süren bir ölçüm varsa arayüz beklemesin.
         var monitor = _monitorInstance;
         if (monitor is not null) _ = Task.Run(monitor.Stop);
-        _logger.Info("Cihaz Durumu: canlı ölçüm durdu.");
+        _logger.Info(L.T("Cihaz Durumu: canlı ölçüm durdu.", "Device Status: live measurement stopped."));
     }
 
     private async void OnMonitorTick(object? sender, EventArgs e)
@@ -89,8 +89,8 @@ public sealed partial class MainViewModel
         }
         catch (Exception ex)
         {
-            DeviceStatusTime = "Ölçüm başarısız: " + ex.Message;
-            _logger.Warning("Cihaz Durumu ölçülemedi: " + ex.Message);
+            DeviceStatusTime = L.T("Ölçüm başarısız: ", "Measurement failed: ") + ex.Message;
+            _logger.Warning(L.T("Cihaz Durumu ölçülemedi: ", "Device Status could not be measured: ") + ex.Message);
         }
         finally
         {
@@ -107,68 +107,68 @@ public sealed partial class MainViewModel
     {
         var rows = new List<RowSpec>();
         var cpuName = SystemInfoFields.FirstOrDefault(f => f.Label == "CPU" && f.Available)?.Value ?? string.Empty;
-        rows.Add(new RowSpec("cpu", "İşlemci", cpuName, null,
+        rows.Add(new RowSpec("cpu", L.T("İşlemci", "Processor"), cpuName, null,
         [
-            new GaugeSpec("Kullanım", "%", 100, false, s.CpuUsage),
-            new GaugeSpec("Termal bölge", "°C", 100, true, s.ThermalZone)
+            new GaugeSpec(L.T("Kullanım", "Usage"), "%", 100, false, s.CpuUsage),
+            new GaugeSpec(L.T("Termal bölge", "Thermal zone"), "°C", 100, true, s.ThermalZone)
         ]));
 
         if (s.Gpus.Count == 0)
-            rows.Add(new RowSpec("gpu", "Ekran Kartı", string.Empty, s.GpuNote, []));
+            rows.Add(new RowSpec("gpu", L.T("Ekran Kartı", "Graphics Card"), string.Empty, s.GpuNote, []));
         foreach (var g in s.Gpus)
         {
             var vram = g.MemoryTotalBytes is > 0 && g.MemoryUsedBytes is { } used
                 ? $" · VRAM {used / 1073741824.0:0.0} GB / {g.MemoryTotalBytes.Value / 1073741824.0:0.0} GB"
                 : string.Empty;
-            rows.Add(new RowSpec("gpu:" + g.Name, "Ekran Kartı", g.Name + vram, null,
+            rows.Add(new RowSpec("gpu:" + g.Name, L.T("Ekran Kartı", "Graphics Card"), g.Name + vram, null,
             [
-                new GaugeSpec("Kullanım", "%", 100, false, g.Usage),
-                new GaugeSpec("Sıcaklık", "°C", 100, true, g.Temperature),
-                new GaugeSpec("Bellek", "%", 100, false, g.MemoryUsage)
+                new GaugeSpec(L.T("Kullanım", "Usage"), "%", 100, false, g.Usage),
+                new GaugeSpec(L.T("Sıcaklık", "Temperature"), "°C", 100, true, g.Temperature),
+                new GaugeSpec(L.T("Bellek", "Memory"), "%", 100, false, g.MemoryUsage)
             ]));
         }
 
         var memoryText = s.MemoryTotalBytes > 0
-            ? $"{s.MemoryUsedBytes / 1073741824.0:0.0} GB / {s.MemoryTotalBytes / 1073741824.0:0.0} GB kullanılıyor"
+            ? L.T($"{s.MemoryUsedBytes / 1073741824.0:0.0} GB / {s.MemoryTotalBytes / 1073741824.0:0.0} GB kullanılıyor", $"{s.MemoryUsedBytes / 1073741824.0:0.0} GB / {s.MemoryTotalBytes / 1073741824.0:0.0} GB in use")
             : string.Empty;
-        rows.Add(new RowSpec("ram", "Bellek", memoryText, null, [new GaugeSpec("Kullanım", "%", 100, false, s.MemoryUsage)]));
+        rows.Add(new RowSpec("ram", L.T("Bellek", "Memory"), memoryText, null, [new GaugeSpec(L.T("Kullanım", "Usage"), "%", 100, false, s.MemoryUsage)]));
 
         // Disk: etkin süre + okuma / yazma (PhysicalDisk sayaçları) ve sıcaklık (güvenilirlik sayacı; yönetici gerekir).
         if (s.DiskActivity.Count == 0 && s.Disks.Count == 0)
-            rows.Add(new RowSpec("disk", "Depolama", string.Empty, s.DiskActivityNote ?? s.DiskNote ?? "Disk bilgisi henüz okunmadı", []));
+            rows.Add(new RowSpec("disk", L.T("Depolama", "Storage"), string.Empty, s.DiskActivityNote ?? s.DiskNote ?? L.T("Disk bilgisi henüz okunmadı", "Disk information not read yet"), []));
         foreach (var a in s.DiskActivity)
         {
             var disk = s.Disks.FirstOrDefault(d => d.Id == a.Id);
-            var io = $"Okuma {Services.Diagnostics.Formats.Rate(a.ReadBytesPerSec.Value ?? 0)} · Yazma {Services.Diagnostics.Formats.Rate(a.WriteBytesPerSec.Value ?? 0)}";
-            rows.Add(new RowSpec("disk:" + a.Id, "Depolama", $"{disk?.Name ?? a.Instance} · {io}", null,
+            var io = L.T($"Okuma {Services.Diagnostics.Formats.Rate(a.ReadBytesPerSec.Value ?? 0)} · Yazma {Services.Diagnostics.Formats.Rate(a.WriteBytesPerSec.Value ?? 0)}", $"Read {Services.Diagnostics.Formats.Rate(a.ReadBytesPerSec.Value ?? 0)} · Write {Services.Diagnostics.Formats.Rate(a.WriteBytesPerSec.Value ?? 0)}");
+            rows.Add(new RowSpec("disk:" + a.Id, L.T("Depolama", "Storage"), $"{disk?.Name ?? a.Instance} · {io}", null,
             [
-                new GaugeSpec("Etkin süre", "%", 100, false, a.ActiveTime),
-                new GaugeSpec("Sıcaklık", "°C", 100, true, disk?.Temperature ?? DeviceReading.Missing(s.DiskNote ?? "Disk sıcaklığı okunmadı"))
+                new GaugeSpec(L.T("Etkin süre", "Active time"), "%", 100, false, a.ActiveTime),
+                new GaugeSpec(L.T("Sıcaklık", "Temperature"), "°C", 100, true, disk?.Temperature ?? DeviceReading.Missing(s.DiskNote ?? L.T("Disk sıcaklığı okunmadı", "Disk temperature not read")))
             ]));
         }
         if (s.DiskActivity.Count == 0)
             foreach (var d in s.Disks)
-                rows.Add(new RowSpec("disk:" + d.Id, "Depolama", d.Name, s.DiskActivityNote, [new GaugeSpec("Sıcaklık", "°C", 100, true, d.Temperature)]));
+                rows.Add(new RowSpec("disk:" + d.Id, L.T("Depolama", "Storage"), d.Name, s.DiskActivityNote, [new GaugeSpec(L.T("Sıcaklık", "Temperature"), "°C", 100, true, d.Temperature)]));
 
         // Ağ: bağlı bağdaştırıcıların toplam anlık aktarımı (Mbps).
         if (s.Network is { } net)
         {
             static DeviceReading Mbps(DeviceReading r) => r.Value is { } v ? new DeviceReading(v * 8 / 1_000_000) : r;
-            rows.Add(new RowSpec("net", "Ağ", net.Adapters, null,
+            rows.Add(new RowSpec("net", L.T("Ağ", "Network"), net.Adapters, null,
             [
-                new GaugeSpec("İndirme", "Mbps", 0, false, Mbps(net.ReceiveBytesPerSec), "0.0"),
-                new GaugeSpec("Yükleme", "Mbps", 0, false, Mbps(net.SendBytesPerSec), "0.0")
+                new GaugeSpec(L.T("İndirme", "Download"), "Mbps", 0, false, Mbps(net.ReceiveBytesPerSec), "0.0"),
+                new GaugeSpec(L.T("Yükleme", "Upload"), "Mbps", 0, false, Mbps(net.SendBytesPerSec), "0.0")
             ]));
         }
 
         var fans = new List<GaugeSpec>();
         foreach (var g in s.Gpus.Where(g => g.Fan.Value is not null))
-            fans.Add(new GaugeSpec("Ekran kartı", "%", 100, false, g.Fan));
+            fans.Add(new GaugeSpec(L.T("Ekran kartı", "Graphics card"), "%", 100, false, g.Fan));
         foreach (var f in s.Fans)
             fans.Add(new GaugeSpec(f.Name, "RPM", 0, false, f.Rpm)); // RPM için bilinen üst sınır yok: halka boş kalır, değer yazılır
-        rows.Add(new RowSpec("fan", "Fan Hızı", string.Empty,
+        rows.Add(new RowSpec("fan", L.T("Fan Hızı", "Fan Speed"), string.Empty,
             fans.Count == 0
-                ? "Bu cihaz fan hızını Windows'un standart arayüzleriyle bildirmiyor (ekran kartı dahil). Fan bilgisi yalnızca üretici yazılımıyla okunabilir."
+                ? L.T("Bu cihaz fan hızını Windows'un standart arayüzleriyle bildirmiyor (ekran kartı dahil). Fan bilgisi yalnızca üretici yazılımıyla okunabilir.", "This device does not report fan speed through the standard Windows interfaces (including the graphics card). Fan information can only be read with the manufacturer's software.")
                 : null,
             fans.ToArray()));
 
@@ -194,6 +194,6 @@ public sealed partial class MainViewModel
             for (var j = 0; j < rows[i].Gauges.Length; j++)
                 row.Gauges[j].Update(rows[i].Gauges[j].Reading);
         }
-        DeviceStatusTime = $"Canlı · 2 saniyede bir güncellenir · Son ölçüm {s.Time:HH:mm:ss}";
+        DeviceStatusTime = L.T($"Canlı · 2 saniyede bir güncellenir · Son ölçüm {s.Time:HH:mm:ss}", $"Live · updated every 2 seconds · Last measurement {s.Time:HH:mm:ss}");
     }
 }

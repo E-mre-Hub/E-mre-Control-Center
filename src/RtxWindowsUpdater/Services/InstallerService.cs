@@ -71,18 +71,18 @@ public static class InstallSteps
 
     public static IReadOnlyDictionary<string, string> Titles { get; } = new Dictionary<string, string>
     {
-        [Running] = "Çalışan uygulama denetleniyor",
-        [Copy] = "Program dosyası kopyalanıyor",
-        [Verify] = "Dosya doğrulanıyor (SHA-256)",
-        [StartMenu] = "Başlat menüsü kısayolu",
-        [Desktop] = "Masaüstü kısayolu",
-        [Registry] = "Windows Uygulamalar kaydı",
-        [Feedback] = "Geri bildirim gönderiliyor",
-        [Shortcuts] = "Kısayollar kaldırılıyor",
-        [Files] = "Program dosyaları siliniyor",
-        [Unregister] = "Windows Uygulamalar kaydı siliniyor",
-        [Cache] = "Uygulamanın geçici dosyaları siliniyor",
-        [UserData] = "Ayarlar, geçmiş ve günlükler siliniyor"
+        [Running] = L.T("Çalışan uygulama denetleniyor", "Checking for the running app"),
+        [Copy] = L.T("Program dosyası kopyalanıyor", "Copying the program file"),
+        [Verify] = L.T("Dosya doğrulanıyor (SHA-256)", "Verifying the file (SHA-256)"),
+        [StartMenu] = L.T("Başlat menüsü kısayolu", "Start menu shortcut"),
+        [Desktop] = L.T("Masaüstü kısayolu", "Desktop shortcut"),
+        [Registry] = L.T("Windows Uygulamalar kaydı", "Windows Apps entry"),
+        [Feedback] = L.T("Geri bildirim gönderiliyor", "Sending feedback"),
+        [Shortcuts] = L.T("Kısayollar kaldırılıyor", "Removing shortcuts"),
+        [Files] = L.T("Program dosyaları siliniyor", "Deleting program files"),
+        [Unregister] = L.T("Windows Uygulamalar kaydı siliniyor", "Deleting the Windows Apps entry"),
+        [Cache] = L.T("Uygulamanın geçici dosyaları siliniyor", "Deleting the app's temporary files"),
+        [UserData] = L.T("Ayarlar, geçmiş ve günlükler siliniyor", "Deleting settings, history and logs")
     };
 }
 
@@ -139,7 +139,7 @@ public sealed class InstallerService(InstallLayout layout, Action<string> log)
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or System.Security.SecurityException)
         {
-            log($"Kurulum bilgisi okunamadı: {ex.Message}");
+            log(L.T($"Kurulum bilgisi okunamadı: {ex.Message}", $"Could not read the installation information: {ex.Message}"));
             return null;
         }
     }
@@ -172,15 +172,15 @@ public sealed class InstallerService(InstallLayout layout, Action<string> log)
                 // uygulamanın bildirim alanı penceresine gider. Eski sürümlerde bu pencere yoktur → ana pencere kapatılır.
                 if (AppSignals.Post(AppSignals.ExitMessage, p.Id))
                 {
-                    log($"Kapatma isteği: PID {p.Id} (bildirim alanı penceresine iletildi)");
+                    log(L.T($"Kapatma isteği: PID {p.Id} (bildirim alanı penceresine iletildi)", $"Close request: PID {p.Id} (sent to the notification area window)"));
                     continue;
                 }
                 var sent = p.CloseMainWindow();
-                log($"Kapatma isteği: PID {p.Id} ({(sent ? "pencereye iletildi" : "penceresi yok")})");
+                log(L.T($"Kapatma isteği: PID {p.Id} ({(sent ? "pencereye iletildi" : "penceresi yok")})", $"Close request: PID {p.Id} ({(sent ? "sent to the window" : "no window")})"));
             }
             catch (Exception ex) when (ex is InvalidOperationException or System.ComponentModel.Win32Exception)
             {
-                log($"Kapatma isteği gönderilemedi (PID {p.Id}): {ex.Message}");
+                log(L.T($"Kapatma isteği gönderilemedi (PID {p.Id}): {ex.Message}", $"Could not send the close request (PID {p.Id}): {ex.Message}"));
             }
         }
         var deadline = DateTime.UtcNow + timeout;
@@ -190,7 +190,7 @@ public sealed class InstallerService(InstallLayout layout, Action<string> log)
             await Task.Delay(250);
         }
         var closed = processes.All(HasExited);
-        log(closed ? "Çalışan uygulama kapandı." : "Çalışan uygulama süre içinde kapanmadı.");
+        log(closed ? L.T("Çalışan uygulama kapandı.", "The running app closed.") : L.T("Çalışan uygulama süre içinde kapanmadı.", "The running app did not close in time."));
         return closed;
 
         static bool HasExited(Process p)
@@ -220,8 +220,8 @@ public sealed class InstallerService(InstallLayout layout, Action<string> log)
         var registryTouched = false;
         var step = InstallSteps.Running;
 
-        log($"Kurulum başladı: {sourceExe} → {exe} (sürüm {AppInfo.Version}; masaüstü kısayolu: {(desktopShortcut ? "evet" : "hayır")}; " +
-            $"önceki kayıt: {(registryBefore is null ? "yok" : "var")})");
+        log(L.T($"Kurulum başladı: {sourceExe} → {exe} (sürüm {AppInfo.Version}; masaüstü kısayolu: {(desktopShortcut ? "evet" : "hayır")}; ", $"Setup started: {sourceExe} → {exe} (version {AppInfo.Version}; desktop shortcut: {(desktopShortcut ? "yes" : "no")}; ") +
+            L.T($"önceki kayıt: {(registryBefore is null ? "yok" : "var")})", $"previous entry: {(registryBefore is null ? "none" : "present")})"));
         try
         {
             progress?.Report(new(step));
@@ -230,16 +230,16 @@ public sealed class InstallerService(InstallLayout layout, Action<string> log)
             {
                 var pids = string.Join(", ", running.Select(p => p.Id));
                 foreach (var p in running) p.Dispose();
-                report.Steps.Add(new(step, false, $"Uygulama hâlâ açık (PID {pids}). Kapatıp yeniden deneyin."));
-                log($"Kurulum durdu: uygulama açık (PID {pids}).");
+                report.Steps.Add(new(step, false, L.T($"Uygulama hâlâ açık (PID {pids}). Kapatıp yeniden deneyin.", $"The app is still open (PID {pids}). Close it and try again.")));
+                log(L.T($"Kurulum durdu: uygulama açık (PID {pids}).", $"Setup stopped: the app is open (PID {pids})."));
                 return report;
             }
-            report.Steps.Add(new(step, true, "Kurulu uygulama açık değil"));
+            report.Steps.Add(new(step, true, L.T("Kurulu uygulama açık değil", "The installed app is not open")));
 
             step = InstallSteps.Copy;
             progress?.Report(new(step, 0));
             if (SamePath(sourceExe, exe))
-                throw new InvalidOperationException("Kurulum programı kurulu dosyanın kendisinden çalıştırılıyor; kurulum dosyasını (Setup) kullanın.");
+                throw new InvalidOperationException(L.T("Kurulum programı kurulu dosyanın kendisinden çalıştırılıyor; kurulum dosyasını (Setup) kullanın.", "The setup is running from the installed file itself; use the setup file (Setup)."));
             if (!Directory.Exists(layout.InstallDir))
             {
                 Directory.CreateDirectory(layout.InstallDir);
@@ -254,7 +254,7 @@ public sealed class InstallerService(InstallLayout layout, Action<string> log)
             progress?.Report(new(step));
             var writtenHash = HashFile(fresh);
             if (!string.Equals(sourceHash, writtenHash, StringComparison.OrdinalIgnoreCase))
-                throw new IOException($"Kopyalanan dosya kaynakla aynı değil (SHA-256 {sourceHash[..12]}… ≠ {writtenHash[..12]}…).");
+                throw new IOException(L.T($"Kopyalanan dosya kaynakla aynı değil (SHA-256 {sourceHash[..12]}… ≠ {writtenHash[..12]}…).", $"The copied file is not identical to the source (SHA-256 {sourceHash[..12]}… ≠ {writtenHash[..12]}…)."));
             if (File.Exists(exe))
             {
                 File.Move(exe, previous, true);
@@ -262,7 +262,7 @@ public sealed class InstallerService(InstallLayout layout, Action<string> log)
             }
             File.Move(fresh, exe);
             placed = true;
-            report.Steps.Add(new(step, true, $"SHA-256 eşleşti ({sourceHash[..16]}…)"));
+            report.Steps.Add(new(step, true, L.T($"SHA-256 eşleşti ({sourceHash[..16]}…)", $"SHA-256 matched ({sourceHash[..16]}…)")));
 
             step = InstallSteps.StartMenu;
             progress?.Report(new(step));
@@ -279,30 +279,30 @@ public sealed class InstallerService(InstallLayout layout, Action<string> log)
             else if (IsOurShortcut(layout.DesktopShortcut))
             {
                 File.Delete(layout.DesktopShortcut);
-                report.Steps.Add(new(step, true, "İstenmedi; önceki masaüstü kısayolu kaldırıldı"));
+                report.Steps.Add(new(step, true, L.T("İstenmedi; önceki masaüstü kısayolu kaldırıldı", "Not requested; the previous desktop shortcut was removed")));
             }
             else
             {
-                report.Steps.Add(new(step, true, "İstenmedi"));
+                report.Steps.Add(new(step, true, L.T("İstenmedi", "Not requested")));
             }
 
             step = InstallSteps.Registry;
             progress?.Report(new(step));
             registryTouched = true;
             WriteUninstallKey(exe, size);
-            report.Steps.Add(new(step, true, "Ayarlar → Uygulamalar listesinde görünür"));
+            report.Steps.Add(new(step, true, L.T("Ayarlar → Uygulamalar listesinde görünür", "Appears in the Settings → Apps list")));
 
             if (hadPrevious) DeleteOrSchedule(previous, report);
-            log($"Kurulum tamamlandı: {exe} ({Mb(size)}, SHA-256 {sourceHash}).");
+            log(L.T($"Kurulum tamamlandı: {exe} ({Mb(size)}, SHA-256 {sourceHash}).", $"Setup completed: {exe} ({Mb(size)}, SHA-256 {sourceHash})."));
             return report;
         }
         catch (Exception ex)
         {
             report.Steps.Add(new(step, false, ex.Message));
-            log($"Kurulum başarısız ({step}): {ex.GetType().Name}: {ex.Message}");
+            log(L.T($"Kurulum başarısız ({step}): {ex.GetType().Name}: {ex.Message}", $"Setup failed ({step}): {ex.GetType().Name}: {ex.Message}"));
             report.Rollback = RollbackInstall(fresh, previous, hadPrevious, placed, dirCreated, startMenuExisted, desktopExisted,
                 registryTouched, registryBefore);
-            log("Geri alma: " + report.Rollback);
+            log(L.T("Geri alma: ", "Rollback: ") + report.Rollback);
             return report;
         }
     }
@@ -319,18 +319,18 @@ public sealed class InstallerService(InstallLayout layout, Action<string> log)
         }
 
         var exe = layout.ExePath;
-        if (File.Exists(fresh)) Try("yarım kopya silindi", () => File.Delete(fresh));
+        if (File.Exists(fresh)) Try(L.T("yarım kopya silindi", "partial copy deleted"), () => File.Delete(fresh));
         // Yalnızca bu kurulumun yerleştirdiği dosyaya dokunulur; önceki sürüm (.old) geri taşınır.
-        if (hadPrevious && File.Exists(previous)) Try("önceki sürüm geri yüklendi", () => File.Move(previous, exe, true));
-        else if (placed && File.Exists(exe)) Try("kopyalanan dosya silindi", () => File.Delete(exe));
-        if (!startMenuExisted && File.Exists(layout.StartMenuShortcut)) Try("Başlat menüsü kısayolu kaldırıldı", () => File.Delete(layout.StartMenuShortcut));
-        if (!desktopExisted && File.Exists(layout.DesktopShortcut)) Try("masaüstü kısayolu kaldırıldı", () => File.Delete(layout.DesktopShortcut));
-        if (registryTouched) Try("Windows kaydı eski hâline getirildi", () => RestoreUninstallKey(registryBefore));
+        if (hadPrevious && File.Exists(previous)) Try(L.T("önceki sürüm geri yüklendi", "previous version restored"), () => File.Move(previous, exe, true));
+        else if (placed && File.Exists(exe)) Try(L.T("kopyalanan dosya silindi", "copied file deleted"), () => File.Delete(exe));
+        if (!startMenuExisted && File.Exists(layout.StartMenuShortcut)) Try(L.T("Başlat menüsü kısayolu kaldırıldı", "Start menu shortcut removed"), () => File.Delete(layout.StartMenuShortcut));
+        if (!desktopExisted && File.Exists(layout.DesktopShortcut)) Try(L.T("masaüstü kısayolu kaldırıldı", "desktop shortcut removed"), () => File.Delete(layout.DesktopShortcut));
+        if (registryTouched) Try(L.T("Windows kaydı eski hâline getirildi", "Windows entry restored"), () => RestoreUninstallKey(registryBefore));
         if (dirCreated && Directory.Exists(layout.InstallDir) && !Directory.EnumerateFileSystemEntries(layout.InstallDir).Any())
-            Try("boş program klasörü silindi", () => Directory.Delete(layout.InstallDir));
+            Try(L.T("boş program klasörü silindi", "empty program folder deleted"), () => Directory.Delete(layout.InstallDir));
 
-        var text = done.Count == 0 ? "Geri alınacak değişiklik yoktu." : "Geri alındı: " + string.Join(", ", done) + ".";
-        if (failed.Count > 0) text += " Geri alınamayan: " + string.Join("; ", failed) + ".";
+        var text = done.Count == 0 ? L.T("Geri alınacak değişiklik yoktu.", "There were no changes to roll back.") : L.T("Geri alındı: ", "Rolled back: ") + string.Join(", ", done) + ".";
+        if (failed.Count > 0) text += L.T(" Geri alınamayan: ", " Could not roll back: ") + string.Join("; ", failed) + ".";
         return text;
     }
 
@@ -346,7 +346,7 @@ public sealed class InstallerService(InstallLayout layout, Action<string> log)
     private InstallReport Uninstall(bool deleteUserData, string? currentExe, IProgress<InstallProgress>? progress)
     {
         var report = new InstallReport();
-        log($"Kaldırma başladı: {layout.InstallDir} (kullanıcı verileri {(deleteUserData ? "silinecek" : "korunacak")}).");
+        log(L.T($"Kaldırma başladı: {layout.InstallDir} (kullanıcı verileri {(deleteUserData ? "silinecek" : "korunacak")}).", $"Uninstall started: {layout.InstallDir} (user data will be {(deleteUserData ? "deleted" : "kept")})."));
 
         Run(InstallSteps.Shortcuts, () =>
         {
@@ -361,10 +361,10 @@ public sealed class InstallerService(InstallLayout layout, Action<string> log)
                 }
                 else
                 {
-                    report.Kept.Add($"{lnk} (hedefi bu uygulama değil)");
+                    report.Kept.Add(L.T($"{lnk} (hedefi bu uygulama değil)", $"{lnk} (its target is not this app)"));
                 }
             }
-            return removed == 0 ? "Kısayol yoktu" : $"{removed} kısayol silindi";
+            return removed == 0 ? L.T("Kısayol yoktu", "There were no shortcuts") : L.T($"{removed} kısayol silindi", $"{removed} shortcut(s) deleted");
         });
 
         var filesRemoved = Run(InstallSteps.Files, () => RemoveProgramFiles(currentExe, report));
@@ -373,12 +373,12 @@ public sealed class InstallerService(InstallLayout layout, Action<string> log)
         Run(InstallSteps.Unregister, () =>
         {
             if (!filesRemoved)
-                throw new IOException("Program dosyaları kaldırılamadığı için kayıt korundu; kaldırmayı yeniden deneyebilirsiniz.");
+                throw new IOException(L.T("Program dosyaları kaldırılamadığı için kayıt korundu; kaldırmayı yeniden deneyebilirsiniz.", "The entry was kept because the program files could not be removed; you can try uninstalling again."));
             using var root = RegistryKey.OpenBaseKey(layout.Hive, RegistryView.Registry64);
             root.DeleteSubKeyTree(layout.UninstallKeyPath, false);
             using var check = root.OpenSubKey(layout.UninstallKeyPath);
-            if (check is not null) throw new IOException("Kayıt anahtarı silinemedi.");
-            return "Ayarlar → Uygulamalar listesinden kaldırıldı";
+            if (check is not null) throw new IOException(L.T("Kayıt anahtarı silinemedi.", "The registry key could not be deleted."));
+            return L.T("Ayarlar → Uygulamalar listesinden kaldırıldı", "Removed from the Settings → Apps list");
         });
 
         Run(InstallSteps.Cache, () =>
@@ -398,9 +398,9 @@ public sealed class InstallerService(InstallLayout layout, Action<string> log)
                 hkcu.DeleteSubKeyTree(layout.NotificationKeyPath, false);
             return (removed, pending) switch
             {
-                (0, 0) => "Geçici dosya yoktu; bildirim kaydı silindi",
-                (_, 0) => $"{removed} öğe silindi; bildirim kaydı silindi",
-                _ => $"{removed} öğe silindi, {pending} öğe yeniden başlatınca silinecek (kullanımda); bildirim kaydı silindi"
+                (0, 0) => L.T("Geçici dosya yoktu; bildirim kaydı silindi", "There were no temporary files; the notification entry was deleted"),
+                (_, 0) => L.T($"{removed} öğe silindi; bildirim kaydı silindi", $"{removed} item(s) deleted; the notification entry was deleted"),
+                _ => L.T($"{removed} öğe silindi, {pending} öğe yeniden başlatınca silinecek (kullanımda); bildirim kaydı silindi", $"{removed} item(s) deleted, {pending} item(s) will be deleted after restart (in use); the notification entry was deleted")
             };
         });
 
@@ -409,11 +409,11 @@ public sealed class InstallerService(InstallLayout layout, Action<string> log)
             Run(InstallSteps.UserData, () =>
             {
                 var dirs = layout.UserDataDirs.Where(Directory.Exists).ToList();
-                if (dirs.Count == 0) return "Klasör yoktu";
+                if (dirs.Count == 0) return L.T("Klasör yoktu", "The folder did not exist");
                 var pending = 0;
                 foreach (var dir in dirs) pending += DeleteTreeSafe(dir, report).Pending;
                 var names = string.Join(", ", dirs);
-                return pending == 0 ? $"Silindi: {names}" : $"Silindi: {names} ({pending} öğe yeniden başlatınca silinecek)";
+                return pending == 0 ? L.T($"Silindi: {names}", $"Deleted: {names}") : L.T($"Silindi: {names} ({pending} öğe yeniden başlatınca silinecek)", $"Deleted: {names} ({pending} item(s) will be deleted after restart)");
             });
         }
 
@@ -422,11 +422,11 @@ public sealed class InstallerService(InstallLayout layout, Action<string> log)
             // Kaldırıcının kendi geçici kopyası (şu an çalışıyor): Windows yeniden başlatmada siler.
             var staging = Path.GetDirectoryName(currentExe)!;
             ScheduleTreeDelete(staging, report);
-            log($"Kaldırıcının geçici kopyası yeniden başlatmada silinecek: {staging}");
+            log(L.T($"Kaldırıcının geçici kopyası yeniden başlatmada silinecek: {staging}", $"The uninstaller's temporary copy will be deleted at restart: {staging}"));
         }
 
-        log($"Kaldırma bitti: {(report.Success ? "başarılı" : "sorunlu")}; yeniden başlatmada silinecek {report.PendingReboot.Count}, " +
-            $"bırakılan {report.Kept.Count}, silinemeyen {report.Failed.Count}.");
+        log(L.T($"Kaldırma bitti: {(report.Success ? "başarılı" : "sorunlu")}; yeniden başlatmada silinecek {report.PendingReboot.Count}, ", $"Uninstall finished: {(report.Success ? "successful" : "with problems")}; to delete at restart {report.PendingReboot.Count}, ") +
+            L.T($"bırakılan {report.Kept.Count}, silinemeyen {report.Failed.Count}.", $"kept {report.Kept.Count}, could not delete {report.Failed.Count}."));
         return report;
 
         bool Run(string key, Func<string> action)
@@ -442,7 +442,7 @@ public sealed class InstallerService(InstallLayout layout, Action<string> log)
             catch (Exception ex)
             {
                 report.Steps.Add(new(key, false, ex.Message));
-                log($"  {InstallSteps.Titles[key]}: BAŞARISIZ – {ex.GetType().Name}: {ex.Message}");
+                log(L.T($"  {InstallSteps.Titles[key]}: BAŞARISIZ – {ex.GetType().Name}: {ex.Message}", $"  {InstallSteps.Titles[key]}: FAILED – {ex.GetType().Name}: {ex.Message}"));
                 return false;
             }
         }
@@ -465,7 +465,7 @@ public sealed class InstallerService(InstallLayout layout, Action<string> log)
                 // Kaldırıcı kurulu EXE'nin kendisinden çalışıyor (geçici kopya hazırlanamadıysa): çalışan EXE silinemez, taşınması da
                 // güvenli değildir (tek dosya .NET, derlemeleri sonradan dosya yolundan okur; taşınan işlem çöker – denendi).
                 // Windows'un yeniden başlatmada silmesi için işaretlenir.
-                if (!ScheduleDelete(exe, report)) throw new IOException("Program dosyası kullanımda ve silinemedi.");
+                if (!ScheduleDelete(exe, report)) throw new IOException(L.T("Program dosyası kullanımda ve silinemedi.", "The program file is in use and could not be deleted."));
                 exeScheduledInPlace = true;
             }
             else
@@ -486,17 +486,17 @@ public sealed class InstallerService(InstallLayout layout, Action<string> log)
             else if (left.All(e => report.PendingReboot.Contains(e)))
             {
                 ScheduleDelete(layout.InstallDir, report);
-                notes.Add("program klasörü yeniden başlatınca silinecek");
+                notes.Add(L.T("program klasörü yeniden başlatınca silinecek", "the program folder will be deleted after restart"));
             }
             else
             {
                 var foreign = left.Where(e => !report.PendingReboot.Contains(e)).ToList();
                 report.Kept.AddRange(foreign);
-                notes.Add($"klasörde bu uygulamaya ait olmayan {foreign.Count} öğe olduğu için klasör bırakıldı");
+                notes.Add(L.T($"klasörde bu uygulamaya ait olmayan {foreign.Count} öğe olduğu için klasör bırakıldı", $"the folder was kept because it contains {foreign.Count} item(s) that do not belong to this app"));
             }
         }
-        if (exeScheduledInPlace) notes.Add("program dosyası yeniden başlatınca silinecek");
-        return notes.Count == 0 ? $"{layout.InstallDir} silindi" : $"{layout.InstallDir}: " + string.Join("; ", notes);
+        if (exeScheduledInPlace) notes.Add(L.T("program dosyası yeniden başlatınca silinecek", "the program file will be deleted after restart"));
+        return notes.Count == 0 ? L.T($"{layout.InstallDir} silindi", $"{layout.InstallDir} deleted") : $"{layout.InstallDir}: " + string.Join("; ", notes);
     }
 
     /// <summary>
@@ -569,8 +569,8 @@ public sealed class InstallerService(InstallLayout layout, Action<string> log)
         var staged = Path.Combine(dir, InstallLayout.ExeName);
         var hash = CopyWithHash(currentExe, staged, (_, _) => { });
         if (!string.Equals(hash, HashFile(staged), StringComparison.OrdinalIgnoreCase))
-            throw new IOException("Kaldırıcının geçici kopyası doğrulanamadı (SHA-256 farklı).");
-        log($"Kaldırıcının geçici kopyası hazırlandı: {staged} (SHA-256 {hash[..16]}…)");
+            throw new IOException(L.T("Kaldırıcının geçici kopyası doğrulanamadı (SHA-256 farklı).", "The uninstaller's temporary copy could not be verified (SHA-256 differs)."));
+        log(L.T($"Kaldırıcının geçici kopyası hazırlandı: {staged} (SHA-256 {hash[..16]}…)", $"The uninstaller's temporary copy is ready: {staged} (SHA-256 {hash[..16]}…)"));
         return staged;
     }
 
@@ -586,9 +586,10 @@ public sealed class InstallerService(InstallLayout layout, Action<string> log)
         psi.ArgumentList.Add(AdminPrivilegeManager.ArgElevated);
         psi.ArgumentList.Add(LaunchModes.ArgWaitPid);
         psi.ArgumentList.Add(Environment.ProcessId.ToString(System.Globalization.CultureInfo.InvariantCulture));
+        foreach (var a in LaunchModes.PreferenceArgs()) psi.ArgumentList.Add(a);
         psi.Environment["DOTNET_BUNDLE_EXTRACT_BASE_DIR"] = Path.Combine(dir, "runtime");
-        var process = Process.Start(psi) ?? throw new InvalidOperationException("Kaldırıcının geçici kopyası başlatılamadı.");
-        log($"Kaldırıcının geçici kopyası başlatıldı: PID {process.Id}");
+        var process = Process.Start(psi) ?? throw new InvalidOperationException(L.T("Kaldırıcının geçici kopyası başlatılamadı.", "The uninstaller's temporary copy could not be started."));
+        log(L.T($"Kaldırıcının geçici kopyası başlatıldı: PID {process.Id}", $"The uninstaller's temporary copy started: PID {process.Id}"));
         return process;
     }
 
@@ -637,10 +638,10 @@ public sealed class InstallerService(InstallLayout layout, Action<string> log)
     private static void CreateVerifiedShortcut(string shortcut, string exe)
     {
         Directory.CreateDirectory(Path.GetDirectoryName(shortcut)!);
-        ShellLink.Create(shortcut, exe, "Windows 11 güncelleme ve bakım merkezi");
+        ShellLink.Create(shortcut, exe, L.T("Windows 11 güncelleme ve bakım merkezi", "Windows 11 update and maintenance center"));
         var target = ShellLink.ReadTarget(shortcut);
         if (target is null || !SamePath(target, exe))
-            throw new IOException($"Kısayol oluşturuldu ama doğrulanamadı (hedef: {target ?? "okunamadı"}).");
+            throw new IOException(L.T($"Kısayol oluşturuldu ama doğrulanamadı (hedef: {target ?? "okunamadı"}).", $"The shortcut was created but could not be verified (target: {target ?? "unreadable"})."));
     }
 
     private void WriteUninstallKey(string exe, long size)
@@ -656,7 +657,7 @@ public sealed class InstallerService(InstallLayout layout, Action<string> log)
             key.SetValue("InstallLocation", layout.InstallDir);
             key.SetValue("UninstallString", uninstall);
             key.SetValue("URLInfoAbout", AppInfo.RepositoryUrl);
-            key.SetValue("Comments", "Windows 11 için güncelleme ve bakım merkezi");
+            key.SetValue("Comments", L.T("Windows 11 için güncelleme ve bakım merkezi", "Update and maintenance center for Windows 11"));
             key.SetValue("InstallDate", DateTime.Now.ToString("yyyyMMdd"));
             key.SetValue("EstimatedSize", (int)Math.Min(int.MaxValue, size / 1024), RegistryValueKind.DWord);
             key.SetValue("NoModify", 1, RegistryValueKind.DWord);
@@ -666,9 +667,9 @@ public sealed class InstallerService(InstallLayout layout, Action<string> log)
         // Doğrulama: anahtar yeniden açılıp okunur.
         using var verifyRoot = RegistryKey.OpenBaseKey(layout.Hive, RegistryView.Registry64);
         using var verify = verifyRoot.OpenSubKey(layout.UninstallKeyPath)
-            ?? throw new IOException("Kayıt yazıldı ama yeniden açılamadı.");
+            ?? throw new IOException(L.T("Kayıt yazıldı ama yeniden açılamadı.", "The entry was written but could not be reopened."));
         if (verify.GetValue("DisplayVersion") as string != AppInfo.Version || verify.GetValue("UninstallString") as string != uninstall)
-            throw new IOException("Kayıt değerleri doğrulanamadı.");
+            throw new IOException(L.T("Kayıt değerleri doğrulanamadı.", "The entry values could not be verified."));
     }
 
     private Dictionary<string, (object Value, RegistryValueKind Kind)>? SnapshotUninstallKey()
@@ -715,8 +716,8 @@ public sealed class InstallerService(InstallLayout layout, Action<string> log)
             return true;
         }
         var error = Marshal.GetLastWin32Error();
-        report.Failed.Add($"{path} (Windows hata {error}: {new System.ComponentModel.Win32Exception(error).Message})");
-        log($"Yeniden başlatmada silinmek üzere işaretlenemedi: {path} (hata {error})");
+        report.Failed.Add(L.T($"{path} (Windows hata {error}: {new System.ComponentModel.Win32Exception(error).Message})", $"{path} (Windows error {error}: {new System.ComponentModel.Win32Exception(error).Message})"));
+        log(L.T($"Yeniden başlatmada silinmek üzere işaretlenemedi: {path} (hata {error})", $"Could not mark for deletion at restart: {path} (error {error})"));
         return false;
     }
 

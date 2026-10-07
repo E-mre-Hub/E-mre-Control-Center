@@ -12,7 +12,7 @@ public sealed record PrivacySetting(string Title, string Value, CheckState State
 /// <summary>Kamera / mikrofon / konuma son erişen uygulama (Windows'un kendi kullanım kaydı).</summary>
 public sealed record CapabilityUse(string Capability, string App, DateTime? LastStart, DateTime? LastStop, bool InUse)
 {
-    public string LastText => InUse ? "Şu anda kullanıyor" : Formats.Date(LastStop ?? LastStart);
+    public string LastText => InUse ? L.T("Şu anda kullanıyor", "In use right now") : Formats.Date(LastStop ?? LastStart);
 }
 
 public sealed record PrivacyReport(IReadOnlyList<PrivacySetting> Settings, IReadOnlyList<CapabilityUse> RecentUses, string? Error);
@@ -28,17 +28,17 @@ public sealed class PrivacyService(Logger logger)
 
     private static readonly (string Cap, string Title, string Policy, string Uri)[] Capabilities =
     [
-        ("location", "Konum", "LetAppsAccessLocation", "ms-settings:privacy-location"),
-        ("webcam", "Kamera", "LetAppsAccessCamera", "ms-settings:privacy-webcam"),
-        ("microphone", "Mikrofon", "LetAppsAccessMicrophone", "ms-settings:privacy-microphone"),
-        ("contacts", "Kişiler", "LetAppsAccessContacts", "ms-settings:privacy-contacts"),
-        ("appointments", "Takvim", "LetAppsAccessCalendar", "ms-settings:privacy-calendar"),
-        ("userAccountInformation", "Hesap bilgileri", "LetAppsAccessAccountInfo", "ms-settings:privacy-accountinfo"),
-        ("userNotificationListener", "Bildirimler", "LetAppsAccessNotifications", "ms-settings:privacy-notifications"),
-        ("documentsLibrary", "Belgeler", "", "ms-settings:privacy-documents"),
-        ("picturesLibrary", "Resimler", "", "ms-settings:privacy-pictures"),
-        ("broadFileSystemAccess", "Dosya sistemi", "", "ms-settings:privacy-broadfilesystemaccess"),
-        ("radios", "Radyolar (Bluetooth / Wi-Fi denetimi)", "LetAppsAccessRadios", "ms-settings:privacy-radios")
+        ("location", L.T("Konum", "Location"), "LetAppsAccessLocation", "ms-settings:privacy-location"),
+        ("webcam", L.T("Kamera", "Camera"), "LetAppsAccessCamera", "ms-settings:privacy-webcam"),
+        ("microphone", L.T("Mikrofon", "Microphone"), "LetAppsAccessMicrophone", "ms-settings:privacy-microphone"),
+        ("contacts", L.T("Kişiler", "Contacts"), "LetAppsAccessContacts", "ms-settings:privacy-contacts"),
+        ("appointments", L.T("Takvim", "Calendar"), "LetAppsAccessCalendar", "ms-settings:privacy-calendar"),
+        ("userAccountInformation", L.T("Hesap bilgileri", "Account info"), "LetAppsAccessAccountInfo", "ms-settings:privacy-accountinfo"),
+        ("userNotificationListener", L.T("Bildirimler", "Notifications"), "LetAppsAccessNotifications", "ms-settings:privacy-notifications"),
+        ("documentsLibrary", L.T("Belgeler", "Documents"), "", "ms-settings:privacy-documents"),
+        ("picturesLibrary", L.T("Resimler", "Pictures"), "", "ms-settings:privacy-pictures"),
+        ("broadFileSystemAccess", L.T("Dosya sistemi", "File system"), "", "ms-settings:privacy-broadfilesystemaccess"),
+        ("radios", L.T("Radyolar (Bluetooth / Wi-Fi denetimi)", "Radios (Bluetooth / Wi-Fi control)"), "LetAppsAccessRadios", "ms-settings:privacy-radios")
     ];
 
     public Task<PrivacyReport> ReadAsync(CancellationToken ct = default) => Task.Run(() =>
@@ -51,21 +51,21 @@ public sealed class PrivacyService(Logger logger)
                 settings.Add(ReadCapability(cap, title, policy, uri));
             settings.Add(ReadTelemetry());
             settings.Add(ReadDword(Registry.CurrentUser, @"Software\Microsoft\Windows\CurrentVersion\AdvertisingInfo", "Enabled",
-                "Reklam kimliği", on: "Açık (uygulamalar kişiselleştirilmiş reklam için kullanabilir)", off: "Kapalı", "ms-settings:privacy-general", onIsWarning: true));
+                L.T("Reklam kimliği", "Advertising ID"), on: L.T("Açık (uygulamalar kişiselleştirilmiş reklam için kullanabilir)", "On (apps can use it for personalized ads)"), off: L.T("Kapalı", "Off"), "ms-settings:privacy-general", onIsWarning: true));
             settings.Add(ReadDword(Registry.CurrentUser, @"Software\Microsoft\Windows\CurrentVersion\Privacy", "TailoredExperiencesWithDiagnosticDataEnabled",
-                "Özel deneyimler (tanılama verisiyle)", on: "Açık", off: "Kapalı", "ms-settings:privacy-feedback", onIsWarning: false));
+                L.T("Özel deneyimler (tanılama verisiyle)", "Tailored experiences (with diagnostic data)"), on: L.T("Açık", "On"), off: L.T("Kapalı", "Off"), "ms-settings:privacy-feedback", onIsWarning: false));
             settings.Add(ReadDword(Registry.CurrentUser, @"Software\Microsoft\Speech_OneCore\Settings\OnlineSpeechPrivacy", "HasAccepted",
-                "Çevrimiçi konuşma tanıma", on: "Açık", off: "Kapalı", "ms-settings:privacy-speech", onIsWarning: false));
+                L.T("Çevrimiçi konuşma tanıma", "Online speech recognition"), on: L.T("Açık", "On"), off: L.T("Kapalı", "Off"), "ms-settings:privacy-speech", onIsWarning: false));
             var names = StorePackages.DisplayNamesByFamily();
-            foreach (var cap in new[] { ("webcam", "Kamera"), ("microphone", "Mikrofon"), ("location", "Konum") })
+            foreach (var cap in new[] { ("webcam", L.T("Kamera", "Camera")), ("microphone", L.T("Mikrofon", "Microphone")), ("location", L.T("Konum", "Location")) })
                 uses.AddRange(ReadUses(cap.Item1, cap.Item2, names));
         }
         catch (Exception ex) when (ex is System.Security.SecurityException or UnauthorizedAccessException or System.IO.IOException)
         {
-            return new PrivacyReport(settings, uses, "Gizlilik ayarları okunamadı: " + ex.Message);
+            return new PrivacyReport(settings, uses, L.T("Gizlilik ayarları okunamadı: ", "Could not read privacy settings: ") + ex.Message);
         }
         var recent = uses.OrderByDescending(u => u.InUse).ThenByDescending(u => u.LastStop ?? u.LastStart).Take(15).ToList();
-        logger.Info("Gizlilik ayarları okundu: " + string.Join(" | ", settings.Select(s => $"{s.Title}: {s.Value}")) + $"; son erişim kaydı {recent.Count}.");
+        logger.Info(L.T("Gizlilik ayarları okundu: ", "Privacy settings read: ") + string.Join(" | ", settings.Select(s => $"{s.Title}: {s.Value}")) + L.T($"; son erişim kaydı {recent.Count}.", $"; recent access records {recent.Count}."));
         return new PrivacyReport(settings, recent, null);
     }, ct);
 
@@ -78,13 +78,13 @@ public sealed class PrivacyService(Logger logger)
 
         string value;
         var state = CheckState.Info;
-        if (forced is 1) value = "İlkeyle her zaman izinli";
-        else if (forced is 2) value = "İlkeyle engelli";
-        else if (IsDeny(device)) value = "Bu cihazda kapalı";
-        else if (IsDeny(user)) value = "Uygulamalara kapalı";
-        else if (IsAllow(user) || IsAllow(device)) value = "Uygulamalara açık" + (desktop is null ? "" : IsAllow(desktop) ? " · masaüstü uygulamaları dahil" : " · masaüstü uygulamalarına kapalı");
-        else value = "Kayıt yok (Windows varsayılanı geçerli)";
-        var detail = forced is 1 or 2 ? "Kuruluş / grup ilkesi (AppPrivacy) bu izni zorluyor; Ayarlar'dan değiştirilemez." : null;
+        if (forced is 1) value = L.T("İlkeyle her zaman izinli", "Always allowed by policy");
+        else if (forced is 2) value = L.T("İlkeyle engelli", "Blocked by policy");
+        else if (IsDeny(device)) value = L.T("Bu cihazda kapalı", "Off on this device");
+        else if (IsDeny(user)) value = L.T("Uygulamalara kapalı", "Off for apps");
+        else if (IsAllow(user) || IsAllow(device)) value = L.T("Uygulamalara açık", "On for apps") + (desktop is null ? "" : IsAllow(desktop) ? L.T(" · masaüstü uygulamaları dahil", " · including desktop apps") : L.T(" · masaüstü uygulamalarına kapalı", " · off for desktop apps"));
+        else value = L.T("Kayıt yok (Windows varsayılanı geçerli)", "No entry (Windows default applies)");
+        var detail = forced is 1 or 2 ? L.T("Kuruluş / grup ilkesi (AppPrivacy) bu izni zorluyor; Ayarlar'dan değiştirilemez.", "An organization / group policy (AppPrivacy) enforces this permission; it cannot be changed in Settings.") : null;
         return new PrivacySetting(title, value, state, detail, uri);
 
         static bool IsDeny(string? v) => string.Equals(v, "Deny", StringComparison.OrdinalIgnoreCase);
@@ -98,15 +98,15 @@ public sealed class PrivacyService(Logger logger)
         var v = policy ?? setting;
         var text = v switch
         {
-            0 => "Güvenlik (yalnızca kurumsal sürümlerde; diğerlerinde Gerekli gibi davranır)",
-            1 => "Yalnızca gerekli tanılama verileri",
-            2 => "Gelişmiş (eski düzey)",
-            3 => "İsteğe bağlı tanılama verileri de gönderiliyor",
-            null => "Kayıt yok (Windows varsayılanı geçerli)",
-            _ => $"Bilinmeyen değer ({v})"
+            0 => L.T("Güvenlik (yalnızca kurumsal sürümlerde; diğerlerinde Gerekli gibi davranır)", "Security (Enterprise editions only; others behave like Required)"),
+            1 => L.T("Yalnızca gerekli tanılama verileri", "Required diagnostic data only"),
+            2 => L.T("Gelişmiş (eski düzey)", "Enhanced (legacy level)"),
+            3 => L.T("İsteğe bağlı tanılama verileri de gönderiliyor", "Optional diagnostic data is also sent"),
+            null => L.T("Kayıt yok (Windows varsayılanı geçerli)", "No entry (Windows default applies)"),
+            _ => L.T($"Bilinmeyen değer ({v})", $"Unknown value ({v})")
         };
-        return new PrivacySetting("Tanılama verileri", text, CheckState.Info,
-            policy is not null ? "Grup ilkesiyle ayarlanmış." : null, "ms-settings:privacy-feedback");
+        return new PrivacySetting(L.T("Tanılama verileri", "Diagnostic data"), text, CheckState.Info,
+            policy is not null ? L.T("Grup ilkesiyle ayarlanmış.", "Set by group policy.") : null, "ms-settings:privacy-feedback");
     }
 
     private static PrivacySetting ReadDword(RegistryKey root, string path, string name, string title, string on, string off, string uri, bool onIsWarning)
@@ -116,8 +116,8 @@ public sealed class PrivacyService(Logger logger)
         {
             1 => new PrivacySetting(title, on, onIsWarning ? CheckState.Warning : CheckState.Info, null, uri),
             0 => new PrivacySetting(title, off, CheckState.Info, null, uri),
-            null => new PrivacySetting(title, "Kayıt yok (Windows varsayılanı geçerli)", CheckState.Info, null, uri),
-            _ => new PrivacySetting(title, $"Bilinmeyen değer ({v})", CheckState.Unknown, null, uri)
+            null => new PrivacySetting(title, L.T("Kayıt yok (Windows varsayılanı geçerli)", "No entry (Windows default applies)"), CheckState.Info, null, uri),
+            _ => new PrivacySetting(title, L.T($"Bilinmeyen değer ({v})", $"Unknown value ({v})"), CheckState.Unknown, null, uri)
         };
     }
 

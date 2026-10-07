@@ -133,19 +133,19 @@ public sealed class DeviceMonitorService(Logger logger) : IDisposable
     private DeviceReading ReadCpuUsage()
     {
         if (!GetSystemTimes(out var idle, out var kernel, out var user))
-            return DeviceReading.Missing($"GetSystemTimes başarısız (Win32 hata {Marshal.GetLastWin32Error()})");
+            return DeviceReading.Missing(L.T($"GetSystemTimes başarısız (Win32 hata {Marshal.GetLastWin32Error()})", $"GetSystemTimes failed (Win32 error {Marshal.GetLastWin32Error()})"));
         if (!_hasPrev)
         {
             // İlk ölçüm: kısa aralıklı ikinci okuma ile gerçek fark alınır.
             (_prevIdle, _prevKernel, _prevUser, _hasPrev) = (idle, kernel, user, true);
             Thread.Sleep(300);
             if (!GetSystemTimes(out idle, out kernel, out user))
-                return DeviceReading.Missing($"GetSystemTimes başarısız (Win32 hata {Marshal.GetLastWin32Error()})");
+                return DeviceReading.Missing(L.T($"GetSystemTimes başarısız (Win32 hata {Marshal.GetLastWin32Error()})", $"GetSystemTimes failed (Win32 error {Marshal.GetLastWin32Error()})"));
         }
         var idleDelta = idle - _prevIdle;
         var totalDelta = kernel - _prevKernel + (user - _prevUser); // kernel süresi boşta süresini de içerir
         (_prevIdle, _prevKernel, _prevUser) = (idle, kernel, user);
-        if (totalDelta <= 0) return DeviceReading.Missing("Ölçüm aralığı çok kısa");
+        if (totalDelta <= 0) return DeviceReading.Missing(L.T("Ölçüm aralığı çok kısa", "Measurement interval too short"));
         return new DeviceReading(Math.Clamp(100.0 * (totalDelta - idleDelta) / totalDelta, 0, 100));
     }
 
@@ -155,7 +155,7 @@ public sealed class DeviceMonitorService(Logger logger) : IDisposable
     {
         var status = new MemoryStatusEx { Length = (uint)Marshal.SizeOf<MemoryStatusEx>() };
         if (!GlobalMemoryStatusEx(ref status) || status.TotalPhys == 0)
-            return (DeviceReading.Missing($"GlobalMemoryStatusEx başarısız (Win32 hata {Marshal.GetLastWin32Error()})"), 0, 0);
+            return (DeviceReading.Missing(L.T($"GlobalMemoryStatusEx başarısız (Win32 hata {Marshal.GetLastWin32Error()})", $"GlobalMemoryStatusEx failed (Win32 error {Marshal.GetLastWin32Error()})")), 0, 0);
         var used = status.TotalPhys - status.AvailPhys;
         return (new DeviceReading(100.0 * used / status.TotalPhys), used, status.TotalPhys);
     }
@@ -185,12 +185,12 @@ public sealed class DeviceMonitorService(Logger logger) : IDisposable
                 }
             }
             return max is null
-                ? DeviceReading.Missing("Windows bu cihazda ACPI termal bölge sıcaklığı bildirmiyor")
+                ? DeviceReading.Missing(L.T("Windows bu cihazda ACPI termal bölge sıcaklığı bildirmiyor", "Windows does not report an ACPI thermal zone temperature on this device"))
                 : new DeviceReading(max);
         }
         catch (Exception ex) when (ex is ManagementException or UnauthorizedAccessException or System.Runtime.InteropServices.COMException)
         {
-            return DeviceReading.Missing("Termal bölge sayacı okunamadı: " + ex.Message);
+            return DeviceReading.Missing(L.T("Termal bölge sayacı okunamadı: ", "Could not read the thermal zone counter: ") + ex.Message);
         }
     }
 
@@ -200,9 +200,9 @@ public sealed class DeviceMonitorService(Logger logger) : IDisposable
     {
         List<GpuInfo> adapters;
         try { adapters = SystemRequirementsChecker.GetGpus(); }
-        catch (Exception ex) { return ([], "Ekran kartı listesi okunamadı: " + ex.Message); }
+        catch (Exception ex) { return ([], L.T("Ekran kartı listesi okunamadı: ", "Could not read the graphics card list: ") + ex.Message); }
         if (!adapters.Any(g => g.IsNvidia))
-            return ([], "NVIDIA ekran kartı yok. Ekran kartı kullanımı ve sıcaklığı NVIDIA sürücüsünün NVML arayüzünden okunur.");
+            return ([], L.T("NVIDIA ekran kartı yok. Ekran kartı kullanımı ve sıcaklığı NVIDIA sürücüsünün NVML arayüzünden okunur.", "No NVIDIA graphics card. Graphics card usage and temperature are read from the NVML interface of the NVIDIA driver."));
 
         if (!_nvmlReady)
         {
@@ -212,20 +212,20 @@ public sealed class DeviceMonitorService(Logger logger) : IDisposable
                 var init = Nvml.Init();
                 if (init != 0)
                 {
-                    _nvmlError = $"NVIDIA NVML başlatılamadı ({NvmlError(init)})";
+                    _nvmlError = L.T($"NVIDIA NVML başlatılamadı ({NvmlError(init)})", $"NVIDIA NVML could not be initialized ({NvmlError(init)})");
                     return ([], _nvmlError);
                 }
                 _nvmlReady = true;
             }
             catch (Exception ex) when (ex is DllNotFoundException or EntryPointNotFoundException or BadImageFormatException)
             {
-                _nvmlError = "NVIDIA NVML kitaplığı (nvml.dll) bulunamadı veya yüklenemedi: " + ex.Message;
+                _nvmlError = L.T("NVIDIA NVML kitaplığı (nvml.dll) bulunamadı veya yüklenemedi: ", "The NVIDIA NVML library (nvml.dll) was not found or could not be loaded: ") + ex.Message;
                 return ([], _nvmlError);
             }
         }
 
         var countResult = Nvml.GetCount(out var count);
-        if (countResult != 0) return ([], $"NVML ekran kartı sayısını bildirmedi ({NvmlError(countResult)})");
+        if (countResult != 0) return ([], L.T($"NVML ekran kartı sayısını bildirmedi ({NvmlError(countResult)})", $"NVML did not report the number of graphics cards ({NvmlError(countResult)})"));
         var list = new List<GpuStatus>();
         for (uint i = 0; i < count; i++)
         {
@@ -243,36 +243,36 @@ public sealed class DeviceMonitorService(Logger logger) : IDisposable
                 Thread.Sleep(150);
                 usageResult = Nvml.GetUtilization(device, out utilization);
             }
-            var usage = usageResult == 0 ? new DeviceReading(utilization.Gpu) : DeviceReading.Missing($"Kullanım okunamadı ({NvmlError(usageResult)})");
+            var usage = usageResult == 0 ? new DeviceReading(utilization.Gpu) : DeviceReading.Missing(L.T($"Kullanım okunamadı ({NvmlError(usageResult)})", $"Could not read usage ({NvmlError(usageResult)})"));
             var tempResult = Nvml.GetTemperature(device, 0, out var temperature);
-            var temp = tempResult == 0 ? new DeviceReading(temperature) : DeviceReading.Missing($"Sıcaklık okunamadı ({NvmlError(tempResult)})");
+            var temp = tempResult == 0 ? new DeviceReading(temperature) : DeviceReading.Missing(L.T($"Sıcaklık okunamadı ({NvmlError(tempResult)})", $"Could not read temperature ({NvmlError(tempResult)})"));
             var memResult = Nvml.GetMemory(device, out var memory);
             var mem = memResult == 0 && memory.Total > 0
                 ? new DeviceReading(100.0 * memory.Used / memory.Total)
-                : DeviceReading.Missing($"Bellek okunamadı ({NvmlError(memResult)})");
+                : DeviceReading.Missing(L.T($"Bellek okunamadı ({NvmlError(memResult)})", $"Could not read memory ({NvmlError(memResult)})"));
             ulong? vramUsed = memResult == 0 && memory.Total > 0 ? memory.Used : null;
             ulong? vramTotal = memResult == 0 && memory.Total > 0 ? memory.Total : null;
             var fanResult = Nvml.GetFanSpeed(device, out var fan);
             var fanReading = fanResult == 0
                 ? new DeviceReading(fan)
-                : DeviceReading.Missing(fanResult == 3 ? "Bu ekran kartı fan hızını bildirmiyor" : $"Fan hızı okunamadı ({NvmlError(fanResult)})");
+                : DeviceReading.Missing(fanResult == 3 ? L.T("Bu ekran kartı fan hızını bildirmiyor", "This graphics card does not report fan speed") : L.T($"Fan hızı okunamadı ({NvmlError(fanResult)})", $"Could not read fan speed ({NvmlError(fanResult)})"));
             list.Add(new GpuStatus(name, usage, temp, mem, fanReading, vramUsed, vramTotal));
         }
-        return list.Count == 0 ? ([], "NVML hiçbir NVIDIA ekran kartı bildirmedi") : (list, null);
+        return list.Count == 0 ? ([], L.T("NVML hiçbir NVIDIA ekran kartı bildirmedi", "NVML reported no NVIDIA graphics card")) : (list, null);
     }
 
     private static string NvmlError(int code) => code switch
     {
-        1 => "NVML başlatılmadı",
-        2 => "geçersiz bağımsız değişken",
-        3 => "bu kartta desteklenmiyor",
-        4 => "izin yok",
-        6 => "bulunamadı",
-        9 => "NVIDIA sürücüsü yüklü değil",
-        12 => "NVML kitaplığı bulunamadı",
-        15 => "ekran kartına erişilemiyor",
-        999 => "NVML bilinmeyen hata (999)",
-        _ => $"NVML hata kodu {code}"
+        1 => L.T("NVML başlatılmadı", "NVML not initialized"),
+        2 => L.T("geçersiz bağımsız değişken", "invalid argument"),
+        3 => L.T("bu kartta desteklenmiyor", "not supported on this card"),
+        4 => L.T("izin yok", "no permission"),
+        6 => L.T("bulunamadı", "not found"),
+        9 => L.T("NVIDIA sürücüsü yüklü değil", "NVIDIA driver not installed"),
+        12 => L.T("NVML kitaplığı bulunamadı", "NVML library not found"),
+        15 => L.T("ekran kartına erişilemiyor", "graphics card not accessible"),
+        999 => L.T("NVML bilinmeyen hata (999)", "NVML unknown error (999)"),
+        _ => L.T($"NVML hata kodu {code}", $"NVML error code {code}")
     };
 
     // ------------------------------------------------------------------ Disk etkinliği ve ağ aktarımı (Performans)
@@ -301,12 +301,12 @@ public sealed class DeviceMonitorService(Logger logger) : IDisposable
                     write.NextValue();
                     _diskCounters.Add((id, instance, idle, read, write));
                 }
-                if (_diskCounters.Count == 0) _diskCounterError = "Windows fiziksel disk performans sayacı bildirmedi";
+                if (_diskCounters.Count == 0) _diskCounterError = L.T("Windows fiziksel disk performans sayacı bildirmedi", "Windows did not report physical disk performance counters");
             }
             catch (Exception ex) when (ex is InvalidOperationException or System.ComponentModel.Win32Exception or UnauthorizedAccessException or FormatException)
             {
                 DisposeDiskCounters();
-                _diskCounterError = "Disk performans sayaçları okunamadı: " + ex.Message;
+                _diskCounterError = L.T("Disk performans sayaçları okunamadı: ", "Could not read disk performance counters: ") + ex.Message;
             }
         }
         if (_netPrev is null)
@@ -333,7 +333,7 @@ public sealed class DeviceMonitorService(Logger logger) : IDisposable
         {
             // Disk takıldı / çıkarıldı: sayaçlar bir sonraki ölçümde yeniden oluşturulur.
             DisposeDiskCounters();
-            return ([], "Disk listesi değişti; sayaçlar yeniden oluşturuluyor (" + ex.Message + ")");
+            return ([], L.T("Disk listesi değişti; sayaçlar yeniden oluşturuluyor (", "The disk list changed; recreating the counters (") + ex.Message + ")");
         }
         return (list, null);
     }
@@ -357,10 +357,10 @@ public sealed class DeviceMonitorService(Logger logger) : IDisposable
         var prev = _netPrev;
         _netPrev = (rx, tx, now);
         if (names.Length == 0)
-            return new NetworkThroughput(DeviceReading.Missing("Bağlı ağ bağdaştırıcısı yok"), DeviceReading.Missing("Bağlı ağ bağdaştırıcısı yok"), string.Empty);
+            return new NetworkThroughput(DeviceReading.Missing(L.T("Bağlı ağ bağdaştırıcısı yok", "No connected network adapter")), DeviceReading.Missing(L.T("Bağlı ağ bağdaştırıcısı yok", "No connected network adapter")), string.Empty);
         var seconds = prev is null ? 0 : (now - prev.Value.Time).TotalSeconds;
         if (seconds <= 0.05 || rx < prev!.Value.Received || tx < prev.Value.Sent)
-            return new NetworkThroughput(DeviceReading.Missing("Ölçülüyor"), DeviceReading.Missing("Ölçülüyor"), names);
+            return new NetworkThroughput(DeviceReading.Missing(L.T("Ölçülüyor", "Measuring")), DeviceReading.Missing(L.T("Ölçülüyor", "Measuring")), names);
         return new NetworkThroughput(new DeviceReading((rx - prev.Value.Received) / seconds), new DeviceReading((tx - prev.Value.Sent) / seconds), names);
     }
 
@@ -397,21 +397,21 @@ public sealed class DeviceMonitorService(Logger logger) : IDisposable
         var timeout = TimeSpan.FromSeconds(10);
         var (physical, rawDisks) = StorageInfo.ReadPhysicalDisks(timeout);
         if (!rawDisks.Ok)
-            return ([], rawDisks.AccessDenied ? "Disk sıcaklığı yönetici yetkisi gerektirir" : "Disk sıcaklığı okunamadı: " + rawDisks.Error);
-        if (physical.Count == 0) return ([], "Windows fiziksel disk bildirmedi");
+            return ([], rawDisks.AccessDenied ? L.T("Disk sıcaklığı yönetici yetkisi gerektirir", "Disk temperature requires administrator rights") : L.T("Disk sıcaklığı okunamadı: ", "Could not read disk temperature: ") + rawDisks.Error);
+        if (physical.Count == 0) return ([], L.T("Windows fiziksel disk bildirmedi", "Windows did not report a physical disk"));
 
         var (counters, rawCounters) = StorageInfo.ReadReliability(timeout);
         if (!rawCounters.Ok)
         {
             // Disk adları yine gösterilir (Performans ekranında etkinlik satırları); sıcaklık gerçek nedenle "okunamıyor".
-            var note = rawCounters.AccessDenied ? "Disk sıcaklığı yönetici yetkisi gerektirir" : "Disk sıcaklığı okunamadı: " + rawCounters.Error;
+            var note = rawCounters.AccessDenied ? L.T("Disk sıcaklığı yönetici yetkisi gerektirir", "Disk temperature requires administrator rights") : L.T("Disk sıcaklığı okunamadı: ", "Could not read disk temperature: ") + rawCounters.Error;
             return (physical.Select(d => new DiskStatus(d.DeviceId, d.Name, DeviceReading.Missing(note))).ToList(), note);
         }
 
         var byId = counters.ToDictionary(c => c.DeviceId, StringComparer.OrdinalIgnoreCase);
         var disks = physical.Select(d => byId.TryGetValue(d.DeviceId, out var c)
-                ? new DiskStatus(d.DeviceId, d.Name, c.Temperature is { } t ? new DeviceReading(t) : DeviceReading.Missing("Sürücü sıcaklık bildirmedi"))
-                : new DiskStatus(d.DeviceId, d.Name, DeviceReading.Missing("Sürücü güvenilirlik sayacı bildirmedi")))
+                ? new DiskStatus(d.DeviceId, d.Name, c.Temperature is { } t ? new DeviceReading(t) : DeviceReading.Missing(L.T("Sürücü sıcaklık bildirmedi", "The drive did not report a temperature")))
+                : new DiskStatus(d.DeviceId, d.Name, DeviceReading.Missing(L.T("Sürücü güvenilirlik sayacı bildirmedi", "The drive did not report a reliability counter"))))
             .ToList();
         return (disks, null);
     }
@@ -449,7 +449,7 @@ public sealed class DeviceMonitorService(Logger logger) : IDisposable
         ];
         foreach (var note in notes.OfType<string>())
             if (_loggedNotes.Add(note))
-                logger.Info("Cihaz Durumu: " + note);
+                logger.Info(L.T("Cihaz Durumu: ", "Device Status: ") + note);
     }
 
     // ------------------------------------------------------------------ Win32 / NVML

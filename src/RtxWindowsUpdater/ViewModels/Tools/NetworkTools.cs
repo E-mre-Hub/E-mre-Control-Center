@@ -19,7 +19,7 @@ public sealed class NetworkViewModel : ToolViewModel
     private readonly NetworkDiagnosticsService _service;
     private readonly NetworkState _state;
     private bool _showInactive;
-    private string _testStatus = "Testler henüz çalıştırılmadı. Testler gerçek ağ trafiği kullanır (yaklaşık 40 ping, 3 DNS sorgusu, 2 HTTPS isteği).";
+    private string _testStatus = L.T("Testler henüz çalıştırılmadı. Testler gerçek ağ trafiği kullanır (yaklaşık 40 ping, 3 DNS sorgusu, 2 HTTPS isteği).", "The tests have not run yet. The tests use real network traffic (about 40 pings, 3 DNS queries, 2 HTTPS requests).");
 
     public NetworkViewModel(IToolHost host, NetworkState state) : base(host)
     {
@@ -32,7 +32,7 @@ public sealed class NetworkViewModel : ToolViewModel
     public ObservableCollection<CheckRowViewModel> Tests { get; } = [];
     public ICommand RunTestsCommand { get; }
     public string ConnectivityText => _state.Snapshot?.ConnectivityText ?? "—";
-    public string ProfileText => _state.Snapshot?.ProfileName is { } p ? "Bağlantı profili: " + p : string.Empty;
+    public string ProfileText => _state.Snapshot?.ProfileName is { } p ? L.T("Bağlantı profili: ", "Connection profile: ") + p : string.Empty;
     public string WifiText
     {
         get
@@ -41,10 +41,10 @@ public sealed class NetworkViewModel : ToolViewModel
             if (w is null) return string.Empty;
             if (w.Error is not null) return w.Error;
             var parts = new List<string>();
-            if (w.Ssid is not null) parts.Add("Ağ: " + w.Ssid);
-            if (w.SignalPercent is not null) parts.Add("Sinyal: " + w.SignalText);
+            if (w.Ssid is not null) parts.Add(L.T("Ağ: ", "Network: ") + w.Ssid);
+            if (w.SignalPercent is not null) parts.Add(L.T("Sinyal: ", "Signal: ") + w.SignalText);
             if (w.PhyType is not null) parts.Add(w.PhyType);
-            if (w.RxMbps is not null) parts.Add($"Alma {w.RxMbps} Mbps / Gönderme {w.TxMbps} Mbps");
+            if (w.RxMbps is not null) parts.Add(L.T($"Alma {w.RxMbps} Mbps / Gönderme {w.TxMbps} Mbps", $"Receive {w.RxMbps} Mbps / Send {w.TxMbps} Mbps"));
             return string.Join(" · ", parts);
         }
     }
@@ -56,16 +56,16 @@ public sealed class NetworkViewModel : ToolViewModel
 
     protected override async Task LoadAsync(CancellationToken ct)
     {
-        StatusText = "Ağ bağdaştırıcıları okunuyor…";
+        StatusText = L.T("Ağ bağdaştırıcıları okunuyor…", "Reading network adapters…");
         var snap = await Task.Run(() => _service.ReadAsync(ct), ct);
         _state.Snapshot = snap;
-        if (snap.Error is not null) ErrorText = "Ağ bilgisi alınamadı. " + snap.Error;
+        if (snap.Error is not null) ErrorText = L.T("Ağ bilgisi alınamadı. ", "Network information unavailable. ") + snap.Error;
         ApplyAdapters();
         OnPropertyChanged(nameof(ConnectivityText));
         OnPropertyChanged(nameof(ProfileText));
         OnPropertyChanged(nameof(WifiText));
         OnPropertyChanged(nameof(HasWifi));
-        StatusText = snap.Primary is null ? "Etkin ağ bağlantısı yok" : $"Birincil bağlantı: {snap.Primary.Name} ({snap.Primary.TypeText}, {snap.Primary.SpeedText})";
+        StatusText = snap.Primary is null ? L.T("Etkin ağ bağlantısı yok", "No active network connection") : L.T($"Birincil bağlantı: {snap.Primary.Name} ({snap.Primary.TypeText}, {snap.Primary.SpeedText})", $"Primary connection: {snap.Primary.Name} ({snap.Primary.TypeText}, {snap.Primary.SpeedText})");
         if (_state.Tests is { } previous) ShowTests(previous);
     }
 
@@ -85,11 +85,11 @@ public sealed class NetworkViewModel : ToolViewModel
         _state.Tests = tests;
         ShowTests(tests);
         var worst = CheckStates.Worst(tests.Select(t => t.State));
-        TestStatus = $"{tests.Count} test tamamlandı · {sw.Elapsed.TotalSeconds:0.0} sn · {DateTime.Now:HH:mm:ss}";
-        var summary = worst == CheckState.Healthy ? "Bağlı · " + (tests.FirstOrDefault(t => t.LatencyMs is not null && t.Title.StartsWith("İnternet", StringComparison.Ordinal))?.Summary ?? "")
+        TestStatus = L.T($"{tests.Count} test tamamlandı · {sw.Elapsed.TotalSeconds:0.0} sn · {DateTime.Now:HH:mm:ss}", $"{tests.Count} tests completed · {sw.Elapsed.TotalSeconds:0.0} sec · {DateTime.Now:HH:mm:ss}");
+        var summary = worst == CheckState.Healthy ? L.T("Bağlı · ", "Connected · ") + (tests.FirstOrDefault(t => t.LatencyMs is not null && t.Title.StartsWith(L.T("İnternet", "Internet"), StringComparison.Ordinal))?.Summary ?? "")
             : string.Join(" · ", tests.Where(t => t.State is CheckState.Warning or CheckState.Error).Select(t => $"{t.Title}: {t.Summary}"));
-        Host.ReportDiagnostic("network", new CheckResult("Ağ", worst, summary, null, Nav.SpeedTest, Nav.Network));
-        Host.RecordToolOperation("Ağ bağlantı testi", worst, summary, sw.Elapsed,
+        Host.ReportDiagnostic("network", new CheckResult(L.T("Ağ", "Network"), worst, summary, null, Nav.SpeedTest, Nav.Network));
+        Host.RecordToolOperation(L.T("Ağ bağlantı testi", "Network connection test"), worst, summary, sw.Elapsed,
             worst == CheckState.Error ? string.Join("; ", tests.Where(t => t.State == CheckState.Error).Select(t => $"{t.Title}: {t.Detail ?? t.Summary}")) : null);
     }
 
@@ -107,14 +107,14 @@ public sealed class DnsViewModel : ToolViewModel
     private readonly DnsDiagnosticsService _service;
     private readonly NetworkDiagnosticsService _network;
     private readonly NetworkState _state;
-    private string _overall = "DNS testi henüz çalıştırılmadı.";
+    private string _overall = L.T("DNS testi henüz çalıştırılmadı.", "The DNS test has not run yet.");
 
     public DnsViewModel(IToolHost host, NetworkState state) : base(host)
     {
         _service = new DnsDiagnosticsService(host.Logger);
         _network = new NetworkDiagnosticsService(host.Logger);
         _state = state;
-        StatusText = "Test, yapılandırılmış her DNS sunucusuna doğrudan sorgu gönderir (sunucu başına 6 sorgu).";
+        StatusText = L.T("Test, yapılandırılmış her DNS sunucusuna doğrudan sorgu gönderir (sunucu başına 6 sorgu).", "The test sends queries directly to each configured DNS server (6 queries per server).");
     }
 
     public ObservableCollection<DnsServerResult> Servers { get; } = [];
@@ -132,18 +132,18 @@ public sealed class DnsViewModel : ToolViewModel
     protected override async Task LoadAsync(CancellationToken ct)
     {
         var sw = Start();
-        StatusText = "Ağ bağdaştırıcıları okunuyor…";
+        StatusText = L.T("Ağ bağdaştırıcıları okunuyor…", "Reading network adapters…");
         var snap = await Task.Run(() => _network.ReadAsync(ct), ct);
         _state.Snapshot = snap;
         var progress = new Progress<string>(t => StatusText = t);
         var report = await Task.Run(() => _service.RunAsync(snap.Adapters, progress, ct), ct);
         _state.Dns = report;
         Show(report);
-        StatusText = $"Test tamamlandı · {sw.Elapsed.TotalSeconds:0.0} sn · {DateTime.Now:HH:mm:ss}";
+        StatusText = L.T($"Test tamamlandı · {sw.Elapsed.TotalSeconds:0.0} sn · {DateTime.Now:HH:mm:ss}", $"Test completed · {sw.Elapsed.TotalSeconds:0.0} sec · {DateTime.Now:HH:mm:ss}");
         var tested = report.Servers.Where(s => !s.Placeholder).ToList();
         var summary = report.Error ?? string.Join(" · ", tested.Select(s => $"{s.ServerText}: {s.ResultText}, {s.TimeText}"));
         Host.ReportDiagnostic("dns", new CheckResult("DNS", report.Error is not null ? CheckState.Skipped : report.Overall, summary, null, Nav.SpeedTest, Nav.Dns));
-        Host.RecordToolOperation("DNS testi", report.Error is not null ? CheckState.Skipped : report.Overall, summary, sw.Elapsed,
+        Host.RecordToolOperation(L.T("DNS testi", "DNS test"), report.Error is not null ? CheckState.Skipped : report.Overall, summary, sw.Elapsed,
             report.Overall == CheckState.Error ? string.Join("; ", tested.SelectMany(s => s.Failures)) : report.Error);
     }
 
@@ -151,9 +151,9 @@ public sealed class DnsViewModel : ToolViewModel
     {
         Servers.Clear();
         foreach (var s in report.Servers) Servers.Add(s);
-        if (report.Error is not null) ErrorText = "DNS bilgisi alınamadı. " + report.Error;
+        if (report.Error is not null) ErrorText = L.T("DNS bilgisi alınamadı. ", "DNS information unavailable. ") + report.Error;
         var tested = report.Servers.Where(s => !s.Placeholder).ToList();
-        OverallText = report.Error ?? (tested.Count == 0 ? "Test edilebilir DNS sunucusu yok"
-            : $"{tested.Count(s => s.State == CheckState.Healthy)} / {tested.Count} sunucu sağlıklı · IPv4: {tested.Count(s => s.Family == "IPv4")}, IPv6: {tested.Count(s => s.Family == "IPv6")}");
+        OverallText = report.Error ?? (tested.Count == 0 ? L.T("Test edilebilir DNS sunucusu yok", "No DNS server that can be tested")
+            : L.T($"{tested.Count(s => s.State == CheckState.Healthy)} / {tested.Count} sunucu sağlıklı · IPv4: {tested.Count(s => s.Family == "IPv4")}, IPv6: {tested.Count(s => s.Family == "IPv6")}", $"{tested.Count(s => s.State == CheckState.Healthy)} / {tested.Count} servers healthy · IPv4: {tested.Count(s => s.Family == "IPv4")}, IPv6: {tested.Count(s => s.Family == "IPv6")}"));
     }
 }

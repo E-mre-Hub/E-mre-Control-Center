@@ -46,7 +46,7 @@ public sealed class PackageResultViewModel
 /// </summary>
 public sealed class DetailViewModel : ObservableObject
 {
-    public const string NotAvailable = "Bilgi alınamadı";
+    public static string NotAvailable => L.T("Bilgi alınamadı", "Information unavailable");
 
     private bool _isOpen;
     private string _title = string.Empty;
@@ -91,7 +91,7 @@ public sealed class DetailViewModel : ObservableObject
     public bool HasItems => Items.Count > 0;
     public bool HasPackageResults => PackageResults.Count > 0;
     public string PackageResultsTitle { get => _packageResultsTitle; private set => Set(ref _packageResultsTitle, value); }
-    private string _packageResultsTitle = "PAKET BAZLI SONUÇLAR";
+    private string _packageResultsTitle = L.T("PAKET BAZLI SONUÇLAR", "PER-PACKAGE RESULTS");
 
     public ICommand CloseCommand { get; }
 
@@ -103,7 +103,7 @@ public sealed class DetailViewModel : ObservableObject
         Notes.Clear();
         Items.Clear();
         PackageResults.Clear();
-        PackageResultsTitle = card.Key == ComponentKeys.Dism ? "ONARIM SONUCU" : "PAKET BAZLI SONUÇLAR";
+        PackageResultsTitle = card.Key == ComponentKeys.Dism ? L.T("ONARIM SONUCU", "REPAIR RESULT") : L.T("PAKET BAZLI SONUÇLAR", "PER-PACKAGE RESULTS");
 
         var s = card.LastSnapshot;
         HasData = s is not null;
@@ -112,7 +112,7 @@ public sealed class DetailViewModel : ObservableObject
             Status = card.Status;
             StatusText = card.Summary;
             OperationText = CompletedText = DurationText = ActionableText = string.Empty;
-            SourceText = "Bu kart henüz hiç çalıştırılmadı; gösterilecek gerçek sonuç yok.";
+            SourceText = L.T("Bu kart henüz hiç çalıştırılmadı; gösterilecek gerçek sonuç yok.", "This card has never been run yet; there is no real result to show.");
             Details = string.Empty;
             Reason = null;
         }
@@ -122,31 +122,31 @@ public sealed class DetailViewModel : ObservableObject
             StatusText = s.Summary;
             OperationText = s.Operation switch
             {
-                OperationKind.Check => card.Key is ComponentKeys.Sfc ? "Doğrulama taraması (sfc /verifyonly)" :
-                                       card.Key is ComponentKeys.Mrt ? "Hızlı tarama (yalnızca tespit)" : "Kontrol",
+                OperationKind.Check => card.Key is ComponentKeys.Sfc ? L.T("Doğrulama taraması (sfc /verifyonly)", "Verification scan (sfc /verifyonly)") :
+                                       card.Key is ComponentKeys.Mrt ? L.T("Hızlı tarama (yalnızca tespit)", "Quick scan (detection only)") : L.T("Kontrol", "Check"),
                 OperationKind.Update => card.Key switch
                 {
-                    ComponentKeys.RecycleBin or ComponentKeys.TempFiles => "Temizlik",
-                    ComponentKeys.Dism => "Onarım (DISM /RestoreHealth) ve doğrulama",
-                    ComponentKeys.Sfc => "Tarama ve onarım (sfc /scannow)",
-                    ComponentKeys.Mrt => "Hızlı tarama (temizleme)",
-                    _ => "Güncelleme"
+                    ComponentKeys.RecycleBin or ComponentKeys.TempFiles => L.T("Temizlik", "Cleanup"),
+                    ComponentKeys.Dism => L.T("Onarım (DISM /RestoreHealth) ve doğrulama", "Repair (DISM /RestoreHealth) and verification"),
+                    ComponentKeys.Sfc => L.T("Tarama ve onarım (sfc /scannow)", "Scan and repair (sfc /scannow)"),
+                    ComponentKeys.Mrt => L.T("Hızlı tarama (temizleme)", "Quick scan (removal)"),
+                    _ => L.T("Güncelleme", "Update")
                 },
                 _ => card.Key switch
                 {
-                    ComponentKeys.Sfc => "Tarama ve onarım (sfc /scannow)",
-                    ComponentKeys.Dism => "Sağlık kontrolü (CheckHealth)",
-                    ComponentKeys.Mrt => "Hızlı tarama (yalnızca tespit)",
-                    _ => "Kart işlemi"
+                    ComponentKeys.Sfc => L.T("Tarama ve onarım (sfc /scannow)", "Scan and repair (sfc /scannow)"),
+                    ComponentKeys.Dism => L.T("Sağlık kontrolü (CheckHealth)", "Health check (CheckHealth)"),
+                    ComponentKeys.Mrt => L.T("Hızlı tarama (yalnızca tespit)", "Quick scan (detection only)"),
+                    _ => L.T("Kart işlemi", "Card operation")
                 }
             };
-            CompletedText = s.CompletedAt.ToString("dd.MM.yyyy HH:mm:ss");
+            CompletedText = s.CompletedAt.ToString(L.T("dd.MM.yyyy HH:mm:ss", "yyyy-MM-dd HH:mm:ss"));
             DurationText = s.DurationMs > 0
                 ? UpdateOrchestrator.FormatDuration(TimeSpan.FromMilliseconds(s.DurationMs))
                 : NotAvailable;
             SourceText = card.IsSnapshotFromHistory
-                ? "Önceki oturumdan kaydedilen gerçek sonuç (bu oturumda henüz çalıştırılmadı)."
-                : "Bu oturumdaki son gerçek sonuç.";
+                ? L.T("Önceki oturumdan kaydedilen gerçek sonuç (bu oturumda henüz çalıştırılmadı).", "Real result saved from the previous session (not run in this session yet).")
+                : L.T("Bu oturumdaki son gerçek sonuç.", "The latest real result in this session.");
             ActionableText = s.ActionableCount > 0 ? s.ActionableCount.ToString() : "0";
             Details = s.Details;
             Reason = s.Reason;
@@ -159,11 +159,11 @@ public sealed class DetailViewModel : ObservableObject
                     ExitCodeKnown = c.ExitCode is not null,
                     ExitCodeText = c.ExitCode is { } code
                         ? $"{code} (0x{unchecked((uint)code):X8})"
-                        : NotAvailable + (c.StartError is not null ? $" – başlatılamadı: {c.StartError}"
-                                          : c.TimedOut ? " – zaman aşımı" : c.Cancelled ? " – iptal edildi" : string.Empty),
+                        : NotAvailable + (c.StartError is not null ? L.T($" – başlatılamadı: {c.StartError}", $" – could not start: {c.StartError}")
+                                          : c.TimedOut ? L.T(" – zaman aşımı", " – timed out") : c.Cancelled ? L.T(" – iptal edildi", " – cancelled") : string.Empty),
                     DurationText = UpdateOrchestrator.FormatDuration(TimeSpan.FromMilliseconds(c.DurationMs)),
                     StartedText = c.StartedAt.ToString("HH:mm:ss"),
-                    Output = string.IsNullOrWhiteSpace(c.StdOut) ? "(standart çıktı boş)" : c.StdOut,
+                    Output = string.IsNullOrWhiteSpace(c.StdOut) ? L.T("(standart çıktı boş)", "(standard output empty)") : c.StdOut,
                     Error = c.StdErr
                 });
             }
@@ -201,14 +201,14 @@ public sealed class DetailViewModel : ObservableObject
     {
         var (label, status) = i.Outcome switch
         {
-            ItemOutcome.Updated => ("Başarılı", ComponentStatus.Updated),
-            ItemOutcome.UpdatedReboot => ("Başarılı – yeniden başlatma gerekli", ComponentStatus.RebootRequired),
-            ItemOutcome.Unverified => ("Doğrulanamadı", ComponentStatus.PartiallyUpdated),
-            _ => ("Başarısız", ComponentStatus.Failed)
+            ItemOutcome.Updated => (L.T("Başarılı", "Succeeded"), ComponentStatus.Updated),
+            ItemOutcome.UpdatedReboot => (L.T("Başarılı – yeniden başlatma gerekli", "Succeeded – restart required"), ComponentStatus.RebootRequired),
+            ItemOutcome.Unverified => (L.T("Doğrulanamadı", "Could not be verified"), ComponentStatus.PartiallyUpdated),
+            _ => (L.T("Başarısız", "Failed"), ComponentStatus.Failed)
         };
         var code = string.IsNullOrWhiteSpace(i.ResultCode) ? null
             : string.IsNullOrWhiteSpace(i.ResultSymbol) ? i.ResultCode : $"{i.ResultCode} · {i.ResultSymbol}";
-        var reason = i.OutcomeText is { } t && !t.Equals("Güncellendi", StringComparison.Ordinal) ? t : null;
+        var reason = i.OutcomeText is { } t && !t.Equals(L.T("Güncellendi", "Updated"), StringComparison.Ordinal) ? t : null;
         return new PackageResultViewModel
         {
             Name = i.Name,

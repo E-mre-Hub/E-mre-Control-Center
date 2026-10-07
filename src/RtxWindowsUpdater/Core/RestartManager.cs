@@ -71,14 +71,14 @@ public static class RestartManager
 
         var key = new StringBuilder(CchRmSessionKey + 1);
         var rc = RmStartSession(out var session, 0, key);
-        if (rc != 0) throw new System.ComponentModel.Win32Exception(rc, "RmStartSession başarısız");
+        if (rc != 0) throw new System.ComponentModel.Win32Exception(rc, L.T("RmStartSession başarısız", "RmStartSession failed"));
         try
         {
             // Çok sayıda dosya parça parça kaydedilir (tek çağrıda aşırı büyük dizi göndermemek için).
             foreach (var chunk in files.Chunk(500))
             {
                 rc = RmRegisterResources(session, (uint)chunk.Length, chunk, 0, null, 0, null);
-                if (rc != 0) throw new System.ComponentModel.Win32Exception(rc, "RmRegisterResources başarısız");
+                if (rc != 0) throw new System.ComponentModel.Win32Exception(rc, L.T("RmRegisterResources başarısız", "RmRegisterResources failed"));
             }
 
             uint needed, count = 0, reasons = 0;
@@ -87,11 +87,11 @@ public static class RestartManager
             {
                 rc = RmGetList(session, out needed, ref count, infos, ref reasons);
                 if (rc == 0) break;
-                if (rc != ErrorMoreData) throw new System.ComponentModel.Win32Exception(rc, "RmGetList başarısız");
+                if (rc != ErrorMoreData) throw new System.ComponentModel.Win32Exception(rc, L.T("RmGetList başarısız", "RmGetList failed"));
                 count = needed;
                 infos = new RM_PROCESS_INFO[needed];
             }
-            if (rc != 0) throw new System.ComponentModel.Win32Exception(rc, "RmGetList başarısız");
+            if (rc != 0) throw new System.ComponentModel.Win32Exception(rc, L.T("RmGetList başarısız", "RmGetList failed"));
             if (infos is null || count == 0) return [];
 
             var list = new List<RmProcess>((int)count);

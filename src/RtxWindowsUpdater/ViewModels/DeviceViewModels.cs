@@ -31,7 +31,7 @@ public sealed class DeviceGaugeViewModel(string caption, string unit, double max
 
     public string DisplayValue => _value is { } v ? v.ToString(format) : "—";
     public string DisplayUnit => IsAvailable ? Unit : string.Empty;
-    public string CaptionText => IsAvailable ? Caption : Caption + " · okunamıyor";
+    public string CaptionText => IsAvailable ? Caption : Caption + L.T(" · okunamıyor", " · unreadable");
     public string? ToolTipText => IsAvailable ? null : Note;
 
     /// <summary>Renk seviyesi: sıcaklıkta 80 °C ve üstü "warm", 90 °C ve üstü "hot"; kullanımda %90 ve üstü "warm".</summary>

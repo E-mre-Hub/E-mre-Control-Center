@@ -123,7 +123,7 @@ public sealed class SetupViewModel : ObservableObject
         {
             // Yalnızca izin listesindeki yasal belge adresleri; tarayıcı yönetici yetkisi olmadan açılır.
             if (p is not string url || !AppInfo.LegalLinks.Contains(url)) return;
-            if (ShellOpen.OpenUrl(url) is { } error) _log.Info($"Bağlantı açılamadı ({url}): {error}");
+            if (ShellOpen.OpenUrl(url) is { } error) _log.Info(L.T($"Bağlantı açılamadı ({url}): {error}", $"Could not open the link ({url}): {error}"));
         });
     }
 
@@ -174,33 +174,33 @@ public sealed class SetupViewModel : ObservableObject
         ? cv.CompareTo(iv)
         : 1;
 
-    public string ActionText => Installed is null ? "Yükle" : VersionCompare switch { > 0 => "Güncelle", 0 => "Yeniden Yükle", _ => "Bu Sürümü Yükle" };
+    public string ActionText => Installed is null ? L.T("Yükle", "Install") : VersionCompare switch { > 0 => L.T("Güncelle", "Update"), 0 => L.T("Yeniden Yükle", "Reinstall"), _ => L.T("Bu Sürümü Yükle", "Install This Version") };
 
     /// <summary>Karşılama ekranındaki kurulum durumu (Uninstall kaydından okunan gerçek sürüm).</summary>
     public string InstallStateText => Installed switch
     {
-        null => $"Kurulum yeri: {InstallDir}",
-        { Version: null } => $"Önceki kurulumdan kalan dosya bulundu; yeniden yüklenecek ({InstallDir}).",
+        null => L.T($"Kurulum yeri: {InstallDir}", $"Install location: {InstallDir}"),
+        { Version: null } => L.T($"Önceki kurulumdan kalan dosya bulundu; yeniden yüklenecek ({InstallDir}).", $"Files left from a previous installation were found; it will be reinstalled ({InstallDir})."),
         _ => VersionCompare switch
         {
-            > 0 => $"Yüklü sürüm {Installed.Version} → {Version} sürümüne güncellenecek. Ayarlarınız ve geçmişiniz korunur.",
-            0 => $"Bu sürüm ({Version}) zaten yüklü; yeniden yüklenecek (onarım). Ayarlarınız ve geçmişiniz korunur.",
-            _ => $"Daha yeni bir sürüm yüklü ({Installed.Version}); {Version} sürümüne geri dönülecek."
+            > 0 => L.T($"Yüklü sürüm {Installed.Version} → {Version} sürümüne güncellenecek. Ayarlarınız ve geçmişiniz korunur.", $"The installed version {Installed.Version} will be updated to version {Version}. Your settings and history are kept."),
+            0 => L.T($"Bu sürüm ({Version}) zaten yüklü; yeniden yüklenecek (onarım). Ayarlarınız ve geçmişiniz korunur.", $"This version ({Version}) is already installed; it will be reinstalled (repair). Your settings and history are kept."),
+            _ => L.T($"Daha yeni bir sürüm yüklü ({Installed.Version}); {Version} sürümüne geri dönülecek.", $"A newer version is installed ({Installed.Version}); it will be rolled back to version {Version}.")
         }
     };
 
     /// <summary>Yeni kurulumda teşekkür + hoş geldin; güncellemede (önceki sürüm vardı) güncelleme metni.</summary>
     public bool IsUpdate => Installed?.Version is { } old && old != Version;
-    public string DoneTitle => IsUpdate ? "Güncelleme tamamlandı!" : "Bizi tercih ettiğiniz için teşekkürler!";
-    public string DoneSubtitle => IsUpdate ? $"E-mre Control Center {Version} sürümü hazır." : "Aramıza hoş geldin.";
+    public string DoneTitle => IsUpdate ? L.T("Güncelleme tamamlandı!", "Update completed!") : L.T("Bizi tercih ettiğiniz için teşekkürler!", "Thank you for choosing us!");
+    public string DoneSubtitle => IsUpdate ? L.T($"E-mre Control Center {Version} sürümü hazır.", $"E-mre Control Center version {Version} is ready.") : L.T("Aramıza hoş geldin.", "Welcome aboard.");
 
     public string DoneDetail => Installed?.Version is { } old && old != Version
-        ? $"{old} → {Version} sürümüne güncellendi · {InstallDir}"
-        : $"Sürüm {Version} kuruldu · {InstallDir}";
+        ? L.T($"{old} → {Version} sürümüne güncellendi · {InstallDir}", $"Updated from {old} to version {Version} · {InstallDir}")
+        : L.T($"Sürüm {Version} kuruldu · {InstallDir}", $"Version {Version} installed · {InstallDir}");
 
     public string DoneShortcutText => DesktopShortcut
-        ? "Başlat menüsünde ve masaüstünde \"E-mre Control Center\" kısayolu var."
-        : "Başlat menüsünde \"E-mre Control Center\" kısayolu var.";
+        ? L.T("Başlat menüsünde ve masaüstünde \"E-mre Control Center\" kısayolu var.", "There is an \"E-mre Control Center\" shortcut in the Start menu and on the desktop.")
+        : L.T("Başlat menüsünde \"E-mre Control Center\" kısayolu var.", "There is an \"E-mre Control Center\" shortcut in the Start menu.");
 
     /// <summary>Karşılama ekranı "Yükle": yönetici değilse UAC ile yeniden başlatır, yöneticiyse kurulumu başlatır.</summary>
     private async Task InstallClickedAsync()
@@ -213,17 +213,17 @@ public sealed class SetupViewModel : ObservableObject
         }
         var args = new[] { LaunchModes.ArgInstall, DesktopShortcut ? LaunchModes.ArgDesktop : LaunchModes.ArgNoDesktop };
         var (outcome, error) = _relaunchElevated(args);
-        _log.Info($"Yönetici olarak yeniden başlatma: {outcome}{(error is null ? "" : " – " + error)}");
+        _log.Info(L.T($"Yönetici olarak yeniden başlatma: {outcome}{(error is null ? "" : " – " + error)}", $"Restart as administrator: {outcome}{(error is null ? "" : " – " + error)}"));
         switch (outcome)
         {
             case ElevationOutcome.Started:
                 RequestClose?.Invoke();
                 break;
             case ElevationOutcome.Declined:
-                ElevationError = "Yönetici izni verilmedi; hiçbir değişiklik yapılmadı. Program Files klasörüne kurulum için izin gerekir.";
+                ElevationError = L.T("Yönetici izni verilmedi; hiçbir değişiklik yapılmadı. Program Files klasörüne kurulum için izin gerekir.", "Administrator permission was not granted; no changes were made. Installing to the Program Files folder requires permission.");
                 break;
             default:
-                ElevationError = error ?? "Kurulum yönetici olarak başlatılamadı.";
+                ElevationError = error ?? L.T("Kurulum yönetici olarak başlatılamadı.", "Setup could not be started as administrator.");
                 break;
         }
     }
@@ -252,7 +252,7 @@ public sealed class SetupViewModel : ObservableObject
         Progress = 0;
         RollbackText = null;
         Page = SetupPage.Working;
-        StatusText = "Kuruluyor…";
+        StatusText = L.T("Kuruluyor…", "Installing…");
 
         var running = _installer.FindRunning();
         if (running.Count > 0)
@@ -260,19 +260,19 @@ public sealed class SetupViewModel : ObservableObject
             try
             {
                 var ok = await RunningPrompt.AskAsync(
-                    "E-mre Control Center şu anda açık. Kurulumun devam etmesi için uygulamanın kapatılması gerekiyor. " +
-                    "Uygulamada bir işlem sürüyorsa önce onun bitmesini bekleyin.");
+                    L.T("E-mre Control Center şu anda açık. Kurulumun devam etmesi için uygulamanın kapatılması gerekiyor. ", "E-mre Control Center is currently open. The app must be closed for setup to continue. ") +
+                    L.T("Uygulamada bir işlem sürüyorsa önce onun bitmesini bekleyin.", "If an operation is running in the app, wait for it to finish first."));
                 if (!ok)
                 {
-                    _log.Info("Kurulum iptal edildi: kullanıcı açık uygulamanın kapatılmasını istemedi.");
+                    _log.Info(L.T("Kurulum iptal edildi: kullanıcı açık uygulamanın kapatılmasını istemedi.", "Setup cancelled: the user did not want the open app to be closed."));
                     Page = SetupPage.Welcome;
                     return;
                 }
-                StatusText = "Uygulama kapatılıyor…";
+                StatusText = L.T("Uygulama kapatılıyor…", "Closing the app…");
                 if (!await _installer.CloseRunningAsync(running, TimeSpan.FromSeconds(10)))
                 {
-                    Fail("E-mre Control Center kapanmadı (uygulamada bir işlem sürüyor veya kapatma onayı bekliyor olabilir). " +
-                         "Uygulamayı kendiniz kapatıp \"Tekrar dene\"ye basın. Hiçbir değişiklik yapılmadı.");
+                    Fail(L.T("E-mre Control Center kapanmadı (uygulamada bir işlem sürüyor veya kapatma onayı bekliyor olabilir). ", "E-mre Control Center did not close (an operation may be running in the app or it may be waiting for close confirmation). ") +
+                         L.T("Uygulamayı kendiniz kapatıp \"Tekrar dene\"ye basın. Hiçbir değişiklik yapılmadı.", "Close the app yourself and press \"Try again\". No changes were made."));
                     return;
                 }
             }
@@ -296,7 +296,7 @@ public sealed class SetupViewModel : ObservableObject
         else
         {
             var failure = report.FirstFailure;
-            Fail(failure is null ? "Kurulum tamamlanamadı." : $"{failure.Title}: {failure.Detail}");
+            Fail(failure is null ? L.T("Kurulum tamamlanamadı.", "Setup could not be completed.") : $"{failure.Title}: {failure.Detail}");
             RollbackText = report.Rollback;
         }
     }
@@ -330,9 +330,9 @@ public sealed class SetupViewModel : ObservableObject
     private void Fail(string text)
     {
         FailText = text;
-        StatusText = "Kurulum tamamlanamadı";
+        StatusText = L.T("Kurulum tamamlanamadı", "Setup could not be completed");
         Page = SetupPage.Failed;
-        _log.Info("Kurulum başarısız: " + text);
+        _log.Info(L.T("Kurulum başarısız: ", "Setup failed: ") + text);
     }
 
     private void Finish()
@@ -343,7 +343,7 @@ public sealed class SetupViewModel : ObservableObject
             var error = _launch(_installer.Layout.ExePath);
             if (error is not null)
             {
-                LaunchError = "Uygulama başlatılamadı: " + error + " Başlat menüsünden açabilirsiniz.";
+                LaunchError = L.T("Uygulama başlatılamadı: ", "The app could not be started: ") + error + L.T(" Başlat menüsünden açabilirsiniz.", " You can open it from the Start menu.");
                 LaunchAfter = false;
                 return;
             }
@@ -355,32 +355,34 @@ public sealed class SetupViewModel : ObservableObject
     /// Kurulan uygulamanın açılış argümanı: uygulama içi güncellemeden sonra yeni sürüm doğrudan Kontrol Merkezi'nde açılır
     /// (gereksinim ekranı yeniden sorulmaz; Windows 11 denetimi yine yapılır). Yeni kurulumda ilk açılış gereksinim ekranıyla olur.
     /// </summary>
-    internal string LaunchArguments => !_autoFinish
+    internal string LaunchArguments => (!_autoFinish
         ? string.Empty
         : Installed?.Version is { } old && System.Version.TryParse(old, out var previous)
             // Önceki sürüm (Uninstall kaydından) yeni sürüme iletilir: açılışta "Güncelleme tamamlandı: vX → vY" gösterilir.
-            ? $"{AdminPrivilegeManager.ArgAccepted} {LaunchModes.ArgUpdatedFrom} {previous.ToString(3)}"
-            : AdminPrivilegeManager.ArgAccepted;
+            ? $"{AdminPrivilegeManager.ArgAccepted} {LaunchModes.ArgUpdatedFrom} {previous.ToString(3)} "
+            : AdminPrivilegeManager.ArgAccepted + " ")
+        // v2.0.0: kurulumda seçilen dil ve tema; uygulama ilk açılıştaki "Dil ve görünüm" ekranında bunları önerir.
+        + string.Join(' ', LaunchModes.PreferenceArgs());
 
     private string? LaunchInstalled(string exe)
     {
         try
         {
             Process.Start(new ProcessStartInfo(exe, LaunchArguments) { UseShellExecute = true, WorkingDirectory = Path.GetDirectoryName(exe)! })?.Dispose();
-            _log.Info($"Kurulan uygulama başlatıldı: {exe} {LaunchArguments}".TrimEnd());
+            _log.Info(L.T($"Kurulan uygulama başlatıldı: {exe} {LaunchArguments}", $"Installed app started: {exe} {LaunchArguments}").TrimEnd());
             return null;
         }
         catch (Exception ex) when (ex is System.ComponentModel.Win32Exception or InvalidOperationException or IOException)
         {
-            _log.Info("Kurulan uygulama başlatılamadı: " + ex.Message);
+            _log.Info(L.T("Kurulan uygulama başlatılamadı: ", "The installed app could not be started: ") + ex.Message);
             return ex.Message;
         }
     }
 
     private void OnError(Exception ex)
     {
-        _log.Info($"Beklenmeyen kurulum hatası: {ex}");
-        Fail("Beklenmeyen hata: " + ex.Message);
+        _log.Info(L.T($"Beklenmeyen kurulum hatası: {ex}", $"Unexpected setup error: {ex}"));
+        Fail(L.T("Beklenmeyen hata: ", "Unexpected error: ") + ex.Message);
     }
 }
 
@@ -425,7 +427,7 @@ public sealed class UninstallViewModel : ObservableObject
         _log = log;
         _currentExe = currentExe;
         Reasons = new ObservableCollection<FeedbackReasonViewModel>(
-            new[] { "Sevmedim", "Kasıyor / yavaş çalışıyor", "Hata veriyor", "Artık ihtiyacım yok", "Diğer" }
+            new[] { L.T("Sevmedim", "I didn't like it"), L.T("Kasıyor / yavaş çalışıyor", "It lags / runs slowly"), L.T("Hata veriyor", "It shows errors"), L.T("Artık ihtiyacım yok", "I don't need it anymore"), L.T("Diğer", "Other") }
                 .Select(t => new FeedbackReasonViewModel(t)));
         foreach (var r in Reasons) r.PropertyChanged += (_, _) => OnFeedbackChanged();
         Installed = installer.ReadInstalled();
@@ -488,7 +490,7 @@ public sealed class UninstallViewModel : ObservableObject
     public string MessageCounter => $"{Message.Length} / {MaxMessageLength}";
     public bool DeleteUserData { get => _deleteUserData; set => Set(ref _deleteUserData, value); }
     public bool HasFeedback => Reasons.Any(r => r.IsChecked) || Message.Trim().Length > 0;
-    public string PrimaryText => FeedbackEnabled && HasFeedback ? "Gönder ve Kaldır" : "Kaldır";
+    public string PrimaryText => FeedbackEnabled && HasFeedback ? L.T("Gönder ve Kaldır", "Send and Uninstall") : L.T("Kaldır", "Uninstall");
     public string StatusText { get => _statusText; private set => Set(ref _statusText, value); }
     public string ResultTitle { get => _resultTitle; private set => Set(ref _resultTitle, value); }
     public string? FeedbackResult { get => _feedbackResult; private set => Set(ref _feedbackResult, value); }
@@ -510,8 +512,8 @@ public sealed class UninstallViewModel : ObservableObject
             Steps.Add(new SetupStepViewModel(key));
         if (DeleteUserData) Steps.Add(new SetupStepViewModel(InstallSteps.UserData));
         Page = UninstallPage.Working;
-        StatusText = "Kaldırılıyor…";
-        _log.Info($"Kaldırma onaylandı: geri bildirim {(sendFeedback ? "gönderilecek" : "yok")}, kullanıcı verileri {(DeleteUserData ? "silinecek" : "korunacak")}.");
+        StatusText = L.T("Kaldırılıyor…", "Uninstalling…");
+        _log.Info(L.T($"Kaldırma onaylandı: geri bildirim {(sendFeedback ? "gönderilecek" : "yok")}, kullanıcı verileri {(DeleteUserData ? "silinecek" : "korunacak")}.", $"Uninstall confirmed: feedback {(sendFeedback ? "will be sent" : "none")}, user data will be {(DeleteUserData ? "deleted" : "kept")}."));
 
         // 1) Açık uygulama: önce sorulur (iptal edilirse geri bildirim de gönderilmemiş olur).
         var running = _installer.FindRunning();
@@ -520,21 +522,21 @@ public sealed class UninstallViewModel : ObservableObject
             try
             {
                 var ok = await RunningPrompt.AskAsync(
-                    "E-mre Control Center şu anda açık. Kaldırmak için uygulamanın kapatılması gerekiyor. " +
-                    "Uygulamada bir işlem sürüyorsa önce onun bitmesini bekleyin.");
+                    L.T("E-mre Control Center şu anda açık. Kaldırmak için uygulamanın kapatılması gerekiyor. ", "E-mre Control Center is currently open. The app must be closed to uninstall it. ") +
+                    L.T("Uygulamada bir işlem sürüyorsa önce onun bitmesini bekleyin.", "If an operation is running in the app, wait for it to finish first."));
                 if (!ok)
                 {
-                    _log.Info("Kaldırma iptal edildi: kullanıcı açık uygulamanın kapatılmasını istemedi.");
+                    _log.Info(L.T("Kaldırma iptal edildi: kullanıcı açık uygulamanın kapatılmasını istemedi.", "Uninstall cancelled: the user did not want the open app to be closed."));
                     Page = UninstallPage.Form;
                     return;
                 }
-                StatusText = "Uygulama kapatılıyor…";
+                StatusText = L.T("Uygulama kapatılıyor…", "Closing the app…");
                 if (!await _installer.CloseRunningAsync(running, TimeSpan.FromSeconds(10)))
                 {
                     Steps.Clear();
-                    ResultTitle = "Kaldırma yapılmadı";
-                    NotesText = "E-mre Control Center kapanmadı (uygulamada bir işlem sürüyor veya kapatma onayı bekliyor olabilir). " +
-                                "Uygulamayı kendiniz kapatıp kaldırmayı yeniden başlatın. Hiçbir şey silinmedi.";
+                    ResultTitle = L.T("Kaldırma yapılmadı", "Uninstall not performed");
+                    NotesText = L.T("E-mre Control Center kapanmadı (uygulamada bir işlem sürüyor veya kapatma onayı bekliyor olabilir). ", "E-mre Control Center did not close (an operation may be running in the app or it may be waiting for close confirmation). ") +
+                                L.T("Uygulamayı kendiniz kapatıp kaldırmayı yeniden başlatın. Hiçbir şey silinmedi.", "Close the app yourself and start the uninstall again. Nothing was deleted.");
                     Page = UninstallPage.Done;
                     return;
                 }
@@ -552,7 +554,7 @@ public sealed class UninstallViewModel : ObservableObject
             _sentMessage = Message;
             var step = Steps[0];
             step.State = SetupStepState.Running;
-            StatusText = "Geri bildirim gönderiliyor…";
+            StatusText = L.T("Geri bildirim gönderiliyor…", "Sending feedback…");
             var result = await _feedback!.SendAsync(_sentReasons, _sentMessage);
             step.State = result.Success ? SetupStepState.Done : SetupStepState.Failed;
             step.Detail = result.Message;
@@ -578,18 +580,18 @@ public sealed class UninstallViewModel : ObservableObject
         }
 
         var removed = report.Steps.Any(s => s.Key == InstallSteps.Files && s.Success);
-        ResultTitle = report.Success ? "E-mre Control Center kaldırıldı"
-            : removed ? "E-mre Control Center kaldırıldı (bazı öğeler silinemedi)"
-            : "Kaldırma tamamlanamadı";
+        ResultTitle = report.Success ? L.T("E-mre Control Center kaldırıldı", "E-mre Control Center has been uninstalled")
+            : removed ? L.T("E-mre Control Center kaldırıldı (bazı öğeler silinemedi)", "E-mre Control Center has been uninstalled (some items could not be deleted)")
+            : L.T("Kaldırma tamamlanamadı", "Uninstall could not be completed");
         var notes = new List<string>();
         if (report.PendingReboot.Count > 0)
-            notes.Add($"Kullanımdaki {report.PendingReboot.Count} öğe bilgisayar yeniden başlatılınca Windows tarafından silinecek.");
+            notes.Add(L.T($"Kullanımdaki {report.PendingReboot.Count} öğe bilgisayar yeniden başlatılınca Windows tarafından silinecek.", $"{report.PendingReboot.Count} item(s) in use will be deleted by Windows when the computer restarts."));
         if (report.Kept.Count > 0)
-            notes.Add("Bu uygulamaya ait olmadığı için bırakılanlar: " + string.Join(", ", report.Kept) + ".");
+            notes.Add(L.T("Bu uygulamaya ait olmadığı için bırakılanlar: ", "Kept because they do not belong to this app: ") + string.Join(", ", report.Kept) + ".");
         if (report.Failed.Count > 0)
-            notes.Add("Silinemeyenler: " + string.Join("; ", report.Failed) + ".");
+            notes.Add(L.T("Silinemeyenler: ", "Could not be deleted: ") + string.Join("; ", report.Failed) + ".");
         if (!DeleteUserData)
-            notes.Add($"Ayarlarınız, geçmişiniz ve günlükleriniz korundu ({_installer.Layout.UserDataDirs[0]}).");
+            notes.Add(L.T($"Ayarlarınız, geçmişiniz ve günlükleriniz korundu ({_installer.Layout.UserDataDirs[0]}).", $"Your settings, history and logs have been kept ({_installer.Layout.UserDataDirs[0]})."));
         NotesText = string.Join("\n", notes);
         StatusText = ResultTitle;
         Page = UninstallPage.Done;
@@ -598,7 +600,7 @@ public sealed class UninstallViewModel : ObservableObject
     private async Task RetryFeedbackAsync()
     {
         if (_feedback is null) return;
-        FeedbackResult = "Geri bildirim yeniden gönderiliyor…";
+        FeedbackResult = L.T("Geri bildirim yeniden gönderiliyor…", "Sending feedback again…");
         var result = await _feedback.SendAsync(_sentReasons, _sentMessage);
         FeedbackResult = result.Message;
         FeedbackFailed = !result.Success;
@@ -607,9 +609,9 @@ public sealed class UninstallViewModel : ObservableObject
 
     private void OnError(Exception ex)
     {
-        _log.Info($"Beklenmeyen kaldırma hatası: {ex}");
-        ResultTitle = "Kaldırma tamamlanamadı";
-        NotesText = "Beklenmeyen hata: " + ex.Message;
+        _log.Info(L.T($"Beklenmeyen kaldırma hatası: {ex}", $"Unexpected uninstall error: {ex}"));
+        ResultTitle = L.T("Kaldırma tamamlanamadı", "Uninstall could not be completed");
+        NotesText = L.T("Beklenmeyen hata: ", "Unexpected error: ") + ex.Message;
         Page = UninstallPage.Done;
     }
 }

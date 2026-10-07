@@ -36,11 +36,20 @@ jobs:
         run: |
           $suffix = if ($env:GITHUB_REF_TYPE -eq 'tag') { "-$($env:GITHUB_REF_NAME)" } else { '' }
           $zip = "E-mre-Control-Center$suffix.zip"
-          $setup = "E-mre-Control-Center-Setup$suffix.exe"
+          # v2.0.0: Türkçe (TR) ve İngilizce (EN) kurulum = aynı EXE; adındaki işaret kurulum ekranının dilini belirler.
+          # Eski adlı kopya (işaretsiz) v1.9.3 ve önceki sürümlerin uygulama içi güncellemesi için tutulur: o sürümler YALNIZCA
+          # "E-mre-Control-Center-Setup-vX.Y.Z.exe" adını arar. v2.0.0 ve sonrası seçili dildeki TR / EN dosyasını indirir.
+          $setup = "E-mre-Control-Center-Setup-TR$suffix.exe"
+          $setupEn = "E-mre-Control-Center-Setup-EN$suffix.exe"
+          $setupLegacy = "E-mre-Control-Center-Setup$suffix.exe"
           Compress-Archive -Path 'E-mre Control Center.exe' -DestinationPath $zip -Force
           Copy-Item 'E-mre Control Center.exe' $setup -Force
+          Copy-Item 'E-mre Control Center.exe' $setupEn -Force
+          Copy-Item 'E-mre Control Center.exe' $setupLegacy -Force
           "ZIP_NAME=$zip" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
           "SETUP_NAME=$setup" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
+          "SETUP_EN_NAME=$setupEn" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
+          "SETUP_LEGACY_NAME=$setupLegacy" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
 
       - name: Artifact yükle
         uses: actions/upload-artifact@v4
@@ -48,6 +57,7 @@ jobs:
           name: E-mre-Control-Center
           path: |
             ${{ env.SETUP_NAME }}
+            ${{ env.SETUP_EN_NAME }}
             ${{ env.ZIP_NAME }}
 
       # Sürüm notları: CHANGELOG.md'deki "### vX.Y.Z" başlığının altı (uygulamadaki güncelleme penceresinde gösterilir).
@@ -74,4 +84,6 @@ jobs:
           make_latest: true
           files: |
             ${{ env.SETUP_NAME }}
+            ${{ env.SETUP_EN_NAME }}
             ${{ env.ZIP_NAME }}
+            ${{ env.SETUP_LEGACY_NAME }}

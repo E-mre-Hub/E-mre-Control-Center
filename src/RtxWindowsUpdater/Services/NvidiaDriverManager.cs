@@ -41,7 +41,7 @@ public sealed class NvidiaDriverManager(Logger logger, HttpClient http) : IUpdat
 
     public async Task<ModuleResult> CheckAsync(CancellationToken ct)
     {
-        logger.Info("NVIDIA sürücüsü kontrol ediliyor...");
+        logger.Info(L.T("NVIDIA sürücüsü kontrol ediliyor...", "Checking the NVIDIA driver..."));
 
         // 1) GPU
         GpuInfo? gpu;
@@ -54,15 +54,15 @@ public sealed class NvidiaDriverManager(Logger logger, HttpClient http) : IUpdat
             {
                 var nv = gpus.FirstOrDefault(g => g.IsNvidia);
                 var reason = nv is null
-                    ? "NVIDIA ekran kartı bulunamadı."
-                    : $"{nv.Name} RTX serisi değil; bu uygulama yalnızca RTX kartları destekler.";
+                    ? L.T("NVIDIA ekran kartı bulunamadı.", "No NVIDIA graphics card found.")
+                    : L.T($"{nv.Name} RTX serisi değil; bu uygulama yalnızca RTX kartları destekler.", $"{nv.Name} is not an RTX series card; this app supports only RTX cards.");
                 logger.Error(reason);
                 return ModuleResult.CheckFailed(Key, reason);
             }
         }
         catch (Exception ex)
         {
-            var reason = "Ekran kartı bilgisi okunamadı: " + ex.Message;
+            var reason = L.T("Ekran kartı bilgisi okunamadı: ", "Could not read graphics card information: ") + ex.Message;
             logger.Error(reason);
             return ModuleResult.CheckFailed(Key, reason);
         }
@@ -72,18 +72,18 @@ public sealed class NvidiaDriverManager(Logger logger, HttpClient http) : IUpdat
         var current = await ReadInstalledDriverVersionAsync(gpu, ct, logger);
         if (current is null)
         {
-            const string reason = "Kurulu NVIDIA sürücü sürümü okunamadı (nvidia-smi ve WMI başarısız).";
+            var reason = L.T("Kurulu NVIDIA sürücü sürümü okunamadı (nvidia-smi ve WMI başarısız).", "Could not read the installed NVIDIA driver version (nvidia-smi and WMI failed).");
             logger.Error(reason);
             return ModuleResult.CheckFailed(Key, reason, $"GPU: {gpu.Name}");
         }
-        logger.Info($"Mevcut sürücü: {current}");
+        logger.Info(L.T($"Mevcut sürücü: {current}", $"Current driver: {current}"));
 
         // 3) NVIDIA App (bilgi)
         var (appInstalled, appVersion) = DetectNvidiaApp();
-        var appText = !appInstalled ? "Bulunamadı" : appVersion is null ? "Kurulu" : $"Kurulu ({appVersion})";
+        var appText = !appInstalled ? L.T("Bulunamadı", "Not found") : appVersion is null ? L.T("Kurulu", "Installed") : L.T($"Kurulu ({appVersion})", $"Installed ({appVersion})");
         logger.Info(appInstalled
-            ? $"NVIDIA App: {appText}. (NVIDIA App'in herkese açık bir komut satırı arayüzü olmadığından kontrol NVIDIA'nın resmi sürücü servisiyle yapılır.)"
-            : "NVIDIA App bulunamadı; kontrol NVIDIA'nın resmi sürücü servisi üzerinden yapılacak.");
+            ? L.T($"NVIDIA App: {appText}. (NVIDIA App'in herkese açık bir komut satırı arayüzü olmadığından kontrol NVIDIA'nın resmi sürücü servisiyle yapılır.)", $"NVIDIA App: {appText}. (Because NVIDIA App has no public command-line interface, the check is done with NVIDIA's official driver service.)")
+            : L.T("NVIDIA App bulunamadı; kontrol NVIDIA'nın resmi sürücü servisi üzerinden yapılacak.", "NVIDIA App not found; the check will be done through NVIDIA's official driver service."));
 
         // 4) NVIDIA resmi servisinden en son sürücü
         DriverInfo latest;
@@ -94,34 +94,34 @@ public sealed class NvidiaDriverManager(Logger logger, HttpClient http) : IUpdat
         catch (Exception ex) when (ex is not OperationCanceledException || !ct.IsCancellationRequested)
         {
             var reason = ex is HttpRequestException or TaskCanceledException
-                ? $"NVIDIA sürücü servisine ulaşılamadı (internet bağlantısını kontrol edin): {ex.Message}"
+                ? L.T($"NVIDIA sürücü servisine ulaşılamadı (internet bağlantısını kontrol edin): {ex.Message}", $"Could not reach the NVIDIA driver service (check the internet connection): {ex.Message}")
                 : ex.Message;
-            logger.Error("NVIDIA sürücüsü kontrolü gerçekleştirilemedi: " + reason);
+            logger.Error(L.T("NVIDIA sürücüsü kontrolü gerçekleştirilemedi: ", "The NVIDIA driver check could not be performed: ") + reason);
             return ModuleResult.CheckFailed(Key, reason,
-                $"GPU: {ShortName(gpu.Name)}\nMevcut sürücü: {current}\nNVIDIA App: {appText}");
+                L.T($"GPU: {ShortName(gpu.Name)}\nMevcut sürücü: {current}\nNVIDIA App: {appText}", $"GPU: {ShortName(gpu.Name)}\nCurrent driver: {current}\nNVIDIA App: {appText}"));
         }
 
-        logger.Info($"NVIDIA'nın yayımladığı en son sürücü: {latest.Version} ({latest.Name}, {latest.ReleaseDate})");
+        logger.Info(L.T($"NVIDIA'nın yayımladığı en son sürücü: {latest.Version} ({latest.Name}, {latest.ReleaseDate})", $"Latest driver published by NVIDIA: {latest.Version} ({latest.Name}, {latest.ReleaseDate})"));
         ExecutionTrace.Note($"NVIDIA App: {appText}");
-        ExecutionTrace.Note($"NVIDIA resmi sürücü servisi: en son sürücü {latest.Version} – {latest.Name}, yayın {latest.ReleaseDate}, boyut {latest.Size}");
-        ExecutionTrace.Note($"Resmi indirme adresi: {latest.DownloadUrl}");
+        ExecutionTrace.Note(L.T($"NVIDIA resmi sürücü servisi: en son sürücü {latest.Version} – {latest.Name}, yayın {latest.ReleaseDate}, boyut {latest.Size}", $"NVIDIA official driver service: latest driver {latest.Version} – {latest.Name}, released {latest.ReleaseDate}, size {latest.Size}"));
+        ExecutionTrace.Note(L.T($"Resmi indirme adresi: {latest.DownloadUrl}", $"Official download address: {latest.DownloadUrl}"));
 
         var updateAvailable = CompareDriver(current, latest.Version) < 0;
         var details =
             $"GPU: {ShortName(gpu.Name)}\n" +
-            $"Mevcut sürücü: {current}\n" +
-            $"Yeni sürücü: {latest.Version}\n" +
-            $"Durum: {(updateAvailable ? "Güncelleme mevcut" : "Güncel")}\n" +
+            L.T($"Mevcut sürücü: {current}\n", $"Current driver: {current}\n") +
+            L.T($"Yeni sürücü: {latest.Version}\n", $"New driver: {latest.Version}\n") +
+            L.T($"Durum: {(updateAvailable ? "Güncelleme mevcut" : "Güncel")}\n", $"Status: {(updateAvailable ? "Update available" : "Up to date")}\n") +
             $"NVIDIA App: {appText}";
 
-        if (updateAvailable) logger.Warning($"NVIDIA sürücü güncellemesi mevcut: {current} → {latest.Version}");
-        else logger.Success("Sürücü güncel.");
+        if (updateAvailable) logger.Warning(L.T($"NVIDIA sürücü güncellemesi mevcut: {current} → {latest.Version}", $"NVIDIA driver update available: {current} → {latest.Version}"));
+        else logger.Success(L.T("Sürücü güncel.", "The driver is up to date."));
 
         return new ModuleResult
         {
             Key = Key,
             Status = updateAvailable ? ComponentStatus.UpdateAvailable : ComponentStatus.UpToDate,
-            Summary = updateAvailable ? "Güncelleme mevcut" : "Güncel",
+            Summary = updateAvailable ? L.T("Güncelleme mevcut", "Update available") : L.T("Güncel", "Up to date"),
             Details = details,
             ActionableCount = updateAvailable ? 1 : 0,
             Items =
@@ -133,7 +133,7 @@ public sealed class NvidiaDriverManager(Logger logger, HttpClient http) : IUpdat
                     CurrentVersion = current,
                     NewVersion = latest.Version,
                     UpdateAvailable = updateAvailable,
-                    StatusText = updateAvailable ? $"Güncelleme mevcut ({latest.Size})" : "Güncel",
+                    StatusText = updateAvailable ? L.T($"Güncelleme mevcut ({latest.Size})", $"Update available ({latest.Size})") : L.T("Güncel", "Up to date"),
                     Tag = latest.DownloadUrl
                 }
             ]
@@ -151,7 +151,7 @@ public sealed class NvidiaDriverManager(Logger logger, HttpClient http) : IUpdat
             !(uri.Host.Equals("download.nvidia.com", StringComparison.OrdinalIgnoreCase) ||
               uri.Host.EndsWith(".download.nvidia.com", StringComparison.OrdinalIgnoreCase)))
         {
-            var reason = $"Güvenlik: indirme adresi resmi NVIDIA sunucusu değil, işlem durduruldu ({item.Tag}).";
+            var reason = L.T($"Güvenlik: indirme adresi resmi NVIDIA sunucusu değil, işlem durduruldu ({item.Tag}).", $"Security: the download address is not an official NVIDIA server; the operation was stopped ({item.Tag}).");
             logger.Error(reason);
             return ModuleResult.Failed(Key, reason, check.Details);
         }
@@ -171,7 +171,7 @@ public sealed class NvidiaDriverManager(Logger logger, HttpClient http) : IUpdat
             else Directory.CreateDirectory(dir);
 
             // --- İndirme ---
-            logger.Info($"NVIDIA sürücüsü indiriliyor: {uri}");
+            logger.Info(L.T($"NVIDIA sürücüsü indiriliyor: {uri}", $"Downloading the NVIDIA driver: {uri}"));
             var downloadError = await DownloadAsync(uri, file, ct);
             if (downloadError is not null)
             {
@@ -183,64 +183,64 @@ public sealed class NvidiaDriverManager(Logger logger, HttpClient http) : IUpdat
             var sig = VerifyNvidiaSignature(file);
             if (sig is not null)
             {
-                var reason = "Güvenlik: indirilen dosyanın dijital imzası doğrulanamadı – kurulum yapılmadı. " + sig;
+                var reason = L.T("Güvenlik: indirilen dosyanın dijital imzası doğrulanamadı – kurulum yapılmadı. ", "Security: the digital signature of the downloaded file could not be verified – nothing was installed. ") + sig;
                 logger.Error(reason);
                 return ModuleResult.Failed(Key, reason, check.Details);
             }
-            logger.Success("Dijital imza doğrulandı: NVIDIA Corporation.");
-            ExecutionTrace.Note("Authenticode imzası doğrulandı: NVIDIA Corporation");
+            logger.Success(L.T("Dijital imza doğrulandı: NVIDIA Corporation.", "Digital signature verified: NVIDIA Corporation."));
+            ExecutionTrace.Note(L.T("Authenticode imzası doğrulandı: NVIDIA Corporation", "Authenticode signature verified: NVIDIA Corporation"));
 
             // --- Kurulum ---
-            logger.Info("NVIDIA sürücü kurulumu başlatılıyor (sessiz kurulum, otomatik yeniden başlatma YOK). Ekran birkaç kez kararabilir...");
+            logger.Info(L.T("NVIDIA sürücü kurulumu başlatılıyor (sessiz kurulum, otomatik yeniden başlatma YOK). Ekran birkaç kez kararabilir...", "Starting the NVIDIA driver installation (silent install, NO automatic restart). The screen may go dark a few times..."));
             // Kurulum programı GUI uygulamasıdır: cmd.exe içinde "start "" /wait" ile çalıştırılır, çıkış kodu aynen döner.
             var run = await ProcessRunner.RunCmdAsync(file, ["-s", "-noreboot"], InstallTimeout, CancellationToken.None, waitForGuiApp: true);
             if (!run.Started || run.TimedOut)
             {
-                var reason = ProcessRunner.Describe(run, "NVIDIA kurulum programı");
+                var reason = ProcessRunner.Describe(run, L.T("NVIDIA kurulum programı", "NVIDIA installer"));
                 logger.Error(reason);
                 return ModuleResult.Failed(Key, reason, check.Details);
             }
-            logger.Info($"NVIDIA kurulum programı çıkış kodu: {run.ExitCode} ({run.ExitCodeHex})");
+            logger.Info(L.T($"NVIDIA kurulum programı çıkış kodu: {run.ExitCode} ({run.ExitCodeHex})", $"NVIDIA installer exit code: {run.ExitCode} ({run.ExitCodeHex})"));
 
             // --- Doğrulama ---
             var gpu = SystemRequirementsChecker.ReadGpus().FirstOrDefault(g => g.IsRtx);
             var now = gpu is null ? null : await ReadInstalledDriverVersionAsync(gpu, CancellationToken.None, logger);
-            logger.Info($"Kurulum sonrası sürücü sürümü: {now ?? "okunamadı"}");
+            logger.Info(L.T($"Kurulum sonrası sürücü sürümü: {now ?? "okunamadı"}", $"Driver version after installation: {now ?? "unreadable"}"));
 
             if (now is not null && CompareDriver(now, item.NewVersion) >= 0)
             {
-                logger.Success($"NVIDIA sürücüsü güncellendi: {item.CurrentVersion} → {now}");
+                logger.Success(L.T($"NVIDIA sürücüsü güncellendi: {item.CurrentVersion} → {now}", $"NVIDIA driver updated: {item.CurrentVersion} → {now}"));
                 return new ModuleResult
                 {
                     Key = Key,
                     Status = ComponentStatus.Updated,
-                    Summary = "Güncellendi",
-                    Details = $"GPU: {ShortName(item.Id)}\nÖnceki sürücü: {item.CurrentVersion}\nYeni sürücü: {now}"
+                    Summary = L.T("Güncellendi", "Updated"),
+                    Details = L.T($"GPU: {ShortName(item.Id)}\nÖnceki sürücü: {item.CurrentVersion}\nYeni sürücü: {now}", $"GPU: {ShortName(item.Id)}\nPrevious driver: {item.CurrentVersion}\nNew driver: {now}")
                 };
             }
 
             if (run.ExitCode == 0)
             {
-                const string reason = "Kurulum programı başarıyla sonlandı ancak yeni sürücü henüz etkin değil; yeniden başlatma gerekiyor.";
+                var reason = L.T("Kurulum programı başarıyla sonlandı ancak yeni sürücü henüz etkin değil; yeniden başlatma gerekiyor.", "The installer finished successfully, but the new driver is not active yet; a restart is required.");
                 logger.Warning(reason);
                 return new ModuleResult
                 {
                     Key = Key,
                     Status = ComponentStatus.RebootRequired,
-                    Summary = "Yeniden başlatma gerekiyor",
-                    Details = $"GPU: {ShortName(item.Id)}\nMevcut sürücü: {now ?? item.CurrentVersion}\nKurulan sürücü: {item.NewVersion}",
+                    Summary = L.T("Yeniden başlatma gerekiyor", "Restart required"),
+                    Details = L.T($"GPU: {ShortName(item.Id)}\nMevcut sürücü: {now ?? item.CurrentVersion}\nKurulan sürücü: {item.NewVersion}", $"GPU: {ShortName(item.Id)}\nCurrent driver: {now ?? item.CurrentVersion}\nInstalled driver: {item.NewVersion}"),
                     Reason = reason,
                     RebootRequired = true
                 };
             }
 
-            var fail = $"NVIDIA kurulum programı başarısız oldu (çıkış kodu {run.ExitCode}). Sürücü değişmedi: {now ?? item.CurrentVersion}.";
+            var fail = L.T($"NVIDIA kurulum programı başarısız oldu (çıkış kodu {run.ExitCode}). Sürücü değişmedi: {now ?? item.CurrentVersion}.", $"The NVIDIA installer failed (exit code {run.ExitCode}). The driver did not change: {now ?? item.CurrentVersion}.");
             logger.Error(fail);
             return ModuleResult.Failed(Key, fail, check.Details);
         }
         catch (Exception ex)
         {
-            var reason = "NVIDIA sürücü güncellemesi sırasında hata: " + ex.Message;
+            var reason = L.T("NVIDIA sürücü güncellemesi sırasında hata: ", "Error during the NVIDIA driver update: ") + ex.Message;
             logger.Error(reason);
             return ModuleResult.Failed(Key, reason, check.Details);
         }
@@ -252,7 +252,7 @@ public sealed class NvidiaDriverManager(Logger logger, HttpClient http) : IUpdat
                 if (File.Exists(file))
                 {
                     File.Delete(file);
-                    logger.Info("Uygulamanın indirdiği geçici NVIDIA kurulum dosyası silindi.");
+                    logger.Info(L.T("Uygulamanın indirdiği geçici NVIDIA kurulum dosyası silindi.", "The temporary NVIDIA installer downloaded by the app was deleted."));
                 }
                 if (Directory.Exists(dir) && !Directory.EnumerateFileSystemEntries(dir).Any()) Directory.Delete(dir);
             }
@@ -279,7 +279,7 @@ public sealed class NvidiaDriverManager(Logger logger, HttpClient http) : IUpdat
                 try
                 {
                     Directory.Delete(stale, true);
-                    logger.Info("Önceki NVIDIA indirme klasörü silindi: " + stale);
+                    logger.Info(L.T("Önceki NVIDIA indirme klasörü silindi: ", "Previous NVIDIA download folder deleted: ") + stale);
                 }
                 catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
                 {
@@ -315,28 +315,28 @@ public sealed class NvidiaDriverManager(Logger logger, HttpClient http) : IUpdat
             .FirstOrDefault(v => Normalize(v.Name) == wanted && v.Pfid is not null && v.Psid is not null);
 
         if (match is null)
-            throw new InvalidOperationException($"'{gpuName}' NVIDIA ürün listesinde eşleştirilemedi; en son sürücü belirlenemedi.");
+            throw new InvalidOperationException(L.T($"'{gpuName}' NVIDIA ürün listesinde eşleştirilemedi; en son sürücü belirlenemedi.", $"'{gpuName}' could not be matched in the NVIDIA product list; the latest driver could not be determined."));
 
-        logger.Info($"NVIDIA ürün eşleşmesi: {match.Name} (psid={match.Psid}, pfid={match.Pfid})");
-        ExecutionTrace.Note($"NVIDIA ürün listesi (lookupValueSearch.aspx): {match.Name} → psid={match.Psid}, pfid={match.Pfid}");
+        logger.Info(L.T($"NVIDIA ürün eşleşmesi: {match.Name} (psid={match.Psid}, pfid={match.Pfid})", $"NVIDIA product match: {match.Name} (psid={match.Psid}, pfid={match.Pfid})"));
+        ExecutionTrace.Note(L.T($"NVIDIA ürün listesi (lookupValueSearch.aspx): {match.Name} → psid={match.Psid}, pfid={match.Pfid}", $"NVIDIA product list (lookupValueSearch.aspx): {match.Name} → psid={match.Psid}, pfid={match.Pfid}"));
 
         var json = await http.GetStringAsync(string.Format(DriverLookupUrl, match.Psid, match.Pfid), cts.Token);
         using var doc = JsonDocument.Parse(json);
         var root = doc.RootElement;
         if (root.Str("Success") != "1" || !root.TryGetProperty("IDS", out var ids) ||
             ids.ValueKind != JsonValueKind.Array || ids.GetArrayLength() == 0)
-            throw new InvalidOperationException("NVIDIA sürücü servisi bu GPU için sürücü döndürmedi.");
+            throw new InvalidOperationException(L.T("NVIDIA sürücü servisi bu GPU için sürücü döndürmedi.", "The NVIDIA driver service returned no driver for this GPU."));
 
         var info = ids[0].GetProperty("downloadInfo");
         var version = info.Str("Version");
         var url = info.Str("DownloadURL");
         if (string.IsNullOrWhiteSpace(version) || string.IsNullOrWhiteSpace(url))
-            throw new InvalidOperationException("NVIDIA sürücü servisi eksik veri döndürdü.");
+            throw new InvalidOperationException(L.T("NVIDIA sürücü servisi eksik veri döndürdü.", "The NVIDIA driver service returned incomplete data."));
 
         return new DriverInfo(
             version.Trim(),
             url.Trim(),
-            Uri.UnescapeDataString(info.Str("Name") ?? "NVIDIA sürücüsü"),
+            Uri.UnescapeDataString(info.Str("Name") ?? L.T("NVIDIA sürücüsü", "NVIDIA driver")),
             info.Str("ReleaseDateTime") ?? string.Empty,
             info.Str("DownloadURLFileSize") ?? string.Empty);
     }
@@ -368,7 +368,7 @@ public sealed class NvidiaDriverManager(Logger logger, HttpClient http) : IUpdat
             }
             else
             {
-                logger?.Warning("nvidia-smi çalıştırılamadı: " + ProcessRunner.Describe(r, "nvidia-smi"));
+                logger?.Warning(L.T("nvidia-smi çalıştırılamadı: ", "Could not run nvidia-smi: ") + ProcessRunner.Describe(r, "nvidia-smi"));
             }
         }
 
@@ -382,7 +382,7 @@ public sealed class NvidiaDriverManager(Logger logger, HttpClient http) : IUpdat
         }
         catch (Exception ex) when (ex is System.Management.ManagementException or UnauthorizedAccessException or System.Runtime.InteropServices.COMException)
         {
-            logger?.Warning("WMI sürücü sürümü okunamadı: " + ex.Message);
+            logger?.Warning(L.T("WMI sürücü sürümü okunamadı: ", "Could not read the WMI driver version: ") + ex.Message);
         }
 
         // WMI biçimi: 32.0.16.1714 → son 5 hane "61714" → 617.14
@@ -443,14 +443,14 @@ public sealed class NvidiaDriverManager(Logger logger, HttpClient http) : IUpdat
         {
             using var response = await http.GetAsync(uri, HttpCompletionOption.ResponseHeadersRead, cts.Token);
             if (!response.IsSuccessStatusCode)
-                return $"NVIDIA sunucusu indirmeyi reddetti: HTTP {(int)response.StatusCode}.";
+                return L.T($"NVIDIA sunucusu indirmeyi reddetti: HTTP {(int)response.StatusCode}.", $"The NVIDIA server refused the download: HTTP {(int)response.StatusCode}.");
 
             var total = response.Content.Headers.ContentLength;
             if (total is > 0)
             {
                 var drive = new DriveInfo(Path.GetPathRoot(file)!);
                 if (drive.AvailableFreeSpace < total.Value * 3)
-                    return $"Yetersiz disk alanı: sürücü paketi için yaklaşık {total.Value * 3 / 1048576} MB boş alan gerekli.";
+                    return L.T($"Yetersiz disk alanı: sürücü paketi için yaklaşık {total.Value * 3 / 1048576} MB boş alan gerekli.", $"Not enough disk space: about {total.Value * 3 / 1048576} MB of free space is needed for the driver package.");
             }
 
             await using var input = await response.Content.ReadAsStreamAsync(cts.Token);
@@ -468,30 +468,30 @@ public sealed class NvidiaDriverManager(Logger logger, HttpClient http) : IUpdat
                     var pct = (int)(read * 100 / total.Value);
                     if (pct >= nextReport)
                     {
-                        logger.Info($"  İndiriliyor: %{pct} ({read / 1048576} / {total.Value / 1048576} MB)");
+                        logger.Info(L.T($"  İndiriliyor: %{pct} ({read / 1048576} / {total.Value / 1048576} MB)", $"  Downloading: {pct}% ({read / 1048576} / {total.Value / 1048576} MB)"));
                         nextReport = pct / 10 * 10 + 10;
                     }
                 }
             }
 
             if (total is > 0 && read != total.Value)
-                return $"İndirme eksik kaldı ({read} / {total.Value} bayt).";
+                return L.T($"İndirme eksik kaldı ({read} / {total.Value} bayt).", $"The download is incomplete ({read} / {total.Value} bytes).");
 
-            logger.Success($"İndirme tamamlandı ({read / 1048576} MB).");
-            ExecutionTrace.Note($"İndirme tamamlandı: {uri} ({read / 1048576} MB)");
+            logger.Success(L.T($"İndirme tamamlandı ({read / 1048576} MB).", $"Download completed ({read / 1048576} MB)."));
+            ExecutionTrace.Note(L.T($"İndirme tamamlandı: {uri} ({read / 1048576} MB)", $"Download completed: {uri} ({read / 1048576} MB)"));
             return null;
         }
         catch (OperationCanceledException)
         {
-            return ct.IsCancellationRequested ? "İndirme iptal edildi." : "İndirme zaman aşımına uğradı.";
+            return ct.IsCancellationRequested ? L.T("İndirme iptal edildi.", "Download cancelled.") : L.T("İndirme zaman aşımına uğradı.", "The download timed out.");
         }
         catch (HttpRequestException ex)
         {
-            return $"İndirme başarısız (ağ hatası): {ex.Message}";
+            return L.T($"İndirme başarısız (ağ hatası): {ex.Message}", $"Download failed (network error): {ex.Message}");
         }
         catch (IOException ex)
         {
-            return $"İndirme dosyası yazılamadı: {ex.Message}";
+            return L.T($"İndirme dosyası yazılamadı: {ex.Message}", $"Could not write the download file: {ex.Message}");
         }
     }
 
@@ -502,7 +502,7 @@ public sealed class NvidiaDriverManager(Logger logger, HttpClient http) : IUpdat
     {
         var trust = WinTrust.Verify(path);
         if (trust != 0)
-            return $"WinVerifyTrust sonucu 0x{unchecked((uint)trust):X8}.";
+            return L.T($"WinVerifyTrust sonucu 0x{unchecked((uint)trust):X8}.", $"WinVerifyTrust result 0x{unchecked((uint)trust):X8}.");
 
         try
         {
@@ -511,12 +511,12 @@ public sealed class NvidiaDriverManager(Logger logger, HttpClient http) : IUpdat
 #pragma warning restore SYSLIB0057
             var org = cert.GetNameInfo(X509NameType.SimpleName, false);
             if (!cert.Subject.Contains("NVIDIA Corporation", StringComparison.OrdinalIgnoreCase))
-                return $"Dosya NVIDIA tarafından imzalanmamış (imzalayan: {org}).";
+                return L.T($"Dosya NVIDIA tarafından imzalanmamış (imzalayan: {org}).", $"The file is not signed by NVIDIA (signer: {org}).");
             return null;
         }
         catch (Exception ex)
         {
-            return "İmza sertifikası okunamadı: " + ex.Message;
+            return L.T("İmza sertifikası okunamadı: ", "Could not read the signing certificate: ") + ex.Message;
         }
     }
 

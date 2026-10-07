@@ -17,40 +17,40 @@ public sealed partial class MainViewModel
     /// <summary>Bölme anahtar kelimeleri (başlıkta geçmeyen ama aranabilecek sözcükler).</summary>
     private static readonly Dictionary<string, string> SectionKeywords = new()
     {
-        [SectionKeys.Found] = "bulunan güncellemeler paket sürüm program",
-        [SectionKeys.Log] = "işlem günlüğü günlük log kayıt filtre",
-        [SectionKeys.Recent] = "işlem geçmişi son işlemler geçmiş kayıt",
-        [SectionKeys.Health] = "sağlık özeti durum son işlem",
-        [SectionKeys.Quick] = "kolay ayar bildirim bildirimler çöp kutusu anahtar tercih arka plan bildirim alanı tepsi simge kapatınca",
-        [SectionKeys.Admin] = "yönetici yetki uac izin",
-        [SectionKeys.LogFiles] = "günlük dosyası log klasör dışa aktar veri klasörü",
-        [SectionKeys.Legal] = "yasal gizlilik politikası kullanım koşulları sözleşme lisans eula çerez telemetri kvkk gdpr sorumluluk garanti iletişim privacy terms",
-        [SectionKeys.DeviceInfo] = "işlemci cpu ekran kartı gpu bellek ram disk depolama ssd işletim sistemi windows sürüm donanım",
-        [SectionKeys.DeviceStatus] = "performans canlı sıcaklık kullanım fan cpu gpu vram bellek ram disk ağ termal cihaz durumu",
-        [SectionKeys.DeviceAbout] = "hakkında sürüm uygulama kurulum yüklü kaldır",
-        [SectionKeys.SpeedTest] = "internet hız ping indirme yükleme paket kaybı mbps titreşim",
-        [SectionKeys.SpeedServers] = "sunucu ookla speedtest cloudflare turkcell seç otomatik",
-        [SectionKeys.SpeedHistory] = "sonuçlar geçmiş hız",
-        [SectionKeys.SpeedMethod] = "yöntem nasıl ölçülür",
+        [SectionKeys.Found] = L.T("bulunan güncellemeler paket sürüm program", "updates found package version program"),
+        [SectionKeys.Log] = L.T("işlem günlüğü günlük log kayıt filtre", "operation log log record filter"),
+        [SectionKeys.Recent] = L.T("işlem geçmişi son işlemler geçmiş kayıt", "operation history recent operations history record"),
+        [SectionKeys.Health] = L.T("sağlık özeti durum son işlem", "health summary status last operation"),
+        [SectionKeys.Quick] = L.T("kolay ayar bildirim bildirimler çöp kutusu anahtar tercih arka plan bildirim alanı tepsi simge kapatınca", "quick settings notification notifications recycle bin switch preference background notification area tray icon close"),
+        [SectionKeys.Admin] = L.T("yönetici yetki uac izin", "administrator rights uac permission elevate"),
+        [SectionKeys.LogFiles] = L.T("günlük dosyası log klasör dışa aktar veri klasörü", "log file log folder export data folder"),
+        [SectionKeys.Legal] = L.T("yasal gizlilik politikası kullanım koşulları sözleşme lisans eula çerez telemetri kvkk gdpr sorumluluk garanti iletişim privacy terms", "legal privacy policy terms of use agreement license eula cookie telemetry kvkk gdpr liability warranty contact"),
+        [SectionKeys.DeviceInfo] = L.T("işlemci cpu ekran kartı gpu bellek ram disk depolama ssd işletim sistemi windows sürüm donanım", "processor cpu graphics card gpu memory ram disk storage ssd operating system windows version hardware"),
+        [SectionKeys.DeviceStatus] = L.T("performans canlı sıcaklık kullanım fan cpu gpu vram bellek ram disk ağ termal cihaz durumu", "performance live temperature usage fan cpu gpu vram memory ram disk network thermal device status"),
+        [SectionKeys.DeviceAbout] = L.T("hakkında sürüm uygulama kurulum yüklü kaldır", "about version app installation installed uninstall"),
+        [SectionKeys.SpeedTest] = L.T("internet hız ping indirme yükleme paket kaybı mbps titreşim", "internet speed ping download upload packet loss mbps jitter"),
+        [SectionKeys.SpeedServers] = L.T("sunucu ookla speedtest cloudflare turkcell seç otomatik", "server ookla speedtest cloudflare isp select automatic"),
+        [SectionKeys.SpeedHistory] = L.T("sonuçlar geçmiş hız", "results history speed"),
+        [SectionKeys.SpeedMethod] = L.T("yöntem nasıl ölçülür", "method how measured"),
         // v1.8.0 Sistem Tanılama bölmeleri
-        [SectionKeys.Drivers] = "sürücü driver aygıt yöneticisi nvidia intel amd yonga seti chipset ağ ses bluetooth usb depolama sürücü güncellemesi",
-        [SectionKeys.Apps] = "uygulamalar program kurulu yüklü yazılım winget microsoft store kaldır güncelleme",
-        [SectionKeys.StorageAnalysis] = "depolama analizi büyük dosyalar en büyük klasörler disk alanı boş alan dosya türü",
-        [SectionKeys.SystemHealth] = "sistem sağlığı sfc dism windows update etkinleştirme aktivasyon lisans sürüm build yeniden başlatma kritik hizmet",
-        [SectionKeys.StorageHealth] = "disk ssd nvme sata smart sıcaklık aşınma güvenilirlik depolama sağlığı",
-        [SectionKeys.EventLog] = "olay günlüğü event log event viewer olay görüntüleyicisi kritik hata uyarı",
-        [SectionKeys.Crash] = "çökme analizi mavi ekran bsod bugcheck minidump dump kernel-power beklenmedik kapanma",
-        [SectionKeys.Network] = "ağ merkezi wi-fi wifi kablosuz ethernet ip ipv4 ipv6 ağ geçidi gateway dhcp mac ping bağlantı internet https paket kaybı gecikme",
-        [SectionKeys.Dns] = "dns dnssec çözümleme ad sunucusu",
-        [SectionKeys.Privacy] = "gizlilik konum kamera mikrofon uygulama izinleri tanılama verisi telemetri reklam kimliği",
-        [SectionKeys.Battery] = "batarya pil şarj kapasite döngü sağlık dizüstü laptop",
-        [SectionKeys.Diagnose] = "tek tıkla tanıla tanılama teşhis sorun giderme sistem kontrolü",
-        [SectionKeys.Startup] = "başlangıç uygulamaları açılış startup otomatik başlatma görev zamanlayıcı",
-        [SectionKeys.Services] = "servis servisler hizmet hizmetler windows servisleri service",
-        [SectionKeys.Processes] = "işlemler process görev yöneticisi task manager cpu bellek sonlandır pid",
-        [SectionKeys.Security] = "güvenlik defender antivirüs virüs güvenlik duvarı firewall güvenli önyükleme secure boot uac",
-        [SectionKeys.Report] = "sistem raporu rapor txt html json dışa aktar",
-        [SectionKeys.Support] = "destek paketi zip tanılama verisi destek günlük"
+        [SectionKeys.Drivers] = L.T("sürücü driver aygıt yöneticisi nvidia intel amd yonga seti chipset ağ ses bluetooth usb depolama sürücü güncellemesi", "driver drivers device manager nvidia intel amd chipset network audio bluetooth usb storage driver update"),
+        [SectionKeys.Apps] = L.T("uygulamalar program kurulu yüklü yazılım winget microsoft store kaldır güncelleme", "apps programs installed software winget microsoft store uninstall update"),
+        [SectionKeys.StorageAnalysis] = L.T("depolama analizi büyük dosyalar en büyük klasörler disk alanı boş alan dosya türü", "storage analysis large files largest folders disk space free space file type"),
+        [SectionKeys.SystemHealth] = L.T("sistem sağlığı sfc dism windows update etkinleştirme aktivasyon lisans sürüm build yeniden başlatma kritik hizmet", "system health sfc dism windows update activation license version build restart critical service"),
+        [SectionKeys.StorageHealth] = L.T("disk ssd nvme sata smart sıcaklık aşınma güvenilirlik depolama sağlığı", "disk ssd nvme sata smart temperature wear reliability storage health"),
+        [SectionKeys.EventLog] = L.T("olay günlüğü event log event viewer olay görüntüleyicisi kritik hata uyarı", "event log event viewer critical error warning"),
+        [SectionKeys.Crash] = L.T("çökme analizi mavi ekran bsod bugcheck minidump dump kernel-power beklenmedik kapanma", "crash analysis blue screen bsod bugcheck minidump dump kernel-power unexpected shutdown"),
+        [SectionKeys.Network] = L.T("ağ merkezi wi-fi wifi kablosuz ethernet ip ipv4 ipv6 ağ geçidi gateway dhcp mac ping bağlantı internet https paket kaybı gecikme", "network center wi-fi wifi wireless ethernet ip ipv4 ipv6 gateway dhcp mac ping connection internet https packet loss latency"),
+        [SectionKeys.Dns] = L.T("dns dnssec çözümleme ad sunucusu", "dns dnssec resolution name server"),
+        [SectionKeys.Privacy] = L.T("gizlilik konum kamera mikrofon uygulama izinleri tanılama verisi telemetri reklam kimliği", "privacy location camera microphone app permissions diagnostic data telemetry advertising id"),
+        [SectionKeys.Battery] = L.T("batarya pil şarj kapasite döngü sağlık dizüstü laptop", "battery charge capacity cycle health laptop notebook"),
+        [SectionKeys.Diagnose] = L.T("tek tıkla tanıla tanılama teşhis sorun giderme sistem kontrolü", "one click diagnosis diagnostics troubleshoot system check"),
+        [SectionKeys.Startup] = L.T("başlangıç uygulamaları açılış startup otomatik başlatma görev zamanlayıcı", "startup apps boot startup autostart task scheduler"),
+        [SectionKeys.Services] = L.T("servis servisler hizmet hizmetler windows servisleri service", "service services windows services"),
+        [SectionKeys.Processes] = L.T("işlemler process görev yöneticisi task manager cpu bellek sonlandır pid", "processes process task manager cpu memory end task kill pid"),
+        [SectionKeys.Security] = L.T("güvenlik defender antivirüs virüs güvenlik duvarı firewall güvenli önyükleme secure boot uac", "security defender antivirus virus firewall secure boot uac"),
+        [SectionKeys.Report] = L.T("sistem raporu rapor txt html json dışa aktar", "system report report txt html json export"),
+        [SectionKeys.Support] = L.T("destek paketi zip tanılama verisi destek günlük", "support package zip diagnostic data support log")
     };
 
     private List<(SearchResultViewModel Item, string Alias, string Haystack, int Kind)>? _searchIndex;
@@ -142,7 +142,7 @@ public sealed partial class MainViewModel
     {
         var category = Categories.FirstOrDefault(c => c.Key == r.CategoryKey);
         var section = category?.Sections.FirstOrDefault(s => s.Key == r.SectionKey);
-        _logger.Info($"Arama: \"{SearchText.Trim()}\" → {category?.Title} / {section?.Title} ({r.Title})");
+        _logger.Info(L.T($"Arama: \"{SearchText.Trim()}\" → {category?.Title} / {section?.Title} ({r.Title})", $"Search: \"{SearchText.Trim()}\" → {category?.Title} / {section?.Title} ({r.Title})"));
         SearchText = string.Empty;
         OpenSection(r.CategoryKey, r.SectionKey);
     }

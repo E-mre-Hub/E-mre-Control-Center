@@ -40,7 +40,7 @@ public sealed class DialogViewModel : ObservableObject
     private string _message = string.Empty;
     private string _glyph = "";
     private DialogKind _kind;
-    private string _primaryText = "Tamam";
+    private string _primaryText = L.T("Tamam", "OK");
     private string? _secondaryText;
     private string? _tertiaryText;
     private Action? _tertiaryAction;
@@ -91,8 +91,8 @@ public sealed class DialogViewModel : ObservableObject
 
     /// <summary>Seçili öğelerin gerçek toplam boyutu (boyutlu seçimlerde) veya seçili öğe sayısı.</summary>
     public string ChoicesTotalText => _choicesAreSizes
-        ? "Seçili toplam: " + RtxWindowsUpdater.Services.TemporaryFilesManager.FormatSize(Choices.Where(c => c.IsChecked).Sum(c => c.Bytes))
-        : $"Seçili: {Choices.Count(c => c.IsChecked)}";
+        ? L.T("Seçili toplam: ", "Selected total: ") + RtxWindowsUpdater.Services.TemporaryFilesManager.FormatSize(Choices.Where(c => c.IsChecked).Sum(c => c.Bytes))
+        : L.T($"Seçili: {Choices.Count(c => c.IsChecked)}", $"Selected: {Choices.Count(c => c.IsChecked)}");
 
     public ICommand PrimaryCommand { get; }
     public ICommand SecondaryCommand { get; }

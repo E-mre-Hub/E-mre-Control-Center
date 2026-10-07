@@ -33,7 +33,7 @@ public abstract class ToolViewModel : ObservableObject
 {
     private CancellationTokenSource? _cts;
     private bool _isBusy;
-    private string _statusText = "Henüz okunmadı";
+    private string _statusText = L.T("Henüz okunmadı", "Not read yet");
     private string? _errorText;
     private bool _hasLoaded;
     private DateTime? _lastRun;
@@ -75,7 +75,7 @@ public abstract class ToolViewModel : ObservableObject
     public bool HasError => !string.IsNullOrEmpty(_errorText);
     public bool HasLoaded { get => _hasLoaded; private set => Set(ref _hasLoaded, value); }
     public DateTime? LastRun { get => _lastRun; private set { Set(ref _lastRun, value); OnPropertyChanged(nameof(LastRunText)); } }
-    public string LastRunText => LastRun is { } t ? "Son okuma: " + t.ToString("HH:mm:ss") : "";
+    public string LastRunText => LastRun is { } t ? L.T("Son okuma: ", "Last read: ") + t.ToString("HH:mm:ss") : "";
 
     /// <summary>Üst şeritte "Yenile" gösterilsin mi (okuma yapmayan ekranlarda gizli).</summary>
     public virtual bool ShowRefresh => true;
@@ -114,12 +114,12 @@ public abstract class ToolViewModel : ObservableObject
         }
         catch (OperationCanceledException) when (cts.IsCancellationRequested)
         {
-            StatusText = "İptal edildi";
+            StatusText = L.T("İptal edildi", "Cancelled");
         }
         catch (Exception ex)
         {
             ErrorText = ex.Message;
-            StatusText = "Okunamadı";
+            StatusText = L.T("Okunamadı", "Unreadable");
             Logger.Error($"{GetType().Name}: {ex}");
         }
         finally
@@ -139,17 +139,17 @@ public abstract class ToolViewModel : ObservableObject
     /// <summary>Kullanıcının açık onayı (pencere içi iletişim kutusu).</summary>
     protected Task<bool> ConfirmAsync(string title, string message, string primary, IEnumerable<string>? bullets = null, bool warning = true) =>
         Host.Dialog.ShowAsync(title, message, warning ? "" : "", warning ? DialogKind.Warning : DialogKind.Question,
-            primary, "Vazgeç", bullets);
+            primary, L.T("Vazgeç", "Cancel"), bullets);
 
     protected Task InformAsync(string title, string message, bool error = false) =>
-        Host.Dialog.ShowAsync(title, message, error ? "" : "", error ? DialogKind.Warning : DialogKind.Info, "Tamam");
+        Host.Dialog.ShowAsync(title, message, error ? "" : "", error ? DialogKind.Warning : DialogKind.Info, L.T("Tamam", "OK"));
 
     /// <summary>Windows'un kendi Ayarlar / Güvenlik sayfasını açar (yalnızca sabit, uygulamanın tanıdığı adresler).</summary>
     protected void OpenWindowsUri(string uri)
     {
         // Gezgin üzerinden: uygulama yönetici olarak çalışsa da sayfa normal yetkiyle açılır (HKCU ilişkilendirmesi yönetici olarak çalışmaz).
-        if (ShellOpen.OpenWindowsUri(uri) is { } error) Logger.Warning($"Ayar sayfası açılamadı ({uri}): {error}");
-        else Logger.Info("Windows ayar sayfası açıldı: " + uri);
+        if (ShellOpen.OpenWindowsUri(uri) is { } error) Logger.Warning(L.T($"Ayar sayfası açılamadı ({uri}): {error}", $"Could not open the settings page ({uri}): {error}"));
+        else Logger.Info(L.T("Windows ayar sayfası açıldı: ", "Windows settings page opened: ") + uri);
     }
 
     /// <summary>Dosyayı Gezgin'de seçili gösterir (yalnızca var olan dosya; argüman tırnaklanır, komut birleştirilmez).</summary>
@@ -169,7 +169,7 @@ public abstract class ToolViewModel : ObservableObject
         }
         catch (Exception ex) when (ex is System.ComponentModel.Win32Exception or InvalidOperationException)
         {
-            Logger.Warning("Gezgin açılamadı: " + ex.Message);
+            Logger.Warning(L.T("Gezgin açılamadı: ", "Could not open File Explorer: ") + ex.Message);
         }
     }
 }

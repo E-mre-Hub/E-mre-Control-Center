@@ -50,12 +50,12 @@ public static class AdminPrivilegeManager
     {
         var exe = Environment.ProcessPath;
         if (string.IsNullOrEmpty(exe))
-            return (ElevationOutcome.Failed, "Uygulamanın dosya yolu belirlenemedi.");
+            return (ElevationOutcome.Failed, L.T("Uygulamanın dosya yolu belirlenemedi.", "The app's file path could not be determined."));
 
         var psi = new ProcessStartInfo
         {
             FileName = exe,
-            Arguments = string.Join(' ', args.Append(ArgElevated)),
+            Arguments = string.Join(' ', args.Concat(Core.LaunchModes.PreferenceArgs()).Append(ArgElevated)),
             UseShellExecute = true, // "runas" fiili yalnızca ShellExecute ile çalışır
             Verb = "runas",
             WorkingDirectory = AppContext.BaseDirectory
@@ -68,11 +68,11 @@ public static class AdminPrivilegeManager
         }
         catch (Win32Exception ex) when (ex.NativeErrorCode == ErrorCancelled)
         {
-            return (ElevationOutcome.Declined, "Yönetici izni kullanıcı tarafından reddedildi.");
+            return (ElevationOutcome.Declined, L.T("Yönetici izni kullanıcı tarafından reddedildi.", "Administrator permission was denied by the user."));
         }
         catch (Exception ex)
         {
-            return (ElevationOutcome.Failed, $"Yönetici olarak başlatılamadı: {ex.Message}");
+            return (ElevationOutcome.Failed, L.T($"Yönetici olarak başlatılamadı: {ex.Message}", $"Could not start as administrator: {ex.Message}"));
         }
     }
 }

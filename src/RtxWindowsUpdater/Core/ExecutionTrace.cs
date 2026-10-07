@@ -94,7 +94,7 @@ public sealed class ExecutionTrace
             if (line.Trim().All(c => c is '-' or '\\' or '|' or '/' or ' ') && line.Trim().Length < 3) continue;
 
             if (line.StartsWith("##LOG|", StringComparison.Ordinal)) line = line[6..];
-            else if (line.StartsWith("##RESULT|", StringComparison.Ordinal)) line = "Sonuç (JSON): " + line[9..];
+            else if (line.StartsWith("##RESULT|", StringComparison.Ordinal)) line = L.T("Sonuç (JSON): ", "Result (JSON): ") + line[9..];
 
             var trimmed = line.Trim();
             if (ProgressLine.IsMatch(trimmed) || (trimmed.StartsWith('[') && trimmed.Contains('%') && trimmed.Contains('=')))
@@ -116,6 +116,6 @@ public sealed class ExecutionTrace
         var result = sb.ToString().TrimEnd();
         return result.Length <= MaxOutputChars
             ? result
-            : "… (baştaki kısım kısaltıldı)\n" + result[^MaxOutputChars..];
+            : L.T("… (baştaki kısım kısaltıldı)\n", "… (beginning shortened)\n") + result[^MaxOutputChars..];
     }
 }

@@ -67,17 +67,17 @@ public static class StorageInfo
     public static string BusTypeText(int? bus) => bus switch
     {
         1 => "SCSI", 2 => "ATAPI", 3 => "ATA", 4 => "IEEE 1394", 6 => "Fibre Channel", 7 => "USB", 8 => "RAID", 9 => "iSCSI",
-        10 => "SAS", 11 => "SATA", 12 => "SD", 13 => "MMC", 15 => "Sanal (dosya)", 16 => "Depolama Alanları", 17 => "NVMe",
-        18 => "SCM", 19 => "UFS", null => "—", _ => $"Bilinmiyor ({bus})"
+        10 => "SAS", 11 => "SATA", 12 => "SD", 13 => "MMC", 15 => L.T("Sanal (dosya)", "Virtual (file)"), 16 => L.T("Depolama Alanları", "Storage Spaces"), 17 => "NVMe",
+        18 => "SCM", 19 => "UFS", null => "—", _ => L.T($"Bilinmiyor ({bus})", $"Unknown ({bus})")
     };
 
     public static string MediaTypeText(int? media) => media switch
     {
-        3 => "HDD", 4 => "SSD", 5 => "SCM", _ => "Belirtilmemiş"
+        3 => "HDD", 4 => "SSD", 5 => "SCM", _ => L.T("Belirtilmemiş", "Unspecified")
     };
 
     public static string HealthText(int? health) => health switch
     {
-        0 => "Sağlıklı", 1 => "Uyarı", 2 => "Sağlıksız", 5 => "Bilinmiyor", null => "Bildirilmedi", _ => $"Bilinmiyor ({health})"
+        0 => L.T("Sağlıklı", "Healthy"), 1 => L.T("Uyarı", "Warning"), 2 => L.T("Sağlıksız", "Unhealthy"), 5 => L.T("Bilinmiyor", "Unknown"), null => L.T("Bildirilmedi", "Not reported"), _ => L.T($"Bilinmiyor ({health})", $"Unknown ({health})")
     };
 }

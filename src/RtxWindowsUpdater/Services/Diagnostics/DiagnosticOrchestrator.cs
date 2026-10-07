@@ -18,16 +18,16 @@ public sealed class DiagnosticOrchestrator(Logger logger)
 {
     public static IReadOnlyList<DiagnosticStep> Steps { get; } =
     [
-        new(1, "requirements", "Sistem gereksinimleri", "Sistem gereksinimleri kontrol ediliyor…", Nav.Settings, Nav.Requirements),
-        new(2, "windows", "Windows sağlığı", "Windows sistem durumu kontrol ediliyor…", Nav.Health, Nav.SystemHealth),
-        new(3, "drivers", "Sürücü durumu", "Sürücüler okunuyor…", Nav.Update, Nav.Drivers),
-        new(4, "network", "Ağ bağlantısı", "Ağ bağlantısı test ediliyor…", Nav.SpeedTest, Nav.Network),
-        new(5, "dns", "DNS", "DNS sunucuları sorgulanıyor…", Nav.SpeedTest, Nav.Dns),
-        new(6, "storage", "Depolama sağlığı", "Depolama sağlık bilgileri okunuyor…", Nav.Health, Nav.StorageHealth),
-        new(7, "security", "Güvenlik durumu", "Güvenlik durumu okunuyor…", Nav.SystemTools, Nav.Security),
-        new(8, "events", "Olay günlüğü", "Olay günlüğü taranıyor…", Nav.Health, Nav.EventLog),
-        new(9, "crash", "Çökme / mavi ekran geçmişi", "Çökme kayıtları taranıyor…", Nav.Health, Nav.Crash),
-        new(10, "performance", "Performans anlık görüntüsü", "Performans ölçülüyor…", Nav.Device, Nav.Performance)
+        new(1, "requirements", L.T("Sistem gereksinimleri", "System requirements"), L.T("Sistem gereksinimleri kontrol ediliyor…", "Checking system requirements…"), Nav.Settings, Nav.Requirements),
+        new(2, "windows", L.T("Windows sağlığı", "Windows health"), L.T("Windows sistem durumu kontrol ediliyor…", "Checking Windows system status…"), Nav.Health, Nav.SystemHealth),
+        new(3, "drivers", L.T("Sürücü durumu", "Driver status"), L.T("Sürücüler okunuyor…", "Reading drivers…"), Nav.Update, Nav.Drivers),
+        new(4, "network", L.T("Ağ bağlantısı", "Network connection"), L.T("Ağ bağlantısı test ediliyor…", "Testing the network connection…"), Nav.SpeedTest, Nav.Network),
+        new(5, "dns", "DNS", L.T("DNS sunucuları sorgulanıyor…", "Querying DNS servers…"), Nav.SpeedTest, Nav.Dns),
+        new(6, "storage", L.T("Depolama sağlığı", "Storage health"), L.T("Depolama sağlık bilgileri okunuyor…", "Reading storage health information…"), Nav.Health, Nav.StorageHealth),
+        new(7, "security", L.T("Güvenlik durumu", "Security status"), L.T("Güvenlik durumu okunuyor…", "Reading security status…"), Nav.SystemTools, Nav.Security),
+        new(8, "events", L.T("Olay günlüğü", "Event log"), L.T("Olay günlüğü taranıyor…", "Scanning the event log…"), Nav.Health, Nav.EventLog),
+        new(9, "crash", L.T("Çökme / mavi ekran geçmişi", "Crash / blue screen history"), L.T("Çökme kayıtları taranıyor…", "Scanning crash records…"), Nav.Health, Nav.Crash),
+        new(10, "performance", L.T("Performans anlık görüntüsü", "Performance snapshot"), L.T("Performans ölçülüyor…", "Measuring performance…"), Nav.Device, Nav.Performance)
     ];
 
     /// <summary>"Tümünü Kontrol Et"e eklenen hızlı ve güvenli tanılama adımları (DISM / SFC zaten kart kontrollerinde).</summary>
@@ -59,13 +59,13 @@ public sealed class DiagnosticOrchestrator(Logger logger)
             catch (OperationCanceledException) { throw; }
             catch (Exception ex)
             {
-                result = new CheckResult(step.Title, CheckState.Unknown, "Kontrol edilemedi.", ex.Message);
-                logger.Warning($"Tanılama adımı başarısız ({step.Title}): {ex.Message}");
+                result = new CheckResult(step.Title, CheckState.Unknown, L.T("Kontrol edilemedi.", "Could not be checked."), ex.Message);
+                logger.Warning(L.T($"Tanılama adımı başarısız ({step.Title}): {ex.Message}", $"Diagnosis step failed ({step.Title}): {ex.Message}"));
             }
             result = result with { Title = step.Title, TargetCategory = step.TargetCategory, TargetSection = step.TargetSection };
             results.Add(new DiagnosticStepResult(step, result, sw.Elapsed));
             onStep?.Invoke(step, result);
-            logger.Info($"Tanılama {step.Index}/{Steps.Count} – {step.Title}: {CheckStates.Text(result.State)} – {result.Summary} ({sw.Elapsed.TotalSeconds:0.0} sn)");
+            logger.Info(L.T($"Tanılama {step.Index}/{Steps.Count} – {step.Title}: {CheckStates.Text(result.State)} – {result.Summary} ({sw.Elapsed.TotalSeconds:0.0} sn)", $"Diagnosis {step.Index}/{Steps.Count} – {step.Title}: {CheckStates.Text(result.State)} – {result.Summary} ({sw.Elapsed.TotalSeconds:0.0} sec)"));
         }
         return results;
     }
@@ -77,45 +77,45 @@ public sealed class DiagnosticOrchestrator(Logger logger)
             case "requirements":
             {
                 var r = await new SystemRequirementsChecker(logger).CheckAsync();
-                if (r.Error is not null) return new CheckResult("", CheckState.Unknown, "Gereksinimler okunamadı.", r.Error);
+                if (r.Error is not null) return new CheckResult("", CheckState.Unknown, L.T("Gereksinimler okunamadı.", "Requirements could not be read."), r.Error);
                 var parts = new List<string>
                 {
-                    r.IsWindows11 ? "Windows 11" : "Windows 11 değil",
-                    r.HasRtxGpu ? "NVIDIA RTX var" : "NVIDIA RTX yok (kartsız mod)",
-                    r.IsAdministrator ? "yönetici" : "yönetici değil"
+                    r.IsWindows11 ? "Windows 11" : L.T("Windows 11 değil", "not Windows 11"),
+                    r.HasRtxGpu ? L.T("NVIDIA RTX var", "NVIDIA RTX present") : L.T("NVIDIA RTX yok (kartsız mod)", "no NVIDIA RTX (without-RTX mode)"),
+                    r.IsAdministrator ? L.T("yönetici", "administrator") : L.T("yönetici değil", "not administrator")
                 };
                 var state = !r.IsWindows11 ? CheckState.Error : !r.IsAdministrator ? CheckState.Warning : CheckState.Healthy;
                 return new CheckResult("", state, string.Join(" · ", parts),
-                    $"{r.OsDescription}\n{r.GpuDescription}" + (r.IsAdministrator ? "" : "\nYönetici yetkisi olmadan bazı kontroller (sıcaklık, minidump, DISM) yapılamaz."));
+                    $"{r.OsDescription}\n{r.GpuDescription}" + (r.IsAdministrator ? "" : L.T("\nYönetici yetkisi olmadan bazı kontroller (sıcaklık, minidump, DISM) yapılamaz.", "\nWithout administrator rights some checks (temperature, minidump, DISM) cannot be run.")));
             }
             case "windows":
             {
                 var rows = await new WindowsHealthService(logger).CheckAsync(ct);
-                return Summarize(rows, "Windows sistem durumu sağlıklı");
+                return Summarize(rows, L.T("Windows sistem durumu sağlıklı", "Windows system status is healthy"));
             }
             case "drivers":
             {
                 var d = await new DriverService(logger).ScanAsync(ct);
-                if (d.Error is not null && d.Drivers.Count == 0) return new CheckResult("", CheckState.Unknown, "Sürücü bilgisi alınamadı.", d.Error);
+                if (d.Error is not null && d.Drivers.Count == 0) return new CheckResult("", CheckState.Unknown, L.T("Sürücü bilgisi alınamadı.", "Driver information unavailable."), d.Error);
                 var problems = d.Drivers.Where(x => x.State is CheckState.Error or CheckState.Warning).ToList();
                 return problems.Count == 0
-                    ? new CheckResult("", CheckState.Healthy, $"{d.Drivers.Count} sürücü · sorunlu aygıt yok")
+                    ? new CheckResult("", CheckState.Healthy, L.T($"{d.Drivers.Count} sürücü · sorunlu aygıt yok", $"{d.Drivers.Count} drivers · no devices with problems"))
                     : new CheckResult("", problems.Any(p => p.State == CheckState.Error) ? CheckState.Error : CheckState.Warning,
-                        $"{problems.Count} aygıtta sorun bildirildi", string.Join("\n", problems.Take(10).Select(p => $"{p.DeviceName}: {p.StatusText}")));
+                        L.T($"{problems.Count} aygıtta sorun bildirildi", $"Problems reported on {problems.Count} device(s)"), string.Join("\n", problems.Take(10).Select(p => $"{p.DeviceName}: {p.StatusText}")));
             }
             case "network":
             {
                 var net = new NetworkDiagnosticsService(logger);
                 var snap = await net.ReadAsync(ct);
                 LastNetwork = snap;
-                if (snap.Error is not null) return new CheckResult("", CheckState.Unknown, "Ağ bilgisi alınamadı.", snap.Error);
+                if (snap.Error is not null) return new CheckResult("", CheckState.Unknown, L.T("Ağ bilgisi alınamadı.", "Network information unavailable."), snap.Error);
                 var tests = await net.RunTestsAsync(snap, null, ct);
                 LastNetworkTests = tests;
                 var worst = CheckStates.Worst(tests.Select(t => t.State));
-                var inet = tests.FirstOrDefault(t => t.LatencyMs is not null && t.Title.StartsWith("İnternet", StringComparison.Ordinal));
+                var inet = tests.FirstOrDefault(t => t.LatencyMs is not null && t.Title.StartsWith(L.T("İnternet", "Internet"), StringComparison.Ordinal));
                 return new CheckResult("", worst,
-                    snap.Primary is null ? "Etkin ağ bağlantısı yok"
-                    : worst == CheckState.Healthy ? $"Bağlı ({snap.Primary.TypeText})" + (inet is null ? "" : $" · {inet.Summary}")
+                    snap.Primary is null ? L.T("Etkin ağ bağlantısı yok", "No active network connection")
+                    : worst == CheckState.Healthy ? L.T($"Bağlı ({snap.Primary.TypeText})", $"Connected ({snap.Primary.TypeText})") + (inet is null ? "" : $" · {inet.Summary}")
                     : string.Join(" · ", tests.Where(t => t.State is CheckState.Warning or CheckState.Error).Select(t => $"{t.Title}: {t.Summary}")),
                     string.Join("\n", tests.Select(t => $"{t.Title}: {t.StateText} – {t.Summary}")));
             }
@@ -133,10 +133,10 @@ public sealed class DiagnosticOrchestrator(Logger logger)
             case "storage":
             {
                 var s = await new StorageHealthService(logger).ScanAsync(ct);
-                if (s.Error is not null) return new CheckResult("", CheckState.Unknown, "Depolama bilgisi alınamadı.", s.Error);
+                if (s.Error is not null) return new CheckResult("", CheckState.Unknown, L.T("Depolama bilgisi alınamadı.", "Storage information unavailable."), s.Error);
                 var findings = s.Disks.SelectMany(d => d.Findings.Select(f => $"{d.Name}: {f}")).ToList();
                 return new CheckResult("", s.Overall,
-                    findings.Count == 0 ? $"{s.Disks.Count} disk · " + string.Join(", ", s.Disks.Select(d => $"{d.Name}: {d.StateText}")) : string.Join(" · ", findings),
+                    findings.Count == 0 ? L.T($"{s.Disks.Count} disk · ", $"{s.Disks.Count} disk(s) · ") + string.Join(", ", s.Disks.Select(d => $"{d.Name}: {d.StateText}")) : string.Join(" · ", findings),
                     s.ReliabilityNote);
             }
             case "security":
@@ -144,29 +144,29 @@ public sealed class DiagnosticOrchestrator(Logger logger)
                 var s = await new SecurityStatusService(logger).ReadAsync(ct);
                 var issues = s.Checks.Where(c => c.State is CheckState.Warning or CheckState.Error).ToList();
                 return new CheckResult("", s.Overall,
-                    issues.Count == 0 ? "Virüsten koruma ve güvenlik duvarı etkin" : string.Join(" · ", issues.Select(i => $"{i.Title}: {i.Summary}")),
+                    issues.Count == 0 ? L.T("Virüsten koruma ve güvenlik duvarı etkin", "Antivirus and firewall are on") : string.Join(" · ", issues.Select(i => $"{i.Title}: {i.Summary}")),
                     string.Join("\n", s.Checks.Select(c => $"{c.Title}: {CheckStates.Text(c.State)} – {c.Summary}")));
             }
             case "events":
             {
                 var c = await new EventLogService(logger).CountAsync("System", TimeSpan.FromHours(24), ct);
-                if (!c.Ok) return new CheckResult("", CheckState.Unknown, "Olay günlüğü okunamadı.", c.Failure);
+                if (!c.Ok) return new CheckResult("", CheckState.Unknown, L.T("Olay günlüğü okunamadı.", "Could not read the event log."), c.Failure);
                 return new CheckResult("", c.Critical > 0 ? CheckState.Warning : CheckState.Healthy,
-                    $"Son 24 saat (Sistem): {c.Critical} kritik, {c.Errors} hata, {c.Warnings} uyarı" + (c.Capped ? " (sınır)" : ""),
-                    c.Critical > 0 ? "Kritik olaylar Olay Günlüğü ekranında listelenir (ör. Kernel-Power 41 = beklenmedik kapanma)." : null);
+                    L.T($"Son 24 saat (Sistem): {c.Critical} kritik, {c.Errors} hata, {c.Warnings} uyarı", $"Last 24 hours (System): {c.Critical} critical, {c.Errors} error(s), {c.Warnings} warning(s)") + (c.Capped ? L.T(" (sınır)", " (limit)") : ""),
+                    c.Critical > 0 ? L.T("Kritik olaylar Olay Günlüğü ekranında listelenir (ör. Kernel-Power 41 = beklenmedik kapanma).", "Critical events are listed on the Event Log screen (e.g. Kernel-Power 41 = unexpected shutdown).") : null);
             }
             case "crash":
             {
                 var r = await new CrashAnalysisService(logger).AnalyzeAsync(TimeSpan.FromDays(30), AdminPrivilegeManager.IsElevated, ct);
-                if (r.EventError is not null) return new CheckResult("", CheckState.Unknown, "Çökme kayıtları okunamadı.", r.EventError);
+                if (r.EventError is not null) return new CheckResult("", CheckState.Unknown, L.T("Çökme kayıtları okunamadı.", "Could not read crash records."), r.EventError);
                 var parts = new List<string>();
-                if (r.BugChecks > 0) parts.Add($"{r.BugChecks} mavi ekran");
-                if (r.Unexpected > 0) parts.Add($"{r.Unexpected} beklenmedik kapanma kaydı");
-                if (r.DisplayResets > 0) parts.Add($"{r.DisplayResets} ekran sürücüsü sıfırlama");
-                if (r.Hardware > 0) parts.Add($"{r.Hardware} donanım hatası (WHEA)");
+                if (r.BugChecks > 0) parts.Add(L.T($"{r.BugChecks} mavi ekran", $"{r.BugChecks} blue screen(s)"));
+                if (r.Unexpected > 0) parts.Add(L.T($"{r.Unexpected} beklenmedik kapanma kaydı", $"{r.Unexpected} unexpected shutdown record(s)"));
+                if (r.DisplayResets > 0) parts.Add(L.T($"{r.DisplayResets} ekran sürücüsü sıfırlama", $"{r.DisplayResets} display driver reset(s)"));
+                if (r.Hardware > 0) parts.Add(L.T($"{r.Hardware} donanım hatası (WHEA)", $"{r.Hardware} hardware error(s) (WHEA)"));
                 return parts.Count == 0
-                    ? new CheckResult("", CheckState.Healthy, "Son 30 günde çökme / beklenmedik kapanma kaydı yok")
-                    : new CheckResult("", r.BugChecks > 0 || r.Hardware > 0 ? CheckState.Error : CheckState.Warning, "Son 30 gün: " + string.Join(", ", parts),
+                    ? new CheckResult("", CheckState.Healthy, L.T("Son 30 günde çökme / beklenmedik kapanma kaydı yok", "No crash / unexpected shutdown records in the last 30 days"))
+                    : new CheckResult("", r.BugChecks > 0 || r.Hardware > 0 ? CheckState.Error : CheckState.Warning, L.T("Son 30 gün: ", "Last 30 days: ") + string.Join(", ", parts),
                         string.Join("\n", r.Events.Take(5).Select(e => $"{e.TimeText} {e.KindText} {e.CodeText}")));
             }
             case "performance":
@@ -175,19 +175,19 @@ public sealed class DiagnosticOrchestrator(Logger logger)
                 var s = await Task.Run(monitor.Sample, ct);
                 var parts = new List<string>();
                 var warn = new List<string>();
-                if (s.CpuUsage.Value is { } cpu) { parts.Add($"CPU %{cpu:0}"); if (cpu >= 90) warn.Add("işlemci yükü yüksek"); }
-                if (s.MemoryUsage.Value is { } ram) { parts.Add($"RAM %{ram:0}"); if (ram >= 90) warn.Add("bellek neredeyse dolu"); }
+                if (s.CpuUsage.Value is { } cpu) { parts.Add(L.T($"CPU %{cpu:0}", $"CPU {cpu:0}%")); if (cpu >= 90) warn.Add(L.T("işlemci yükü yüksek", "high processor load")); }
+                if (s.MemoryUsage.Value is { } ram) { parts.Add(L.T($"RAM %{ram:0}", $"RAM {ram:0}%")); if (ram >= 90) warn.Add(L.T("bellek neredeyse dolu", "memory almost full")); }
                 foreach (var g in s.Gpus)
                 {
-                    if (g.Usage.Value is { } gu) parts.Add($"GPU %{gu:0}");
-                    if (g.Temperature.Value is { } gt) { parts.Add($"GPU {gt:0} °C"); if (gt >= 90) warn.Add("ekran kartı sıcak"); }
+                    if (g.Usage.Value is { } gu) parts.Add(L.T($"GPU %{gu:0}", $"GPU {gu:0}%"));
+                    if (g.Temperature.Value is { } gt) { parts.Add($"GPU {gt:0} °C"); if (gt >= 90) warn.Add(L.T("ekran kartı sıcak", "graphics card is hot")); }
                 }
-                if (parts.Count == 0) return new CheckResult("", CheckState.Unknown, "Performans ölçülemedi.", s.CpuUsage.Note ?? s.MemoryUsage.Note);
+                if (parts.Count == 0) return new CheckResult("", CheckState.Unknown, L.T("Performans ölçülemedi.", "Performance could not be measured."), s.CpuUsage.Note ?? s.MemoryUsage.Note);
                 return new CheckResult("", warn.Count > 0 ? CheckState.Warning : CheckState.Healthy, string.Join(" · ", parts),
-                    warn.Count > 0 ? "Dikkat: " + string.Join(", ", warn) : s.GpuNote);
+                    warn.Count > 0 ? L.T("Dikkat: ", "Attention: ") + string.Join(", ", warn) : s.GpuNote);
             }
             default:
-                return new CheckResult("", CheckState.Skipped, "Bilinmeyen adım");
+                return new CheckResult("", CheckState.Skipped, L.T("Bilinmeyen adım", "Unknown step"));
         }
     }
 
@@ -220,25 +220,25 @@ public sealed class DiagnosticOrchestrator(Logger logger)
         Func<CancellationToken, Task<ModuleResult>>? runDismCheck, Action<string>? progress, CancellationToken ct)
     {
         var rows = new List<CheckResult>();
-        progress?.Invoke("Windows sistem durumu kontrol ediliyor…");
+        progress?.Invoke(L.T("Windows sistem durumu kontrol ediliyor…", "Checking Windows system status…"));
         rows.AddRange(await new WindowsHealthService(logger).CheckAsync(ct)); // kendi bölmesine bağlantı verilmez (yalnızca Servisler gibi başka ekrana)
 
         rows.Add(sfc is null
-            ? new CheckResult("Sistem dosyaları (SFC)", CheckState.NotChecked, "Sağlık Araçları'ndaki SFC kartından (salt doğrulama) çalıştırılır; 10-15 dk sürebilir.", null, Nav.Health, Nav.Cards)
-            : new CheckResult("Sistem dosyaları (SFC)", FromModule(sfc), sfc.Summary, sfc.Reason, Nav.Health, Nav.Cards));
+            ? new CheckResult(L.T("Sistem dosyaları (SFC)", "System files (SFC)"), CheckState.NotChecked, L.T("Sağlık Araçları'ndaki SFC kartından (salt doğrulama) çalıştırılır; 10-15 dk sürebilir.", "Run from the SFC card in Health Tools (verification only); it can take 10-15 min."), null, Nav.Health, Nav.Cards)
+            : new CheckResult(L.T("Sistem dosyaları (SFC)", "System files (SFC)"), FromModule(sfc), sfc.Summary, sfc.Reason, Nav.Health, Nav.Cards));
 
         if (dism is null && runDismCheck is not null && AdminPrivilegeManager.IsElevated)
         {
-            progress?.Invoke("Windows görüntü sağlığı (DISM /CheckHealth) okunuyor…");
+            progress?.Invoke(L.T("Windows görüntü sağlığı (DISM /CheckHealth) okunuyor…", "Reading Windows image health (DISM /CheckHealth)…"));
             dism = await runDismCheck(ct);
         }
         rows.Add(dism is null
-            ? new CheckResult("Windows görüntüsü (DISM)", AdminPrivilegeManager.IsElevated ? CheckState.NotChecked : CheckState.Skipped,
-                AdminPrivilegeManager.IsElevated ? "DISM kartından kontrol edilir." : "Yönetici yetkisi gerekiyor", null, Nav.Health, Nav.Cards)
-            : new CheckResult("Windows görüntüsü (DISM)", FromModule(dism), dism.Summary, dism.Reason, Nav.Health, Nav.Cards));
+            ? new CheckResult(L.T("Windows görüntüsü (DISM)", "Windows image (DISM)"), AdminPrivilegeManager.IsElevated ? CheckState.NotChecked : CheckState.Skipped,
+                AdminPrivilegeManager.IsElevated ? L.T("DISM kartından kontrol edilir.", "Checked from the DISM card.") : L.T("Yönetici yetkisi gerekiyor", "Administrator rights required"), null, Nav.Health, Nav.Cards)
+            : new CheckResult(L.T("Windows görüntüsü (DISM)", "Windows image (DISM)"), FromModule(dism), dism.Summary, dism.Reason, Nav.Health, Nav.Cards));
 
         rows.Add(windowsUpdate is null
-            ? new CheckResult("Windows Update", CheckState.NotChecked, "Güncelleme kategorisindeki Windows Update kartından kontrol edilir.", null, Nav.Update, Nav.Cards)
+            ? new CheckResult("Windows Update", CheckState.NotChecked, L.T("Güncelleme kategorisindeki Windows Update kartından kontrol edilir.", "Checked from the Windows Update card in the Updates category."), null, Nav.Update, Nav.Cards)
             : new CheckResult("Windows Update", FromModule(windowsUpdate), windowsUpdate.Summary, windowsUpdate.Reason, Nav.Update, Nav.Cards));
 
         foreach (var key in new[] { "storage", "drivers", "events", "crash" })
@@ -249,15 +249,15 @@ public sealed class DiagnosticOrchestrator(Logger logger)
             CheckResult r;
             try { r = await RunStepAsync(step, ct); }
             catch (OperationCanceledException) { throw; }
-            catch (Exception ex) { r = new CheckResult("", CheckState.Unknown, "Kontrol edilemedi.", ex.Message); }
+            catch (Exception ex) { r = new CheckResult("", CheckState.Unknown, L.T("Kontrol edilemedi.", "Could not be checked."), ex.Message); }
             rows.Add(r with
             {
-                Title = key switch { "storage" => "Disk sağlığı ve güvenilirlik", "drivers" => "Sistem sürücüleri", "events" => "Kritik sistem olayları", _ => "Son sistem hataları (çökme)" },
+                Title = key switch { "storage" => L.T("Disk sağlığı ve güvenilirlik", "Disk health and reliability"), "drivers" => L.T("Sistem sürücüleri", "System drivers"), "events" => L.T("Kritik sistem olayları", "Critical system events"), _ => L.T("Son sistem hataları (çökme)", "Recent system errors (crashes)") },
                 TargetCategory = step.TargetCategory,
                 TargetSection = step.TargetSection
             });
         }
-        logger.Info("Sistem Sağlığı taraması: " + string.Join(" | ", rows.Select(r => $"{r.Title}: {CheckStates.Text(r.State)}")));
+        logger.Info(L.T("Sistem Sağlığı taraması: ", "System Health scan: ") + string.Join(" | ", rows.Select(r => $"{r.Title}: {CheckStates.Text(r.State)}")));
         return rows;
     }
 }

@@ -46,8 +46,8 @@ public sealed class PersonalDataMask
     /// <summary>Gizlenen / rapora hiç alınmayan bilgiler (ekranda, raporda ve BENIOKU'da aynı liste).</summary>
     public static IReadOnlyList<string> Descriptions { get; } =
     [
-        "Bilgisayar adı", "Kullanıcı adı ve kullanıcı klasörü yolu", "Bu bilgisayarın IP adresleri", "Ağ kartı MAC adresleri",
-        "Wi-Fi ağ adı, seri numaraları ve ürün anahtarları rapora hiç alınmaz"
+        L.T("Bilgisayar adı", "Computer name"), L.T("Kullanıcı adı ve kullanıcı klasörü yolu", "User name and user folder path"), L.T("Bu bilgisayarın IP adresleri", "This computer's IP addresses"), L.T("Ağ kartı MAC adresleri", "Network adapter MAC addresses"),
+        L.T("Wi-Fi ağ adı, seri numaraları ve ürün anahtarları rapora hiç alınmaz", "Wi-Fi network name, serial numbers and product keys are never included in the report")
     ];
 
     public static string DescriptionText => string.Join(", ", Descriptions);
@@ -56,9 +56,9 @@ public sealed class PersonalDataMask
     {
         var profile = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
         if (profile.Length > 3) _replacements.Add((profile, "%USERPROFILE%"));
-        foreach (var ip in OwnAddresses()) _replacements.Add((ip, "<bu bilgisayarın IP adresi>"));
-        if (Environment.MachineName.Length > 1) _replacements.Add((Environment.MachineName, "<BİLGİSAYAR-ADI>"));
-        if (Environment.UserName.Length > 1) _replacements.Add((Environment.UserName, "<KULLANICI>"));
+        foreach (var ip in OwnAddresses()) _replacements.Add((ip, L.T("<bu bilgisayarın IP adresi>", "<this computer's IP address>")));
+        if (Environment.MachineName.Length > 1) _replacements.Add((Environment.MachineName, L.T("<BİLGİSAYAR-ADI>", "<COMPUTER-NAME>")));
+        if (Environment.UserName.Length > 1) _replacements.Add((Environment.UserName, L.T("<KULLANICI>", "<USER>")));
         // Uzun değer önce: yol içindeki kullanıcı adı önce yol olarak değiştirilir.
         _replacements.Sort((a, b) => b.Value.Length.CompareTo(a.Value.Length));
     }
@@ -115,113 +115,113 @@ public sealed class SystemReportService(Logger logger, SystemInfoService systemI
             catch (OperationCanceledException) { throw; }
             catch (Exception ex)
             {
-                sections.Add(new ReportSection(step.TrimEnd('…', '.'), [], null, "Bu bölüm okunamadı: " + ex.Message));
-                logger.Warning($"Sistem raporu – {step} başarısız: {ex.Message}");
+                sections.Add(new ReportSection(step.TrimEnd('…', '.'), [], null, L.T("Bu bölüm okunamadı: ", "This section could not be read: ") + ex.Message));
+                logger.Warning(L.T($"Sistem raporu – {step} başarısız: {ex.Message}", $"System report – {step} failed: {ex.Message}"));
             }
         }
 
-        await Add(ReportParts.Windows, "Windows bilgileri okunuyor…", async () =>
+        await Add(ReportParts.Windows, L.T("Windows bilgileri okunuyor…", "Reading Windows information…"), async () =>
         {
             var rows = await new WindowsHealthService(logger).CheckAsync(ct);
             return new ReportSection("Windows", rows.Select(r => Kv(r.Title, $"{CheckStates.Text(r.State)} – {r.Summary}" + (r.Detail is null ? "" : $" ({r.Detail.ReplaceLineEndings("; ")})"))).ToList());
         });
-        await Add(ReportParts.Hardware, "Donanım bilgileri okunuyor…", async () =>
+        await Add(ReportParts.Hardware, L.T("Donanım bilgileri okunuyor…", "Reading hardware information…"), async () =>
         {
             var snap = await systemInfo.CollectAsync(ct);
-            return new ReportSection("Donanım (CPU / GPU / RAM / Disk)", snap.Fields
-                .Where(f => !f.Label.Contains("Bilgisayar adı", StringComparison.OrdinalIgnoreCase))
+            return new ReportSection(L.T("Donanım (CPU / GPU / RAM / Disk)", "Hardware (CPU / GPU / RAM / Disk)"), snap.Fields
+                .Where(f => !f.Label.Contains(L.T("Bilgisayar adı", "Computer name"), StringComparison.OrdinalIgnoreCase))
                 .Select(f => Kv(f.Label, f.Value)).ToList());
         });
-        await Add(ReportParts.Storage, "Depolama sağlığı okunuyor…", async () =>
+        await Add(ReportParts.Storage, L.T("Depolama sağlığı okunuyor…", "Reading storage health…"), async () =>
         {
             var s = await new StorageHealthService(logger).ScanAsync(ct);
-            var table = new ReportTable(["Disk", "Tür", "Boyut", "Durum", "Sıcaklık", "Aşınma", "Çalışma", "Bulgular"],
+            var table = new ReportTable(["Disk", L.T("Tür", "Type"), L.T("Boyut", "Size"), L.T("Durum", "Status"), L.T("Sıcaklık", "Temperature"), L.T("Aşınma", "Wear"), L.T("Çalışma", "Power-on"), L.T("Bulgular", "Findings")],
                 s.Disks.Select(d => (IReadOnlyList<string>)[d.Name, d.TypeText, d.SizeText, d.StateText, d.TemperatureText, d.WearText, d.PowerOnText, d.FindingsText]).ToList());
-            return new ReportSection("Depolama", s.Volumes.Select(v => Kv(v.Letter + " " + v.FileSystem, v.UsageText)).ToList(), table,
+            return new ReportSection(L.T("Depolama", "Storage"), s.Volumes.Select(v => Kv(v.Letter + " " + v.FileSystem, v.UsageText)).ToList(), table,
                 s.Error ?? s.ReliabilityNote);
         });
-        await Add(ReportParts.Network, "Ağ bilgileri okunuyor…", async () =>
+        await Add(ReportParts.Network, L.T("Ağ bilgileri okunuyor…", "Reading network information…"), async () =>
         {
             var n = await new NetworkDiagnosticsService(logger).ReadAsync(ct);
-            var table = new ReportTable(["Bağdaştırıcı", "Tür", "Durum", "Hız", "Ağ geçidi", "DNS", "DHCP"],
-                n.Adapters.Select(a => (IReadOnlyList<string>)[a.Name + (a.IsPrimary ? " (birincil)" : ""), a.TypeText, a.StatusText, a.SpeedText, a.GatewayText, a.DnsText, a.DhcpText]).ToList());
-            var items = new List<KeyValuePair<string, string>> { Kv("Windows bağlantı durumu", n.ConnectivityText ?? "—") };
-            if (n.Wifi is { } w) items.Add(Kv("Wi-Fi", w.Error ?? $"sinyal {w.SignalText}, {w.PhyType ?? "—"}"));
+            var table = new ReportTable([L.T("Bağdaştırıcı", "Adapter"), L.T("Tür", "Type"), L.T("Durum", "Status"), L.T("Hız", "Speed"), L.T("Ağ geçidi", "Gateway"), "DNS", "DHCP"],
+                n.Adapters.Select(a => (IReadOnlyList<string>)[a.Name + (a.IsPrimary ? L.T(" (birincil)", " (primary)") : ""), a.TypeText, a.StatusText, a.SpeedText, a.GatewayText, a.DnsText, a.DhcpText]).ToList());
+            var items = new List<KeyValuePair<string, string>> { Kv(L.T("Windows bağlantı durumu", "Windows connection status"), n.ConnectivityText ?? "—") };
+            if (n.Wifi is { } w) items.Add(Kv("Wi-Fi", w.Error ?? L.T($"sinyal {w.SignalText}, {w.PhyType ?? "—"}", $"signal {w.SignalText}, {w.PhyType ?? "—"}")));
             if (lastNetworkTests is { Count: > 0 })
-                items.AddRange(lastNetworkTests.Select(t => Kv("Test: " + t.Title, $"{t.StateText} – {t.Summary}")));
-            else items.Add(Kv("Bağlantı testleri", "Bu oturumda çalıştırılmadı"));
+                items.AddRange(lastNetworkTests.Select(t => Kv(L.T("Test: ", "Test: ") + t.Title, $"{t.StateText} – {t.Summary}")));
+            else items.Add(Kv(L.T("Bağlantı testleri", "Connection tests"), L.T("Bu oturumda çalıştırılmadı", "Not run in this session")));
             if (lastDns is { Servers.Count: > 0 })
-                items.AddRange(lastDns.Servers.Where(s => !s.Placeholder).Select(s => Kv("DNS " + s.ServerText, $"{s.ResultText}, {s.TimeText}, DNSSEC: {s.DnssecText}")));
-            return new ReportSection("Ağ", items, table, n.Error);
+                items.AddRange(lastDns.Servers.Where(s => !s.Placeholder).Select(s => Kv("DNS " + s.ServerText, L.T($"{s.ResultText}, {s.TimeText}, DNSSEC: {s.DnssecText}", $"{s.ResultText}, {s.TimeText}, DNSSEC: {s.DnssecText}"))));
+            return new ReportSection(L.T("Ağ", "Network"), items, table, n.Error);
         });
-        await Add(ReportParts.Drivers, "Sürücüler okunuyor…", async () =>
+        await Add(ReportParts.Drivers, L.T("Sürücüler okunuyor…", "Reading drivers…"), async () =>
         {
             var d = await new DriverService(logger).ScanAsync(ct);
             var shown = d.Drivers.Where(x => x.Important || x.State is CheckState.Error or CheckState.Warning).ToList();
-            var table = new ReportTable(["Aygıt", "Kategori", "Sağlayıcı", "Sürüm", "Tarih", "Durum"],
+            var table = new ReportTable([L.T("Aygıt", "Device"), L.T("Kategori", "Category"), L.T("Sağlayıcı", "Provider"), L.T("Sürüm", "Version"), L.T("Tarih", "Date"), L.T("Durum", "Status")],
                 shown.Select(x => (IReadOnlyList<string>)[x.DeviceName, x.Category, x.Provider, x.Version, x.DateText, x.StatusText]).ToList());
-            return new ReportSection("Sürücüler", [Kv("Toplam sürücü", d.Drivers.Count.ToString()), Kv("Sorunlu aygıt", d.ProblemCount.ToString())], table, d.Error);
+            return new ReportSection(L.T("Sürücüler", "Drivers"), [Kv(L.T("Toplam sürücü", "Total drivers"), d.Drivers.Count.ToString()), Kv(L.T("Sorunlu aygıt", "Devices with problems"), d.ProblemCount.ToString())], table, d.Error);
         });
-        await Add(ReportParts.Security, "Güvenlik durumu okunuyor…", async () =>
+        await Add(ReportParts.Security, L.T("Güvenlik durumu okunuyor…", "Reading security status…"), async () =>
         {
             var s = await new SecurityStatusService(logger).ReadAsync(ct);
-            return new ReportSection("Güvenlik", s.Checks.Select(c => Kv(c.Title, $"{CheckStates.Text(c.State)} – {c.Summary}")).ToList(),
-                new ReportTable(["Ürün", "Tür", "Durum"], s.Products.Select(p => (IReadOnlyList<string>)[p.Name, p.Kind, p.StateText]).ToList()));
+            return new ReportSection(L.T("Güvenlik", "Security"), s.Checks.Select(c => Kv(c.Title, $"{CheckStates.Text(c.State)} – {c.Summary}")).ToList(),
+                new ReportTable([L.T("Ürün", "Product"), L.T("Tür", "Type"), L.T("Durum", "Status")], s.Products.Select(p => (IReadOnlyList<string>)[p.Name, p.Kind, p.StateText]).ToList()));
         });
-        await Add(ReportParts.Services, "Windows hizmetleri okunuyor…", async () =>
+        await Add(ReportParts.Services, L.T("Windows hizmetleri okunuyor…", "Reading Windows services…"), async () =>
         {
             var s = await new WindowsServiceManager(logger).ListAsync(ct);
             // Tüm hizmetler yerine: otomatik başlaması gerekip çalışmayanlar + Microsoft dışı çalışanlar (tanı için anlamlı olanlar).
             var autoStopped = s.Services.Where(x => x.StartMode == "Auto" && !x.IsRunning && x.DelayedStart != true).ToList();
             var thirdParty = s.Services.Where(x => x.IsRunning && x.Publisher is { } p && !p.Contains("Microsoft", StringComparison.OrdinalIgnoreCase)).ToList();
-            var rows = autoStopped.Select(x => (IReadOnlyList<string>)[x.DisplayName, x.Name, x.StateText, x.StartModeText, "Otomatik ama çalışmıyor"])
+            var rows = autoStopped.Select(x => (IReadOnlyList<string>)[x.DisplayName, x.Name, x.StateText, x.StartModeText, L.T("Otomatik ama çalışmıyor", "Automatic but not running")])
                 .Concat(thirdParty.Select(x => (IReadOnlyList<string>)[x.DisplayName, x.Name, x.StateText, x.StartModeText, x.PublisherText])).ToList();
-            return new ReportSection("Hizmetler",
-                [Kv("Toplam", s.Services.Count.ToString()), Kv("Çalışan", s.Services.Count(x => x.IsRunning).ToString()),
-                 Kv("Otomatik ama çalışmayan (gecikmeli hariç)", autoStopped.Count.ToString())],
-                new ReportTable(["Hizmet", "Ad", "Durum", "Başlangıç", "Not / yayıncı"], rows), s.Error);
+            return new ReportSection(L.T("Hizmetler", "Services"),
+                [Kv(L.T("Toplam", "Total"), s.Services.Count.ToString()), Kv(L.T("Çalışan", "Running"), s.Services.Count(x => x.IsRunning).ToString()),
+                 Kv(L.T("Otomatik ama çalışmayan (gecikmeli hariç)", "Automatic but not running (excluding delayed)"), autoStopped.Count.ToString())],
+                new ReportTable([L.T("Hizmet", "Service"), "Ad", L.T("Durum", "Status"), L.T("Başlangıç", "Startup"), L.T("Not / yayıncı", "Note / publisher")], rows), s.Error);
         });
-        await Add(ReportParts.Startup, "Başlangıç uygulamaları okunuyor…", async () =>
+        await Add(ReportParts.Startup, L.T("Başlangıç uygulamaları okunuyor…", "Reading startup apps…"), async () =>
         {
             var s = await new StartupService(logger).ScanAsync(ct);
-            return new ReportSection("Başlangıç uygulamaları", [Kv("Toplam", s.Entries.Count.ToString()), Kv("Etkin", s.Entries.Count(e => e.Enabled).ToString())],
-                new ReportTable(["Ad", "Kaynak", "Durum", "Yayıncı", "Konum"],
+            return new ReportSection(L.T("Başlangıç uygulamaları", "Startup apps"), [Kv(L.T("Toplam", "Total"), s.Entries.Count.ToString()), Kv(L.T("Etkin", "Enabled"), s.Entries.Count(e => e.Enabled).ToString())],
+                new ReportTable(["Ad", L.T("Kaynak", "Source"), L.T("Durum", "Status"), L.T("Yayıncı", "Publisher"), L.T("Konum", "Location")],
                     s.Entries.Select(e => (IReadOnlyList<string>)[e.Name, e.SourceText, e.StateText, e.PublisherText, e.LocationText]).ToList()),
                 s.Errors.Count > 0 ? string.Join(" ", s.Errors) : null);
         });
-        await Add(ReportParts.Events, "Olay günlüğü okunuyor…", async () =>
+        await Add(ReportParts.Events, L.T("Olay günlüğü okunuyor…", "Reading the event log…"), async () =>
         {
             var events = new EventLogService(logger);
             var sys = await events.CountAsync("System", TimeSpan.FromDays(7), ct);
             var app = await events.CountAsync("Application", TimeSpan.FromDays(7), ct);
             var last = await events.QueryAsync(["System"], [1, 2], TimeSpan.FromDays(7), ct);
-            return new ReportSection("Olay günlüğü (son 7 gün)",
-                [Kv("Sistem", sys.Ok ? $"{sys.Critical} kritik, {sys.Errors} hata, {sys.Warnings} uyarı" : "okunamadı: " + sys.Failure),
-                 Kv("Uygulama", app.Ok ? $"{app.Critical} kritik, {app.Errors} hata, {app.Warnings} uyarı" : "okunamadı: " + app.Failure)],
-                new ReportTable(["Tarih", "Düzey", "Kaynak", "Olay", "İleti"],
+            return new ReportSection(L.T("Olay günlüğü (son 7 gün)", "Event log (last 7 days)"),
+                [Kv(L.T("Sistem", "System"), sys.Ok ? L.T($"{sys.Critical} kritik, {sys.Errors} hata, {sys.Warnings} uyarı", $"{sys.Critical} critical, {sys.Errors} error(s), {sys.Warnings} warning(s)") : L.T("okunamadı: ", "unreadable: ") + sys.Failure),
+                 Kv(L.T("Uygulama", "Application"), app.Ok ? L.T($"{app.Critical} kritik, {app.Errors} hata, {app.Warnings} uyarı", $"{app.Critical} critical, {app.Errors} error(s), {app.Warnings} warning(s)") : L.T("okunamadı: ", "unreadable: ") + app.Failure)],
+                new ReportTable([L.T("Tarih", "Date"), L.T("Düzey", "Level"), L.T("Kaynak", "Source"), L.T("Olay", "Event"), L.T("İleti", "Message")],
                     last.Entries.Take(30).Select(e => (IReadOnlyList<string>)[e.TimeText, e.LevelText, e.Provider, e.Id.ToString(), e.ShortMessage]).ToList()),
                 last.Errors.Count > 0 ? string.Join(" ", last.Errors) : null);
         });
-        await Add(ReportParts.Crashes, "Çökme kayıtları okunuyor…", async () =>
+        await Add(ReportParts.Crashes, L.T("Çökme kayıtları okunuyor…", "Reading crash records…"), async () =>
         {
             var c = await new CrashAnalysisService(logger).AnalyzeAsync(TimeSpan.FromDays(30), AdminPrivilegeManager.IsElevated, ct);
-            return new ReportSection("Çökme / beklenmedik kapanma (son 30 gün)",
-                [Kv("Mavi ekran (BugCheck)", c.BugChecks.ToString()), Kv("Beklenmedik kapanma kaydı", c.Unexpected.ToString()),
-                 Kv("Ekran sürücüsü sıfırlama", c.DisplayResets.ToString()), Kv("Donanım hatası (WHEA)", c.Hardware.ToString()),
-                 Kv("Minidump", c.Dumps.Count > 0 ? c.Dumps.Count.ToString() : c.DumpNote ?? "yok")],
-                new ReportTable(["Tarih", "Tür", "Kod", "Modül", "İlişkili olabilir"],
+            return new ReportSection(L.T("Çökme / beklenmedik kapanma (son 30 gün)", "Crashes / unexpected shutdowns (last 30 days)"),
+                [Kv(L.T("Mavi ekran (BugCheck)", "Blue screen (BugCheck)"), c.BugChecks.ToString()), Kv(L.T("Beklenmedik kapanma kaydı", "Unexpected shutdown record"), c.Unexpected.ToString()),
+                 Kv(L.T("Ekran sürücüsü sıfırlama", "Display driver reset"), c.DisplayResets.ToString()), Kv(L.T("Donanım hatası (WHEA)", "Hardware error (WHEA)"), c.Hardware.ToString()),
+                 Kv("Minidump", c.Dumps.Count > 0 ? c.Dumps.Count.ToString() : c.DumpNote ?? L.T("yok", "none"))],
+                new ReportTable([L.T("Tarih", "Date"), L.T("Tür", "Type"), L.T("Kod", "Code"), L.T("Modül", "Module"), L.T("İlişkili olabilir", "May be related")],
                     c.Events.Take(30).Select(e => (IReadOnlyList<string>)[e.TimeText, e.KindText, e.CodeText, e.ModuleText, e.RelationText]).ToList()),
                 c.EventError);
         });
-        await Add(ReportParts.Battery, "Batarya bilgisi okunuyor…", async () =>
+        await Add(ReportParts.Battery, L.T("Batarya bilgisi okunuyor…", "Reading battery information…"), async () =>
         {
             var b = await new BatteryService(logger).ReadAsync(ct);
-            if (!b.HasBattery) return new ReportSection("Batarya", [Kv("Durum", b.Error ?? BatteryService.NoBatteryText)]);
-            return new ReportSection("Batarya", b.Batteries.SelectMany(x => new[]
+            if (!b.HasBattery) return new ReportSection(L.T("Batarya", "Battery"), [Kv(L.T("Durum", "Status"), b.Error ?? BatteryService.NoBatteryText)]);
+            return new ReportSection(L.T("Batarya", "Battery"), b.Batteries.SelectMany(x => new[]
             {
-                Kv(x.Name + " – şarj", $"{x.ChargeText}, {x.StatusText}"), Kv(x.Name + " – sağlık", x.HealthText),
-                Kv(x.Name + " – kapasite", $"tam {x.FullText} / tasarım {x.DesignText}"), Kv(x.Name + " – döngü", x.CycleText)
-            }).Prepend(Kv("Güç", b.AcText ?? "—")).ToList(), null, b.Note);
+                Kv(x.Name + L.T(" – şarj", " – charge"), $"{x.ChargeText}, {x.StatusText}"), Kv(x.Name + L.T(" – sağlık", " – health"), x.HealthText),
+                Kv(x.Name + L.T(" – kapasite", " – capacity"), L.T($"tam {x.FullText} / tasarım {x.DesignText}", $"full {x.FullText} / design {x.DesignText}")), Kv(x.Name + L.T(" – döngü", " – cycles"), x.CycleText)
+            }).Prepend(Kv(L.T("Güç", "Power"), b.AcText ?? "—")).ToList(), null, b.Note);
         });
 
         // Tüm metinler maskeden geçer (kişisel veri rapora yazılmaz).
@@ -229,8 +229,8 @@ public sealed class SystemReportService(Logger logger, SystemInfoService systemI
             s.Items.Select(i => Kv(mask.Apply(i.Key), mask.Apply(i.Value))).ToList(),
             s.Table is null ? null : new ReportTable(s.Table.Headers, s.Table.Rows.Select(r => (IReadOnlyList<string>)r.Select(mask.Apply).ToList()).ToList()),
             s.Note is null ? null : mask.Apply(s.Note))).ToList();
-        logger.Info($"Sistem raporu hazırlandı: {masked.Count} bölüm ({string.Join(", ", masked.Select(s => s.Title))}).");
-        return new ReportDocument("E-mre Control Center – Sistem Raporu", DateTime.Now, AppInfo.Version, masked, PersonalDataMask.Descriptions);
+        logger.Info(L.T($"Sistem raporu hazırlandı: {masked.Count} bölüm ({string.Join(", ", masked.Select(s => s.Title))}).", $"System report prepared: {masked.Count} sections ({string.Join(", ", masked.Select(s => s.Title))})."));
+        return new ReportDocument(L.T("E-mre Control Center – Sistem Raporu", "E-mre Control Center – System Report"), DateTime.Now, AppInfo.Version, masked, PersonalDataMask.Descriptions);
     }
 
     private static KeyValuePair<string, string> Kv(string k, string v) => new(k, v);
@@ -241,12 +241,12 @@ public sealed class SystemReportService(Logger logger, SystemInfoService systemI
     {
         var sb = new StringBuilder();
         sb.AppendLine(doc.Title);
-        sb.AppendLine($"Oluşturulma: {doc.CreatedAt:dd.MM.yyyy HH:mm:ss} · Uygulama sürümü {doc.AppVersion}");
-        sb.AppendLine("Gizlenen bilgiler: " + string.Join(", ", doc.Masked));
+        sb.AppendLine(L.T($"Oluşturulma: {doc.CreatedAt:dd.MM.yyyy HH:mm:ss} · Uygulama sürümü {doc.AppVersion}", $"Created: {doc.CreatedAt:yyyy-MM-dd HH:mm:ss} · App version {doc.AppVersion}"));
+        sb.AppendLine(L.T("Gizlenen bilgiler: ", "Masked information: ") + string.Join(", ", doc.Masked));
         foreach (var s in doc.Sections)
         {
-            sb.AppendLine().AppendLine(new string('=', 72)).AppendLine(s.Title.ToUpper(new System.Globalization.CultureInfo("tr-TR"))).AppendLine(new string('=', 72));
-            if (s.Note is not null) sb.AppendLine("Not: " + s.Note);
+            sb.AppendLine().AppendLine(new string('=', 72)).AppendLine(L.Upper(s.Title)).AppendLine(new string('=', 72));
+            if (s.Note is not null) sb.AppendLine(L.T("Not: ", "Note: ") + s.Note);
             var width = s.Items.Count == 0 ? 0 : Math.Min(40, s.Items.Max(i => i.Key.Length));
             foreach (var i in s.Items) sb.AppendLine($"{i.Key.PadRight(width)} : {i.Value}");
             if (s.Table is { Rows.Count: > 0 } t)
@@ -278,14 +278,14 @@ public sealed class SystemReportService(Logger logger, SystemInfoService systemI
     {
         static string E(string s) => WebUtility.HtmlEncode(s);
         var sb = new StringBuilder();
-        sb.Append("<!DOCTYPE html><html lang=\"tr\"><head><meta charset=\"utf-8\"><title>").Append(E(doc.Title)).Append("</title><style>")
+        sb.Append(L.T("<!DOCTYPE html><html lang=\"tr\"><head><meta charset=\"utf-8\"><title>", "<!DOCTYPE html><html lang=\"en\"><head><meta charset=\"utf-8\"><title>")).Append(E(doc.Title)).Append("</title><style>")
           .Append("body{background:#020307;color:#E6EDF7;font-family:'Segoe UI',sans-serif;margin:24px;max-width:1200px}")
           .Append("h1{color:#4CCBFF;font-weight:600}h2{color:#4CCBFF;font-size:18px;border-bottom:1px solid #1B2A44;padding-bottom:6px;margin-top:28px}")
           .Append("table{border-collapse:collapse;width:100%;margin-top:8px;font-size:13px}td,th{border:1px solid #1B2A44;padding:6px 8px;text-align:left;vertical-align:top;overflow-wrap:anywhere}")
           .Append("th{background:#0A1426;color:#A7B5CF}.kv td:first-child{color:#A7B5CF;width:32%}.note{color:#F2B84B}.meta{color:#7887A5}")
           .Append("</style></head><body>");
-        sb.Append("<h1>").Append(E(doc.Title)).Append("</h1><p class=\"meta\">Oluşturulma: ").Append(E(doc.CreatedAt.ToString("dd.MM.yyyy HH:mm:ss")))
-          .Append(" · Uygulama sürümü ").Append(E(doc.AppVersion)).Append("<br>Gizlenen bilgiler: ").Append(E(string.Join(", ", doc.Masked))).Append("</p>");
+        sb.Append("<h1>").Append(E(doc.Title)).Append(L.T("</h1><p class=\"meta\">Oluşturulma: ", "</h1><p class=\"meta\">Created: ")).Append(E(doc.CreatedAt.ToString(L.T("dd.MM.yyyy HH:mm:ss", "yyyy-MM-dd HH:mm:ss"))))
+          .Append(L.T(" · Uygulama sürümü ", " · App version ")).Append(E(doc.AppVersion)).Append(L.T("<br>Gizlenen bilgiler: ", "<br>Masked information: ")).Append(E(string.Join(", ", doc.Masked))).Append("</p>");
         foreach (var s in doc.Sections)
         {
             sb.Append("<h2>").Append(E(s.Title)).Append("</h2>");

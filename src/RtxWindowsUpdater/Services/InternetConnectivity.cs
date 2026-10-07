@@ -41,7 +41,7 @@ public static class InternetConnectivity
     public static async Task<InternetCheckResult> CheckAsync(CancellationToken ct = default)
     {
         if (!NetworkInterface.GetIsNetworkAvailable())
-            return new(InternetState.NoNetwork, "Ağ bağlantısı yok – Wi-Fi veya Ethernet bağlı değil.");
+            return new(InternetState.NoNetwork, L.T("Ağ bağlantısı yok – Wi-Fi veya Ethernet bağlı değil.", "No network connection – Wi-Fi or Ethernet is not connected."));
 
         var limited = false;
         string? error = null;
@@ -52,7 +52,7 @@ public static class InternetConnectivity
                 using var response = await Http.GetAsync(url, ct).ConfigureAwait(false);
                 var text = await response.Content.ReadAsStringAsync(ct).ConfigureAwait(false);
                 if (response.IsSuccessStatusCode && text.Contains(expected, StringComparison.Ordinal))
-                    return new(InternetState.Connected, $"Bağlı · {ConnectionName()}");
+                    return new(InternetState.Connected, L.T($"Bağlı · {ConnectionName()}", $"Connected · {ConnectionName()}"));
                 limited = true;
                 error = $"HTTP {(int)response.StatusCode}";
             }
@@ -62,14 +62,14 @@ public static class InternetConnectivity
             }
             catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException or IOException)
             {
-                error = ex is TaskCanceledException ? $"{ProbeTimeout.TotalSeconds:0} sn içinde yanıt gelmedi" : ex.Message;
+                error = ex is TaskCanceledException ? L.T($"{ProbeTimeout.TotalSeconds:0} sn içinde yanıt gelmedi", $"no response within {ProbeTimeout.TotalSeconds:0} sec") : ex.Message;
             }
         }
 
         return limited
-            ? new(InternetState.Limited, "İnternet erişimi sınırlı – bağlantı var ama Microsoft'un bağlantı testi beklenen yanıtı vermedi " +
-                                         "(oturum açma sayfası veya proxy olabilir).")
-            : new(InternetState.Unreachable, "İnternete erişilemiyor: " + error);
+            ? new(InternetState.Limited, L.T("İnternet erişimi sınırlı – bağlantı var ama Microsoft'un bağlantı testi beklenen yanıtı vermedi ", "Internet access is limited – there is a connection, but Microsoft's connectivity test did not return the expected answer ") +
+                                         L.T("(oturum açma sayfası veya proxy olabilir).", "(it may be a sign-in page or a proxy)."))
+            : new(InternetState.Unreachable, L.T("İnternete erişilemiyor: ", "The internet cannot be reached: ") + error);
     }
 
     /// <summary>Etkin bağlantının türü (Wi-Fi / Ethernet); ağ adı okunmaz.</summary>
@@ -84,17 +84,17 @@ public static class InternetConnectivity
                     .Any(g => !g.Address.Equals(IPAddress.Any) && !g.Address.Equals(IPAddress.IPv6Any)));
             return nic?.NetworkInterfaceType switch
             {
-                null => "etkin bağlantı",
+                null => L.T("etkin bağlantı", "active connection"),
                 NetworkInterfaceType.Wireless80211 => "Wi-Fi",
                 NetworkInterfaceType.Ethernet or NetworkInterfaceType.GigabitEthernet or NetworkInterfaceType.FastEthernetT
                     or NetworkInterfaceType.FastEthernetFx or NetworkInterfaceType.Ethernet3Megabit => "Ethernet",
-                NetworkInterfaceType.Wwanpp or NetworkInterfaceType.Wwanpp2 => "mobil geniş bant",
-                _ => "etkin bağlantı"
+                NetworkInterfaceType.Wwanpp or NetworkInterfaceType.Wwanpp2 => L.T("mobil geniş bant", "mobile broadband"),
+                _ => L.T("etkin bağlantı", "active connection")
             };
         }
         catch (NetworkInformationException)
         {
-            return "etkin bağlantı";
+            return L.T("etkin bağlantı", "active connection");
         }
     }
 }

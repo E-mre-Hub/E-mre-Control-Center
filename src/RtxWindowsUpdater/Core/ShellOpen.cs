@@ -18,7 +18,7 @@ public static class ShellOpen
     public static string? OpenUrl(string url)
     {
         if (!Uri.TryCreate(url, UriKind.Absolute, out var uri) || uri.Scheme != Uri.UriSchemeHttps)
-            return "Yalnızca https adresleri açılır.";
+            return L.T("Yalnızca https adresleri açılır.", "Only https addresses are opened.");
         return ViaExplorer(uri.AbsoluteUri);
     }
 
@@ -29,14 +29,14 @@ public static class ShellOpen
         var allowed = uri == "windowsdefender:"
                       || (uri.StartsWith(settings, StringComparison.Ordinal)
                           && uri.Skip(settings.Length).All(c => char.IsAsciiLetterOrDigit(c) || c is '-' or '_'));
-        if (!allowed) return "Yalnızca Windows Ayarlar / Windows Güvenliği sayfaları açılır.";
+        if (!allowed) return L.T("Yalnızca Windows Ayarlar / Windows Güvenliği sayfaları açılır.", "Only Windows Settings / Windows Security pages are opened.");
         return ViaExplorer(uri);
     }
 
     /// <summary>Var olan bir dosyayı varsayılan uygulamasıyla açar (ör. günlük dosyası → metin düzenleyici).</summary>
     public static string? OpenFile(string path)
     {
-        if (!Path.IsPathFullyQualified(path) || !File.Exists(path)) return "Dosya bulunamadı.";
+        if (!Path.IsPathFullyQualified(path) || !File.Exists(path)) return L.T("Dosya bulunamadı.", "File not found.");
         return ViaExplorer(path);
     }
 

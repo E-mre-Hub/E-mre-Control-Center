@@ -41,39 +41,39 @@ public sealed class MicrosoftStoreManager : IUpdateModule, IInUseRetryModule, IM
 
     public async Task<ModuleResult> CheckAsync(CancellationToken ct)
     {
-        _logger.Info("Microsoft Store güncellemeleri kontrol ediliyor...");
+        _logger.Info(L.T("Microsoft Store güncellemeleri kontrol ediliyor...", "Checking Microsoft Store updates..."));
 
         var presence = await PowerShellRunner.RunAsync(StorePresenceScript, TimeSpan.FromMinutes(1), ct,
             traceName: "Get-AppxPackage -Name Microsoft.WindowsStore");
         if (!presence.Ok)
         {
-            var reason = "Microsoft Store durumu okunamadı: " + presence.DescribeFailure("PowerShell");
+            var reason = L.T("Microsoft Store durumu okunamadı: ", "Could not read the Microsoft Store status: ") + presence.DescribeFailure("PowerShell");
             _logger.Error(reason);
             return ModuleResult.CheckFailed(Key, reason);
         }
         if (presence.Data!.Value.Bool("installed") != true)
         {
-            const string reason = "Microsoft Store bu kullanıcı hesabında kurulu değil.";
+            var reason = L.T("Microsoft Store bu kullanıcı hesabında kurulu değil.", "Microsoft Store is not installed for this user account.");
             _logger.Error(reason);
             return ModuleResult.CheckFailed(Key, reason);
         }
         var storeVersion = presence.Data!.Value.Str("version");
-        _logger.Info($"Microsoft Store kurulu (sürüm {storeVersion}).");
+        _logger.Info(L.T($"Microsoft Store kurulu (sürüm {storeVersion}).", $"Microsoft Store installed (version {storeVersion})."));
 
         var result = await _winget.CheckAsync(ct);
         if (result.Status == ComponentStatus.CheckFailed)
         {
-            var reason = "Microsoft Store kataloğuna erişilemedi. " + result.Reason;
+            var reason = L.T("Microsoft Store kataloğuna erişilemedi. ", "Could not access the Microsoft Store catalog. ") + result.Reason;
             _logger.Error(reason);
-            return ModuleResult.CheckFailed(Key, reason, $"Store sürümü: {storeVersion}");
+            return ModuleResult.CheckFailed(Key, reason, L.T($"Store sürümü: {storeVersion}", $"Store version: {storeVersion}"));
         }
 
         return new ModuleResult
         {
             Key = Key,
             Status = result.Status,
-            Summary = result.ActionableCount > 0 ? $"Güncelleme mevcut: {result.ActionableCount}" : "Güncel",
-            Details = $"Store sürümü: {storeVersion}\n{result.Details}\nKaynak: winget msstore kataloğu",
+            Summary = result.ActionableCount > 0 ? L.T($"Güncelleme mevcut: {result.ActionableCount}", $"Update available: {result.ActionableCount}") : L.T("Güncel", "Up to date"),
+            Details = L.T($"Store sürümü: {storeVersion}\n{result.Details}\nKaynak: winget msstore kataloğu", $"Store version: {storeVersion}\n{result.Details}\nSource: winget msstore catalog"),
             Items = result.Items,
             ActionableCount = result.ActionableCount
         };
@@ -91,14 +91,14 @@ public sealed class MicrosoftStoreManager : IUpdateModule, IInUseRetryModule, IM
     {
         var result = await _winget.UpdateAsync(check, ct);
 
-        _logger.Info("Microsoft Store'un kendi güncelleme taraması tetikleniyor (MDM UpdateScanMethod)...");
+        _logger.Info(L.T("Microsoft Store'un kendi güncelleme taraması tetikleniyor (MDM UpdateScanMethod)...", "Triggering Microsoft Store's own update scan (MDM UpdateScanMethod)..."));
         var scan = await PowerShellRunner.RunAsync(MdmScanScript, TimeSpan.FromMinutes(3), CancellationToken.None,
             traceName: "MDM_EnterpriseModernAppManagement_AppManagement01.UpdateScanMethod");
         if (scan.Ok && scan.Data!.Value.Long("returnValue") == 0)
-            _logger.Success("Microsoft Store güncelleme taraması başlatıldı; kalan Store güncellemeleri arka planda Store tarafından kurulacak.");
+            _logger.Success(L.T("Microsoft Store güncelleme taraması başlatıldı; kalan Store güncellemeleri arka planda Store tarafından kurulacak.", "The Microsoft Store update scan started; the remaining Store updates will be installed by Store in the background."));
         else
-            _logger.Warning("Store güncelleme taraması tetiklenemedi: " +
-                            (scan.Ok ? $"dönüş değeri {scan.Data!.Value.Long("returnValue")}" : scan.DescribeFailure("MDM")));
+            _logger.Warning(L.T("Store güncelleme taraması tetiklenemedi: ", "Could not trigger the Store update scan: ") +
+                            (scan.Ok ? L.T($"dönüş değeri {scan.Data!.Value.Long("returnValue")}", $"return value {scan.Data!.Value.Long("returnValue")}") : scan.DescribeFailure("MDM")));
 
         return new ModuleResult
         {

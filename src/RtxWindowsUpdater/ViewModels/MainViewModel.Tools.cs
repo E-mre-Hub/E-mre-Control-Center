@@ -13,7 +13,7 @@ public sealed class DiagnosticSummaryRowViewModel(string key, string title, stri
     : ObservableObject
 {
     private CheckState _state = CheckState.NotChecked;
-    private string _summary = "Tek Tıkla Tanıla veya ilgili ekrandan kontrol edilir.";
+    private string _summary = L.T("Tek Tıkla Tanıla veya ilgili ekrandan kontrol edilir.", "Checked from One-Click Diagnosis or the related screen.");
     private DateTime? _time;
 
     public string Key { get; } = key;
@@ -131,14 +131,14 @@ public sealed partial class MainViewModel : IToolHost, ICardResultSource
         };
         (string Key, string Title, string Glyph, string Category, string Section)[] rows =
         [
-            ("windows", "Sistem Sağlığı", "", Nav.Health, Nav.SystemHealth),
-            ("network", "Ağ", "", Nav.SpeedTest, Nav.Network),
+            ("windows", L.T("Sistem Sağlığı", "System Health"), "", Nav.Health, Nav.SystemHealth),
+            ("network", L.T("Ağ", "Network"), "", Nav.SpeedTest, Nav.Network),
             ("dns", "DNS", "", Nav.SpeedTest, Nav.Dns),
-            ("storage", "Depolama", "", Nav.Health, Nav.StorageHealth),
-            ("security", "Güvenlik", "", Nav.SystemTools, Nav.Security),
-            ("drivers", "Sürücüler", "", Nav.Update, Nav.Drivers),
-            ("events", "Olay Günlüğü", "", Nav.Health, Nav.EventLog),
-            ("crash", "Çökme Geçmişi", "", Nav.Health, Nav.Crash)
+            ("storage", L.T("Depolama", "Storage"), "", Nav.Health, Nav.StorageHealth),
+            ("security", L.T("Güvenlik", "Security"), "", Nav.SystemTools, Nav.Security),
+            ("drivers", L.T("Sürücüler", "Drivers"), "", Nav.Update, Nav.Drivers),
+            ("events", L.T("Olay Günlüğü", "Event Log"), "", Nav.Health, Nav.EventLog),
+            ("crash", L.T("Çökme Geçmişi", "Crash History"), "", Nav.Health, Nav.Crash)
         ];
         foreach (var r in rows) DiagnosticSummary.Add(new DiagnosticSummaryRowViewModel(r.Key, r.Title, r.Glyph, r.Category, r.Section, OpenSection));
     }
@@ -173,7 +173,7 @@ public sealed partial class MainViewModel : IToolHost, ICardResultSource
             if (_state.State.CloseToTray == value) return;
             _state.SetCloseToTray(value);
             OnPropertyChanged();
-            _logger.Info(value ? "Pencere kapatılınca uygulama bildirim alanında çalışmaya devam edecek." : "Pencere kapatılınca uygulama kapanacak.");
+            _logger.Info(value ? L.T("Pencere kapatılınca uygulama bildirim alanında çalışmaya devam edecek.", "When the window is closed, the app keeps running in the notification area.") : L.T("Pencere kapatılınca uygulama kapanacak.", "When the window is closed, the app exits."));
         }
     }
 
@@ -185,7 +185,7 @@ public sealed partial class MainViewModel : IToolHost, ICardResultSource
     {
         if (_windowVisible == visible) return;
         _windowVisible = visible;
-        _logger.Info(visible ? "Pencere bildirim alanından açıldı." : "Pencere kapatıldı; uygulama bildirim alanında çalışmaya devam ediyor.");
+        _logger.Info(visible ? L.T("Pencere bildirim alanından açıldı.", "Window opened from the notification area.") : L.T("Pencere kapatıldı; uygulama bildirim alanında çalışmaya devam ediyor.", "Window closed; the app keeps running in the notification area."));
         UpdateDeviceMonitoring();
         UpdateToolActivation();
         if (visible) Update.CheckIfStale();
@@ -206,7 +206,7 @@ public sealed partial class MainViewModel : IToolHost, ICardResultSource
     private (ComponentStatus, string) DiagnosticTile()
     {
         var done = DiagnosticSummary.Where(r => r.State is not CheckState.NotChecked).ToList();
-        if (done.Count == 0) return (ComponentStatus.NotChecked, "Henüz tanılama yapılmadı");
+        if (done.Count == 0) return (ComponentStatus.NotChecked, L.T("Henüz tanılama yapılmadı", "No diagnosis yet"));
         var worst = CheckStates.Worst(done.Select(r => r.State));
         var status = worst switch
         {
@@ -218,7 +218,7 @@ public sealed partial class MainViewModel : IToolHost, ICardResultSource
         var ok = done.Count(r => r.State is CheckState.Healthy or CheckState.Info);
         var warn = done.Count(r => r.State == CheckState.Warning);
         var err = done.Count(r => r.State is CheckState.Error or CheckState.Unknown);
-        return (status, $"Tanılama: {ok} sağlıklı" + (warn > 0 ? $" · {warn} uyarı" : "") + (err > 0 ? $" · {err} hata" : ""));
+        return (status, L.T($"Tanılama: {ok} sağlıklı", $"Diagnosis: {ok} healthy") + (warn > 0 ? L.T($" · {warn} uyarı", $" · {warn} warning(s)") : "") + (err > 0 ? L.T($" · {err} hata", $" · {err} error(s)") : ""));
     }
 
     public void RecordToolOperation(string title, CheckState state, string summary, TimeSpan duration, string? error = null, bool cancelled = false)
@@ -228,8 +228,8 @@ public sealed partial class MainViewModel : IToolHost, ICardResultSource
             var rec = new OperationRecord
             {
                 CompletedAt = DateTime.Now,
-                Title = cancelled ? $"{title} iptal edildi." : state is CheckState.Error or CheckState.Unknown ? $"{title} – hata var." : $"{title} tamamlandı.",
-                SummaryText = $"{summary} · Süre: {UpdateOrchestrator.FormatDuration(duration)}",
+                Title = cancelled ? L.T($"{title} iptal edildi.", $"{title} cancelled.") : state is CheckState.Error or CheckState.Unknown ? L.T($"{title} – hata var.", $"{title} – with errors.") : L.T($"{title} tamamlandı.", $"{title} completed."),
+                SummaryText = L.T($"{summary} · Süre: {UpdateOrchestrator.FormatDuration(duration)}", $"{summary} · Duration: {UpdateOrchestrator.FormatDuration(duration)}"),
                 Keys = ["tool"],
                 DurationMs = (long)duration.TotalMilliseconds,
                 Cancelled = cancelled,
@@ -243,8 +243,8 @@ public sealed partial class MainViewModel : IToolHost, ICardResultSource
             RecentOperations.Insert(0, rec);
             while (RecentOperations.Count > 50) RecentOperations.RemoveAt(RecentOperations.Count - 1);
             LastOperation = rec;
-            if (rec.Errors > 0) _logger.Warning($"Son işlem: {rec.Title} {rec.SummaryText}" + (error is null ? "" : " – " + error));
-            else _logger.Info($"Son işlem: {rec.Title} {rec.SummaryText}");
+            if (rec.Errors > 0) _logger.Warning(L.T($"Son işlem: {rec.Title} {rec.SummaryText}", $"Last operation: {rec.Title} {rec.SummaryText}") + (error is null ? "" : " – " + error));
+            else _logger.Info(L.T($"Son işlem: {rec.Title} {rec.SummaryText}", $"Last operation: {rec.Title} {rec.SummaryText}"));
         }
         if (_dispatcher.CheckAccess()) Apply();
         else _dispatcher.BeginInvoke(Apply);
@@ -266,8 +266,8 @@ public sealed partial class MainViewModel : IToolHost, ICardResultSource
             done =>
             {
                 StoreChecks(results);
-                var anyError = FinishOperation($"{card.ShortTitle} kontrolü", results, done, updatePhase: false, single: true, NotifyPolicy.Never);
-                return new OperationEnd(anyError, card.Title + ": kontrol tamamlandı", card.Title + ": kontrol başarısız oldu", "Kontrol iptal edildi");
+                var anyError = FinishOperation(L.T($"{card.ShortTitle} kontrolü", $"{card.ShortTitle} check"), results, done, updatePhase: false, single: true, NotifyPolicy.Never);
+                return new OperationEnd(anyError, card.Title + L.T(": kontrol tamamlandı", ": check completed"), card.Title + L.T(": kontrol başarısız oldu", ": check failed"), L.T("Kontrol iptal edildi", "Check cancelled"));
             });
         return _checks.GetValueOrDefault(key);
     }
@@ -295,7 +295,7 @@ public sealed partial class MainViewModel : IToolHost, ICardResultSource
         var ok = results.Count(r => r.Result.State is CheckState.Healthy or CheckState.Info);
         var warn = results.Count(r => r.Result.State == CheckState.Warning);
         var err = results.Count(r => r.Result.State is CheckState.Error or CheckState.Unknown);
-        return $"Tanılama: {ok} sağlıklı, {warn} uyarı, {err} hata / kontrol edilemedi";
+        return L.T($"Tanılama: {ok} sağlıklı, {warn} uyarı, {err} hata / kontrol edilemedi", $"Diagnosis: {ok} healthy, {warn} warning(s), {err} error(s) / could not be checked");
     }
 
     private ICommand? _openDiagnoseCommand;

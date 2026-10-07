@@ -13,7 +13,7 @@ namespace RtxWindowsUpdater.ViewModels;
 public sealed class UsageRatingViewModel(string key, string title, string glyph, string thresholds) : ObservableObject
 {
     private int _score;
-    private string _detail = title + ": henüz ölçülmedi.\n" + thresholds;
+    private string _detail = title + L.T(": henüz ölçülmedi.\n", ": not measured yet.\n") + thresholds;
 
     public string Key { get; } = key;
     public string Title { get; } = title;
@@ -58,10 +58,10 @@ public sealed partial class SpeedTestViewModel : ObservableObject, IDisposable
     private double _phaseProgress;
     private string _phaseText = string.Empty;
     private string _downloadText = Dash, _uploadText = Dash, _pingText = Dash, _downloadPingText = Dash, _uploadPingText = Dash;
-    private string _jitterText = Dash, _packetLossText = Dash, _packetLossToolTip = "Paket kaybı henüz ölçülmedi.";
-    private string _ispText = "Test başlatıldığında okunur", _clientText = string.Empty;
-    private string _serverText = "Test başlatıldığında okunur", _serverDetailText = string.Empty;
-    private string _statusText = "Hazır. Test yaklaşık 25 saniye sürer.";
+    private string _jitterText = Dash, _packetLossText = Dash, _packetLossToolTip = L.T("Paket kaybı henüz ölçülmedi.", "Packet loss not measured yet.");
+    private string _ispText = L.T("Test başlatıldığında okunur", "Read when the test starts"), _clientText = string.Empty;
+    private string _serverText = L.T("Test başlatıldığında okunur", "Read when the test starts"), _serverDetailText = string.Empty;
+    private string _statusText = L.T("Hazır. Test yaklaşık 25 saniye sürer.", "Ready. The test takes about 25 seconds.");
     private ComponentStatus _statusKind = ComponentStatus.NotChecked;
     private SpeedTestResult? _last;
     private string? _resultUrl;
@@ -81,16 +81,16 @@ public sealed partial class SpeedTestViewModel : ObservableObject, IDisposable
         Ratings =
         [
             new UsageRatingViewModel("web", "Web", "",
-                "Ölçüt: indirme hızı — ≥25 Mbps: 5 · ≥10: 4 · ≥5: 3 · ≥2: 2 · daha düşük: 1 (ping 100 ms üstündeyse 1 puan düşer)."),
-            new UsageRatingViewModel("game", "Oyun", "",
-                "Ölçüt: ping — ≤20 ms: 5 · ≤40: 4 · ≤60: 3 · ≤100: 2 · daha yüksek: 1 (titreşim 10 ms üstündeyse 1 puan düşer, paket kaybı %1 üstündeyse en fazla 2)."),
+                L.T("Ölçüt: indirme hızı — ≥25 Mbps: 5 · ≥10: 4 · ≥5: 3 · ≥2: 2 · daha düşük: 1 (ping 100 ms üstündeyse 1 puan düşer).", "Criterion: download speed — ≥25 Mbps: 5 · ≥10: 4 · ≥5: 3 · ≥2: 2 · lower: 1 (1 point less if ping is above 100 ms).")),
+            new UsageRatingViewModel("game", L.T("Oyun", "Gaming"), "",
+                L.T("Ölçüt: ping — ≤20 ms: 5 · ≤40: 4 · ≤60: 3 · ≤100: 2 · daha yüksek: 1 (titreşim 10 ms üstündeyse 1 puan düşer, paket kaybı %1 üstündeyse en fazla 2).", "Criterion: ping — ≤20 ms: 5 · ≤40: 4 · ≤60: 3 · ≤100: 2 · higher: 1 (1 point less if jitter is above 10 ms, at most 2 if packet loss is above 1%).")),
             new UsageRatingViewModel("video", "Video", "",
-                "Ölçüt: indirme hızı — ≥25 Mbps: 5 (4K) · ≥15: 4 · ≥5: 3 (Full HD) · ≥3: 2 · daha düşük: 1."),
-            new UsageRatingViewModel("call", "Görüntülü görüşme", "",
-                "Ölçüt: indirme ve yüklemenin düşüğü — ≥10 Mbps: 5 · ≥3,8: 4 · ≥1,8: 3 · ≥0,6: 2 · daha düşük: 1 (ping 150 ms üstündeyse 1 puan düşer).")
+                L.T("Ölçüt: indirme hızı — ≥25 Mbps: 5 (4K) · ≥15: 4 · ≥5: 3 (Full HD) · ≥3: 2 · daha düşük: 1.", "Criterion: download speed — ≥25 Mbps: 5 (4K) · ≥15: 4 · ≥5: 3 (Full HD) · ≥3: 2 · lower: 1.")),
+            new UsageRatingViewModel("call", L.T("Görüntülü görüşme", "Video call"), "",
+                L.T("Ölçüt: indirme ve yüklemenin düşüğü — ≥10 Mbps: 5 · ≥3,8: 4 · ≥1,8: 3 · ≥0,6: 2 · daha düşük: 1 (ping 150 ms üstündeyse 1 puan düşer).", "Criterion: the lower of download and upload — ≥10 Mbps: 5 · ≥3.8: 4 · ≥1.8: 3 · ≥0.6: 2 · lower: 1 (1 point less if ping is above 150 ms)."))
         ];
         StartCommand = new AsyncCommand(StartAsync, () => !IsWorking && !_systemBusy() && ProviderReady,
-            ex => _logger.Error("Hız testi başlatılamadı: " + ex.Message));
+            ex => _logger.Error(L.T("Hız testi başlatılamadı: ", "Could not start the speed test: ") + ex.Message));
         CancelCommand = new RelayCommand(Cancel, () => IsRunning && _cts is { IsCancellationRequested: false });
     }
 
@@ -139,12 +139,12 @@ public sealed partial class SpeedTestViewModel : ObservableObject, IDisposable
         set { if (value is "multi" or "single") UseMultipleConnections = value == "multi"; }
     }
 
-    public string MultiLabel => $"Çoklu ({SpeedTestService.MultiStreams})";
+    public string MultiLabel => L.T($"Çoklu ({SpeedTestService.MultiStreams})", $"Multi ({SpeedTestService.MultiStreams})");
 
     /// <summary>Başlatma engelliyse nedeni (sistem işlemi sürüyor / seçili altyapı hazır değil).</summary>
     public string BlockedReason =>
         IsRunning ? string.Empty
-        : _systemBusy() ? "Bir kontrol / güncelleme işlemi sürüyor. Hız testi, sonuçları etkilememesi için işlem bitince başlatılabilir."
+        : _systemBusy() ? L.T("Bir kontrol / güncelleme işlemi sürüyor. Hız testi, sonuçları etkilememesi için işlem bitince başlatılabilir.", "A check / update operation is running. The speed test can start when it finishes so that the results are not affected.")
         : ProviderBlockedReason ?? string.Empty;
 
     /// <summary>Son Ookla testinin sonuç sayfası (https://www.speedtest.net/result/...).</summary>
@@ -189,11 +189,11 @@ public sealed partial class SpeedTestViewModel : ObservableObject, IDisposable
     {
         get
         {
-            if (IsRunning) return (ComponentStatus.Checking, "Test sürüyor...");
-            if (IsInstalling) return (ComponentStatus.Checking, "Ookla aracı kuruluyor...");
+            if (IsRunning) return (ComponentStatus.Checking, L.T("Test sürüyor...", "Test running..."));
+            if (IsInstalling) return (ComponentStatus.Checking, L.T("Ookla aracı kuruluyor...", "Installing the Ookla tool..."));
             var last = History.FirstOrDefault();
-            if (last is null) return (ComponentStatus.NotChecked, "Henüz test yapılmadı");
-            if (last.DownloadMbps is null && last.UploadMbps is null) return (ComponentStatus.Failed, "Son test başarısız");
+            if (last is null) return (ComponentStatus.NotChecked, L.T("Henüz test yapılmadı", "No test yet"));
+            if (last.DownloadMbps is null && last.UploadMbps is null) return (ComponentStatus.Failed, L.T("Son test başarısız", "Last test failed"));
             return (last.Status, $"{last.DownloadText} / {last.UploadText} Mbps · {last.PingText} ms");
         }
     }
@@ -211,12 +211,12 @@ public sealed partial class SpeedTestViewModel : ObservableObject, IDisposable
         var metered = MeteredDescription();
         if (metered is not null)
         {
-            var go = await _dialog.ShowAsync("Tarifeli bağlantı",
-                $"Windows bu bağlantıyı tarifeli olarak bildiriyor ({metered}).\n\nHız testi, bağlantı hızına göre onlarca ile yüzlerce MB veri " +
-                "kullanır. Teste başlansın mı?",
-                MainViewModel.Icons.Warning, DialogKind.Warning, "Teste başla", "Vazgeç");
+            var go = await _dialog.ShowAsync(L.T("Tarifeli bağlantı", "Metered connection"),
+                L.T($"Windows bu bağlantıyı tarifeli olarak bildiriyor ({metered}).\n\nHız testi, bağlantı hızına göre onlarca ile yüzlerce MB veri ", $"Windows reports this connection as metered ({metered}).\n\nDepending on the connection speed, the speed test uses tens to hundreds of MB ") +
+                L.T("kullanır. Teste başlansın mı?", "of data. Start the test?"),
+                MainViewModel.Icons.Warning, DialogKind.Warning, L.T("Teste başla", "Start test"), L.T("Vazgeç", "Cancel"));
             if (!go) return;
-            _logger.Info($"Hız testi tarifeli bağlantıda kullanıcı onayıyla başlatıldı ({metered}).");
+            _logger.Info(L.T($"Hız testi tarifeli bağlantıda kullanıcı onayıyla başlatıldı ({metered}).", $"Speed test started on a metered connection with the user's approval ({metered})."));
         }
         if (IsWorking || _systemBusy() || !ProviderReady) return;
 
@@ -265,7 +265,7 @@ public sealed partial class SpeedTestViewModel : ObservableObject, IDisposable
     private void Cancel()
     {
         if (_cts is null || _cts.IsCancellationRequested) return;
-        _logger.Info("Hız testi kullanıcı tarafından iptal edildi.");
+        _logger.Info(L.T("Hız testi kullanıcı tarafından iptal edildi.", "The speed test was cancelled by the user."));
         _cts.Cancel();
         CommandManager.InvalidateRequerySuggested();
     }
@@ -277,14 +277,14 @@ public sealed partial class SpeedTestViewModel : ObservableObject, IDisposable
         GaugeUnit = "Mbps";
         PhaseProgress = 0;
         DownloadText = UploadText = PingText = DownloadPingText = UploadPingText = JitterText = PacketLossText = Dash;
-        PacketLossToolTip = "Paket kaybı ölçülüyor...";
+        PacketLossToolTip = L.T("Paket kaybı ölçülüyor...", "Measuring packet loss...");
         ResultUrl = null;
         foreach (var r in Ratings)
         {
             r.Score = 0;
-            r.Detail = r.Title + ": ölçülüyor...\n" + r.Thresholds;
+            r.Detail = r.Title + L.T(": ölçülüyor...\n", ": measuring...\n") + r.Thresholds;
         }
-        StatusText = "Test sürüyor...";
+        StatusText = L.T("Test sürüyor...", "Test running...");
         StatusKind = ComponentStatus.Checking;
     }
 
@@ -293,10 +293,10 @@ public sealed partial class SpeedTestViewModel : ObservableObject, IDisposable
         OnPropertyChanged(nameof(GaugeIsUpload));
         (GaugeCaption, PhaseText) = Phase switch
         {
-            SpeedTestPhase.Connecting => ("Bağlanıyor", "Sunucuya bağlanılıyor..."),
-            SpeedTestPhase.Latency => ("Ping", IsOoklaProvider ? "Gecikme ölçülüyor..." : "Gecikme ve paket kaybı ölçülüyor..."),
-            SpeedTestPhase.Download => ("İndirme", "İndirme hızı ölçülüyor..."),
-            SpeedTestPhase.Upload => ("Yükleme", "Yükleme hızı ölçülüyor..."),
+            SpeedTestPhase.Connecting => (L.T("Bağlanıyor", "Connecting"), L.T("Sunucuya bağlanılıyor...", "Connecting to the server...")),
+            SpeedTestPhase.Latency => ("Ping", IsOoklaProvider ? L.T("Gecikme ölçülüyor...", "Measuring latency...") : L.T("Gecikme ve paket kaybı ölçülüyor...", "Measuring latency and packet loss...")),
+            SpeedTestPhase.Download => (L.T("İndirme", "Download"), L.T("İndirme hızı ölçülüyor...", "Measuring download speed...")),
+            SpeedTestPhase.Upload => (L.T("Yükleme", "Upload"), L.T("Yükleme hızı ölçülüyor...", "Measuring upload speed...")),
             _ => (string.Empty, string.Empty)
         };
     }
@@ -349,8 +349,8 @@ public sealed partial class SpeedTestViewModel : ObservableObject, IDisposable
         ClientText = string.Join(" · ", new[] { s.ClientIp.Length > 0 ? "IP " + s.ClientIp : "", s.ClientLocation }.Where(x => x.Length > 0));
         ServerText = s.ServerName;
         ServerDetailText = s.Provider == SpeedTestProviders.Ookla
-            ? string.Join(" · ", new[] { s.ProviderText, s.HttpProtocol, s.ServerAddress.Length > 0 ? "Adres " + s.ServerAddress : "" }.Where(x => x.Length > 0))
-            : string.Join(" · ", new[] { s.ProviderText, s.ServerAddress.Length > 0 ? "Adres " + s.ServerAddress : "", "HTTPS (TLS)", s.HttpProtocol }
+            ? string.Join(" · ", new[] { s.ProviderText, s.HttpProtocol, s.ServerAddress.Length > 0 ? L.T("Adres ", "Address ") + s.ServerAddress : "" }.Where(x => x.Length > 0))
+            : string.Join(" · ", new[] { s.ProviderText, s.ServerAddress.Length > 0 ? L.T("Adres ", "Address ") + s.ServerAddress : "", "HTTPS (TLS)", s.HttpProtocol }
                 .Where(x => x.Length > 0));
     }
 
@@ -366,25 +366,25 @@ public sealed partial class SpeedTestViewModel : ObservableObject, IDisposable
         if (r.Phase == SpeedTestPhase.Cancelled && r.PacketLoss is null && r.PacketLossNote is null)
         {
             PacketLossText = Dash;
-            PacketLossToolTip = "Paket kaybı ölçülmedi (test iptal edildi).";
+            PacketLossToolTip = L.T("Paket kaybı ölçülmedi (test iptal edildi).", "Packet loss not measured (test cancelled).");
         }
-        else ApplyPacketLoss(r.PacketLoss, r.PacketLossNote ?? (r.PacketLoss is null ? "test tamamlanmadı" : null));
+        else ApplyPacketLoss(r.PacketLoss, r.PacketLossNote ?? (r.PacketLoss is null ? L.T("test tamamlanmadı", "test not completed") : null));
         RateUsage(r);
 
         GaugeValue = 0;
         GaugeValueText = "0";
         PhaseProgress = r.Phase == SpeedTestPhase.Completed ? 100 : PhaseProgress;
         ResultUrl = r.ResultUrl;
-        var seconds = $"{r.Duration.TotalSeconds:0} sn";
-        var data = $"{r.DataUsedBytes / 1_000_000.0:0.0} MB veri kullanıldı" + (r.ResultUrl is null ? "" : " · sonuç Ookla'ya kaydedildi");
+        var seconds = L.T($"{r.Duration.TotalSeconds:0} sn", $"{r.Duration.TotalSeconds:0} sec");
+        var data = L.T($"{r.DataUsedBytes / 1_000_000.0:0.0} MB veri kullanıldı", $"{r.DataUsedBytes / 1_000_000.0:0.0} MB of data used") + (r.ResultUrl is null ? "" : L.T(" · sonuç Ookla'ya kaydedildi", " · result recorded by Ookla"));
         (StatusText, StatusKind) = r.Phase switch
         {
             SpeedTestPhase.Completed when r.IsComplete && r.Notes.Count == 0 =>
-                ($"Test tamamlandı · {seconds} · {data}", ComponentStatus.UpToDate),
+                (L.T($"Test tamamlandı · {seconds} · {data}", $"Test completed · {seconds} · {data}"), ComponentStatus.UpToDate),
             SpeedTestPhase.Completed =>
-                ($"Kısmen ölçüldü · {seconds} · {data} · {string.Join(" · ", r.Notes)}", ComponentStatus.Attention),
-            SpeedTestPhase.Cancelled => ($"Test iptal edildi · {seconds}", ComponentStatus.Skipped),
-            _ => ("Test başarısız: " + r.Error, ComponentStatus.Failed)
+                (L.T($"Kısmen ölçüldü · {seconds} · {data} · {string.Join(" · ", r.Notes)}", $"Partially measured · {seconds} · {data} · {string.Join(" · ", r.Notes)}"), ComponentStatus.Attention),
+            SpeedTestPhase.Cancelled => (L.T($"Test iptal edildi · {seconds}", $"Test cancelled · {seconds}"), ComponentStatus.Skipped),
+            _ => (L.T("Test başarısız: ", "Test failed: ") + r.Error, ComponentStatus.Failed)
         };
     }
 
@@ -394,14 +394,14 @@ public sealed partial class SpeedTestViewModel : ObservableObject, IDisposable
         {
             PacketLossText = $"%{loss:0.#}";
             PacketLossToolTip = pl.ReportedPercent is not null
-                ? "Speedtest by Ookla aracının bildirdiği paket kaybı (gönderilen / alınan paket sayısını bildirmez)."
-                : $"ICMP yankı isteği: {pl.Sent} gönderildi, {pl.Received} yanıt alındı" +
-                  (pl.MedianRttMs is { } rtt ? $" (ICMP ping medyanı {rtt:0} ms)." : ".");
+                ? L.T("Speedtest by Ookla aracının bildirdiği paket kaybı (gönderilen / alınan paket sayısını bildirmez).", "Packet loss reported by the Speedtest by Ookla tool (it does not report sent / received packet counts).")
+                : L.T($"ICMP yankı isteği: {pl.Sent} gönderildi, {pl.Received} yanıt alındı", $"ICMP echo requests: {pl.Sent} sent, {pl.Received} replies received") +
+                  (pl.MedianRttMs is { } rtt ? L.T($" (ICMP ping medyanı {rtt:0} ms).", $" (ICMP ping median {rtt:0} ms).") : ".");
         }
         else
         {
-            PacketLossText = "Ölçülemedi";
-            PacketLossToolTip = "Paket kaybı ölçülemedi: " + (note ?? "yanıt yok");
+            PacketLossText = L.T("Ölçülemedi", "Not measured");
+            PacketLossToolTip = L.T("Paket kaybı ölçülemedi: ", "Could not measure packet loss: ") + (note ?? L.T("yanıt yok", "no reply"));
         }
     }
 
@@ -423,8 +423,8 @@ public sealed partial class SpeedTestViewModel : ObservableObject, IDisposable
             };
             rating.Score = score is { } s ? Math.Max(1, s) : 0;
             rating.Detail = score is null
-                ? $"{rating.Title}: gerekli değer ölçülemediği için puan verilmedi.\n{rating.Thresholds}"
-                : $"{rating.Title}: {rating.Score}/5 (ölçülen değerlerden).\n{rating.Thresholds}";
+                ? L.T($"{rating.Title}: gerekli değer ölçülemediği için puan verilmedi.\n{rating.Thresholds}", $"{rating.Title}: no rating because a required value could not be measured.\n{rating.Thresholds}")
+                : L.T($"{rating.Title}: {rating.Score}/5 (ölçülen değerlerden).\n{rating.Thresholds}", $"{rating.Title}: {rating.Score}/5 (from the measured values).\n{rating.Thresholds}");
         }
 
         static int Step(double v, double t5, double t4, double t3, double t2) => v >= t5 ? 5 : v >= t4 ? 4 : v >= t3 ? 3 : v >= t2 ? 2 : 1;
@@ -462,16 +462,16 @@ public sealed partial class SpeedTestViewModel : ObservableObject, IDisposable
             var cost = profile?.GetConnectionCost();
             if (cost is null) return null;
             var reasons = new List<string>();
-            if (cost.NetworkCostType == Windows.Networking.Connectivity.NetworkCostType.Fixed) reasons.Add("sabit veri limitli");
-            if (cost.NetworkCostType == Windows.Networking.Connectivity.NetworkCostType.Variable) reasons.Add("kullanıma göre ücretli");
-            if (cost.Roaming) reasons.Add("dolaşımda");
-            if (cost.OverDataLimit) reasons.Add("veri limiti aşıldı");
-            else if (cost.ApproachingDataLimit) reasons.Add("veri limitine yaklaşıldı");
+            if (cost.NetworkCostType == Windows.Networking.Connectivity.NetworkCostType.Fixed) reasons.Add(L.T("sabit veri limitli", "fixed data limit"));
+            if (cost.NetworkCostType == Windows.Networking.Connectivity.NetworkCostType.Variable) reasons.Add(L.T("kullanıma göre ücretli", "usage-based charges"));
+            if (cost.Roaming) reasons.Add(L.T("dolaşımda", "roaming"));
+            if (cost.OverDataLimit) reasons.Add(L.T("veri limiti aşıldı", "over the data limit"));
+            else if (cost.ApproachingDataLimit) reasons.Add(L.T("veri limitine yaklaşıldı", "approaching the data limit"));
             return reasons.Count == 0 ? null : string.Join(", ", reasons);
         }
         catch (Exception ex)
         {
-            _logger.Warning("Bağlantının tarifeli olup olmadığı okunamadı: " + ex.Message);
+            _logger.Warning(L.T("Bağlantının tarifeli olup olmadığı okunamadı: ", "Could not read whether the connection is metered: ") + ex.Message);
             return null;
         }
     }

@@ -27,7 +27,7 @@ public static class EdgeUpdateService
     private static readonly EdgeApp[] Known =
     [
         new("Microsoft.Edge", "{56EB18F8-B008-4CBD-B6D2-8C97FE7E9062}", "Microsoft Edge", "msedge"),
-        new("Microsoft.EdgeWebView2Runtime", "{F3017226-FE2A-4295-8BDF-00C3A9A7E4C5}", "Microsoft Edge WebView2 Çalışma Zamanı", "msedgewebview2")
+        new("Microsoft.EdgeWebView2Runtime", "{F3017226-FE2A-4295-8BDF-00C3A9A7E4C5}", L.T("Microsoft Edge WebView2 Çalışma Zamanı", "Microsoft Edge WebView2 Runtime"), "msedgewebview2")
     ];
 
     /// <summary>winget kimliği Microsoft Edge Update ile güncellenen bir pakete aitse karşılığı; değilse null.</summary>
@@ -78,16 +78,16 @@ public static class EdgeUpdateService
             switch (Outcome)
             {
                 case EdgeUpdateOutcome.Error:
-                    var text = $"Microsoft Edge Update hata bildirdi ({ErrorCodeHex})";
-                    if (InstallerResultCode != 0) text += $", kurulum programı çıkış kodu {InstallerResultCode}";
+                    var text = L.T($"Microsoft Edge Update hata bildirdi ({ErrorCodeHex})", $"Microsoft Edge Update reported an error ({ErrorCodeHex})");
+                    if (InstallerResultCode != 0) text += L.T($", kurulum programı çıkış kodu {InstallerResultCode}", $", installer exit code {InstallerResultCode}");
                     if (!string.IsNullOrWhiteSpace(Message)) text += $" – \"{Message.Trim()}\"";
-                    if (unchecked((uint)ErrorCode) == 0x80070005) text += ". Kurulum için yönetici yetkisi gerekir";
+                    if (unchecked((uint)ErrorCode) == 0x80070005) text += L.T(". Kurulum için yönetici yetkisi gerekir", ". Installation requires administrator rights");
                     return text + ".";
                 case EdgeUpdateOutcome.TimedOut:
                 case EdgeUpdateOutcome.Unavailable:
                     return Message ?? Outcome.ToString();
                 case EdgeUpdateOutcome.NoUpdate:
-                    return "Microsoft Edge Update bu cihaz için yeni sürüm sunmuyor.";
+                    return L.T("Microsoft Edge Update bu cihaz için yeni sürüm sunmuyor.", "Microsoft Edge Update offers no new version for this device.");
                 default:
                     return Message ?? Outcome.ToString();
             }
@@ -190,7 +190,7 @@ public static class EdgeUpdateService
         var type = Type.GetTypeFromProgID(ProgId, throwOnError: false);
         if (type is null)
             return new(EdgeUpdateOutcome.Unavailable,
-                Message: $"Microsoft Edge Update'in COM arayüzü ({ProgId}) bu sistemde kayıtlı değil.");
+                Message: L.T($"Microsoft Edge Update'in COM arayüzü ({ProgId}) bu sistemde kayıtlı değil.", $"The COM interface of Microsoft Edge Update ({ProgId}) is not registered on this system."));
 
         object? server = null, bundle = null, appWeb = null;
         try
@@ -202,10 +202,10 @@ public static class EdgeUpdateService
             catch (COMException ex)
             {
                 return new(EdgeUpdateOutcome.Unavailable, ErrorCode: ex.HResult,
-                    Message: $"Microsoft Edge Update başlatılamadı (0x{ex.HResult:X8}): {ex.Message}");
+                    Message: L.T($"Microsoft Edge Update başlatılamadı (0x{ex.HResult:X8}): {ex.Message}", $"Microsoft Edge Update could not be started (0x{ex.HResult:X8}): {ex.Message}"));
             }
             if (server is null)
-                return new(EdgeUpdateOutcome.Unavailable, Message: "Microsoft Edge Update başlatılamadı (nesne oluşturulamadı).");
+                return new(EdgeUpdateOutcome.Unavailable, Message: L.T("Microsoft Edge Update başlatılamadı (nesne oluşturulamadı).", "Microsoft Edge Update could not be started (the object could not be created)."));
             SetProxyBlanket(server);
 
             dynamic updater = server;
@@ -258,14 +258,14 @@ public static class EdgeUpdateService
                         var percent = (int)(snapshot.Bytes * 100 / snapshot.TotalBytes);
                         if (percent / 10 != lastProgressPercent / 10)
                         {
-                            progress?.Invoke($"İndiriliyor: {snapshot.Bytes / 1048576.0:0.0} / {snapshot.TotalBytes / 1048576.0:0.0} MB (%{percent})");
+                            progress?.Invoke(L.T($"İndiriliyor: {snapshot.Bytes / 1048576.0:0.0} / {snapshot.TotalBytes / 1048576.0:0.0} MB (%{percent})", $"Downloading: {snapshot.Bytes / 1048576.0:0.0} / {snapshot.TotalBytes / 1048576.0:0.0} MB ({percent}%)"));
                             lastProgressPercent = percent;
                         }
                         break;
                     case UpdateState.Installing when snapshot.InstallPercent >= 0:
                         if (snapshot.InstallPercent / 25 != lastProgressPercent / 25)
                         {
-                            progress?.Invoke($"Kuruluyor: %{snapshot.InstallPercent}");
+                            progress?.Invoke(L.T($"Kuruluyor: %{snapshot.InstallPercent}", $"Installing: {snapshot.InstallPercent}%"));
                             lastProgressPercent = snapshot.InstallPercent;
                         }
                         break;
@@ -274,7 +274,7 @@ public static class EdgeUpdateService
                 if (watch.Elapsed > timeout)
                 {
                     return new(EdgeUpdateOutcome.TimedOut, available,
-                        Message: $"Microsoft Edge Update {timeout.TotalMinutes:0} dakika içinde sonuç bildirmedi (son durum: {StateText(snapshot.State, available)}).");
+                        Message: L.T($"Microsoft Edge Update {timeout.TotalMinutes:0} dakika içinde sonuç bildirmedi (son durum: {StateText(snapshot.State, available)}).", $"Microsoft Edge Update reported no result within {timeout.TotalMinutes:0} minutes (last state: {StateText(snapshot.State, available)})."));
                 }
                 Thread.Sleep(250);
             }
@@ -355,22 +355,22 @@ public static class EdgeUpdateService
 
     private static string StateText(UpdateState state, string? available) => state switch
     {
-        UpdateState.Init or UpdateState.WaitingToCheck => "Denetim başlatılıyor",
-        UpdateState.Checking => "Güncelleme denetleniyor",
-        UpdateState.UpdateAvailable => $"Yeni sürüm sunuluyor: {available ?? "?"}",
-        UpdateState.WaitingToDownload => "İndirme sırası bekleniyor",
-        UpdateState.RetryingDownload => "İndirme yeniden deneniyor",
-        UpdateState.Downloading => "İndiriliyor",
-        UpdateState.DownloadComplete => "İndirme tamamlandı",
-        UpdateState.Extracting => "Paket açılıyor",
-        UpdateState.ApplyingPatch => "Fark yaması uygulanıyor",
-        UpdateState.ReadyToInstall or UpdateState.WaitingToInstall => "Kuruluma hazırlanıyor",
-        UpdateState.Installing => "Kuruluyor",
-        UpdateState.InstallComplete => "Kurulum tamamlandı",
-        UpdateState.Paused => "Duraklatıldı",
-        UpdateState.NoUpdate => "Bu cihaz için yeni sürüm yok",
-        UpdateState.Error => "Hata",
-        _ => $"Durum {(int)state}"
+        UpdateState.Init or UpdateState.WaitingToCheck => L.T("Denetim başlatılıyor", "Starting the check"),
+        UpdateState.Checking => L.T("Güncelleme denetleniyor", "Checking for updates"),
+        UpdateState.UpdateAvailable => L.T($"Yeni sürüm sunuluyor: {available ?? "?"}", $"New version offered: {available ?? "?"}"),
+        UpdateState.WaitingToDownload => L.T("İndirme sırası bekleniyor", "Waiting in the download queue"),
+        UpdateState.RetryingDownload => L.T("İndirme yeniden deneniyor", "Retrying the download"),
+        UpdateState.Downloading => L.T("İndiriliyor", "Downloading"),
+        UpdateState.DownloadComplete => L.T("İndirme tamamlandı", "Download completed"),
+        UpdateState.Extracting => L.T("Paket açılıyor", "Extracting the package"),
+        UpdateState.ApplyingPatch => L.T("Fark yaması uygulanıyor", "Applying the differential patch"),
+        UpdateState.ReadyToInstall or UpdateState.WaitingToInstall => L.T("Kuruluma hazırlanıyor", "Preparing to install"),
+        UpdateState.Installing => L.T("Kuruluyor", "Installing"),
+        UpdateState.InstallComplete => L.T("Kurulum tamamlandı", "Installation completed"),
+        UpdateState.Paused => L.T("Duraklatıldı", "Paused"),
+        UpdateState.NoUpdate => L.T("Bu cihaz için yeni sürüm yok", "No new version for this device"),
+        UpdateState.Error => L.T("Hata", "Error"),
+        _ => L.T($"Durum {(int)state}", $"State {(int)state}")
     };
 
     private static void Release(object? comObject)

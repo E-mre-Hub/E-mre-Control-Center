@@ -86,7 +86,7 @@ public static class ProcessRunner
         var startedAt = DateTime.Now;
         var watch = System.Diagnostics.Stopwatch.StartNew();
         var command = displayCommand ?? $"{Path.GetFileName(fileName)} {arguments}".Trim();
-        if (dropElevation) command += " (yönetici yetkisi olmadan)";
+        if (dropElevation) command += L.T(" (yönetici yetkisi olmadan)", " (without administrator rights)");
         var result = dropElevation
             ? await RunUnelevatedCoreAsync(fileName, arguments, timeout, cancellationToken, onStdOut, onStdErr, outputEncoding).ConfigureAwait(false)
             : await RunCoreAsync(fileName, arguments, timeout, cancellationToken, onStdOut, onStdErr, outputEncoding).ConfigureAwait(false);
@@ -168,21 +168,21 @@ public static class ProcessRunner
         try
         {
             if (!process.Start())
-                return new ProcessResult { StartError = $"'{fileName}' başlatılamadı." };
+                return new ProcessResult { StartError = L.T($"'{fileName}' başlatılamadı.", $"'{fileName}' could not be started.") };
         }
         catch (Win32Exception ex)
         {
             return new ProcessResult
             {
                 StartError = ex.NativeErrorCode is 2 or 3
-                    ? $"'{fileName}' sistemde bulunamadı."
-                    : $"'{fileName}' başlatılamadı: {ex.Message}",
+                    ? L.T($"'{fileName}' sistemde bulunamadı.", $"'{fileName}' was not found on the system.")
+                    : L.T($"'{fileName}' başlatılamadı: {ex.Message}", $"'{fileName}' could not be started: {ex.Message}"),
                 StartErrorCode = ex.NativeErrorCode
             };
         }
         catch (Exception ex)
         {
-            return new ProcessResult { StartError = $"'{fileName}' başlatılamadı: {ex.Message}" };
+            return new ProcessResult { StartError = L.T($"'{fileName}' başlatılamadı: {ex.Message}", $"'{fileName}' could not be started: {ex.Message}") };
         }
 
         var tracked = cancellationToken.CanBeCanceled;
@@ -265,8 +265,8 @@ public static class ProcessRunner
             return new ProcessResult
             {
                 StartError = ex.NativeErrorCode is 2 or 3
-                    ? $"'{fileName}' sistemde bulunamadı."
-                    : $"'{fileName}' yönetici yetkisi olmadan başlatılamadı: {ex.Message}",
+                    ? L.T($"'{fileName}' sistemde bulunamadı.", $"'{fileName}' was not found on the system.")
+                    : L.T($"'{fileName}' yönetici yetkisi olmadan başlatılamadı: {ex.Message}", $"'{fileName}' could not be started without administrator rights: {ex.Message}"),
                 StartErrorCode = ex.NativeErrorCode
             };
         }
@@ -361,12 +361,12 @@ public static class ProcessRunner
     public static string Describe(ProcessResult r, string toolName)
     {
         if (!r.Started) return r.StartError!;
-        if (r.TimedOut) return $"{toolName} zaman aşımına uğradı ve sonlandırıldı.";
-        if (r.Cancelled) return $"{toolName} işlemi iptal edildi.";
+        if (r.TimedOut) return L.T($"{toolName} zaman aşımına uğradı ve sonlandırıldı.", $"{toolName} timed out and was ended.");
+        if (r.Cancelled) return L.T($"{toolName} işlemi iptal edildi.", $"The {toolName} operation was cancelled.");
         var lastLine = LastMeaningfulLine(r.StdErr) ?? LastMeaningfulLine(r.StdOut);
         return lastLine is null
-            ? $"{toolName} hata kodu ile sonlandı: {r.ExitCodeHex}"
-            : $"{toolName} hata kodu {r.ExitCodeHex}: {lastLine}";
+            ? L.T($"{toolName} hata kodu ile sonlandı: {r.ExitCodeHex}", $"{toolName} ended with an error code: {r.ExitCodeHex}")
+            : L.T($"{toolName} hata kodu {r.ExitCodeHex}: {lastLine}", $"{toolName} error code {r.ExitCodeHex}: {lastLine}");
     }
 
     public static string? LastMeaningfulLine(string text)

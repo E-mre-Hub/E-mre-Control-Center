@@ -21,7 +21,7 @@ namespace RtxWindowsUpdater.Services;
 public sealed class MrtManager(Logger logger) : IMaintenanceModule, IProgressReportingModule
 {
     public string Key => ComponentKeys.Mrt;
-    public string DisplayName => "Microsoft Kötü Amaçlı Yazılım Temizleme Aracı";
+    public string DisplayName => L.T("Microsoft Kötü Amaçlı Yazılım Temizleme Aracı", "Microsoft Malicious Software Removal Tool");
 
     public event Action<ModuleProgress>? ProgressChanged;
 
@@ -44,16 +44,16 @@ public sealed class MrtManager(Logger logger) : IMaintenanceModule, IProgressRep
     {
         if (!File.Exists(MrtPath))
             return Done(Failed(detectOnly,
-                "MRT.exe bu sistemde bulunamadı. Araç, Windows Update üzerinden (KB890830) aylık olarak kurulur."));
+                L.T("MRT.exe bu sistemde bulunamadı. Araç, Windows Update üzerinden (KB890830) aylık olarak kurulur.", "MRT.exe was not found on this system. The tool is installed monthly through Windows Update (KB890830).")));
         if (!AdminPrivilegeManager.IsElevated)
             return Done(AdminRequired());
 
         var version = FileVersionInfo.GetVersionInfo(MrtPath).FileVersion?.Split(' ')[0] ?? "?";
-        logger.Info($"[MRT] Microsoft Windows Kötü Amaçlı Yazılım Temizleme Aracı başlatılıyor (sürüm {version})...");
+        logger.Info(L.T($"[MRT] Microsoft Windows Kötü Amaçlı Yazılım Temizleme Aracı başlatılıyor (sürüm {version})...", $"[MRT] Starting the Microsoft Windows Malicious Software Removal Tool (version {version})..."));
         logger.Info(detectOnly
-            ? "[MRT] Hızlı tarama başlatılıyor (MRT /Q /N – yalnızca tespit, dosyalara dokunulmaz)..."
-            : "[MRT] Hızlı tarama temizleme modunda başlatılıyor (MRT /Q – tespit edilen tehditler kaldırılır)...");
-        Report("Hızlı tarama sürüyor...", null);
+            ? L.T("[MRT] Hızlı tarama başlatılıyor (MRT /Q /N – yalnızca tespit, dosyalara dokunulmaz)...", "[MRT] Starting a quick scan (MRT /Q /N – detection only, files are not touched)...")
+            : L.T("[MRT] Hızlı tarama temizleme modunda başlatılıyor (MRT /Q – tespit edilen tehditler kaldırılır)...", "[MRT] Starting a quick scan in removal mode (MRT /Q – detected threats are removed)..."));
+        Report(L.T("Hızlı tarama sürüyor...", "Quick scan in progress..."), null);
 
         var logOffset = GetLogLength();
         var started = DateTime.Now;
@@ -75,12 +75,12 @@ public sealed class MrtManager(Logger logger) : IMaintenanceModule, IProgressRep
         if (!r.Started)
             return Done(r.StartErrorCode == 740 ? AdminRequired() : Failed(detectOnly, r.StartError!));
         if (r.TimedOut)
-            return Done(Failed(detectOnly, "MRT zaman aşımına uğradı ve sonlandırıldı (60 dk)."));
+            return Done(Failed(detectOnly, L.T("MRT zaman aşımına uğradı ve sonlandırıldı (60 dk).", "MRT timed out and was ended (60 min).")));
         if (r.Cancelled || ct.IsCancellationRequested)
-            return Done(new ModuleResult { Key = Key, Status = ComponentStatus.Skipped, Summary = "İptal edildi", Reason = "MRT taraması kullanıcı tarafından iptal edildi." });
+            return Done(new ModuleResult { Key = Key, Status = ComponentStatus.Skipped, Summary = L.T("İptal edildi", "Cancelled"), Reason = L.T("MRT taraması kullanıcı tarafından iptal edildi.", "The MRT scan was cancelled by the user.") });
 
         var elapsed = DateTime.Now - started;
-        logger.Info($"[MRT] Tarama tamamlandı ({elapsed.TotalMinutes:0.0} dk). Süreç çıkış kodu: {r.ExitCode}");
+        logger.Info(L.T($"[MRT] Tarama tamamlandı ({elapsed.TotalMinutes:0.0} dk). Süreç çıkış kodu: {r.ExitCode}", $"[MRT] Scan completed ({elapsed.TotalMinutes:0.0} min). Process exit code: {r.ExitCode}"));
 
         int? code = null;
         var summaryLines = new List<string>();
@@ -94,28 +94,28 @@ public sealed class MrtManager(Logger logger) : IMaintenanceModule, IProgressRep
         }
         else
         {
-            logger.Warning("[MRT] Bu taramaya ait sonuç mrt.log dosyasında bulunamadı; süreç çıkış kodu kullanılıyor.");
+            logger.Warning(L.T("[MRT] Bu taramaya ait sonuç mrt.log dosyasında bulunamadı; süreç çıkış kodu kullanılıyor.", "[MRT] The result of this scan was not found in mrt.log; using the process exit code."));
         }
 
-        ExecutionTrace.Note($"Tarama tipi: Hızlı tarama ({(detectOnly ? "yalnızca tespit, MRT /Q /N" : "temizleme, MRT /Q")})");
+        ExecutionTrace.Note(L.T($"Tarama tipi: Hızlı tarama ({(detectOnly ? "yalnızca tespit, MRT /Q /N" : "temizleme, MRT /Q")})", $"Scan type: Quick scan ({(detectOnly ? "detection only, MRT /Q /N" : "removal, MRT /Q")})"));
         if (block is not null)
         {
-            ExecutionTrace.Note($"mrt.log dönüş kodu: {(code?.ToString() ?? "bulunamadı")}");
-            if (summaryLines.Count > 0) ExecutionTrace.Note("mrt.log sonuç özeti: " + string.Join(" / ", summaryLines));
+            ExecutionTrace.Note(L.T($"mrt.log dönüş kodu: {(code?.ToString() ?? "bulunamadı")}", $"mrt.log return code: {(code?.ToString() ?? "not found")}"));
+            if (summaryLines.Count > 0) ExecutionTrace.Note(L.T("mrt.log sonuç özeti: ", "mrt.log result summary: ") + string.Join(" / ", summaryLines));
         }
         else
         {
-            ExecutionTrace.Note("Bu taramaya ait sonuç mrt.log dosyasında bulunamadı; süreç çıkış kodu kullanıldı.");
+            ExecutionTrace.Note(L.T("Bu taramaya ait sonuç mrt.log dosyasında bulunamadı; süreç çıkış kodu kullanıldı.", "The result of this scan was not found in mrt.log; the process exit code was used."));
         }
         code ??= r.ExitCode;
-        logger.Info($"[MRT] Dönüş kodu: {code}");
+        logger.Info(L.T($"[MRT] Dönüş kodu: {code}", $"[MRT] Return code: {code}"));
         return Done(Interpret(code.Value, detectOnly, summaryLines, version));
     }
 
     private ModuleResult Interpret(int code, bool detectOnly, List<string> summary, string version)
     {
         var summaryText = summary.Count > 0 ? string.Join("\n", summary.Take(6)) : string.Empty;
-        var details = $"MRT sürümü: {version}\nMod: {(detectOnly ? "Hızlı tarama (yalnızca tespit)" : "Hızlı tarama (temizleme)")}" +
+        var details = L.T($"MRT sürümü: {version}\nMod: {(detectOnly ? "Hızlı tarama (yalnızca tespit)" : "Hızlı tarama (temizleme)")}", $"MRT version: {version}\nMode: {(detectOnly ? "Quick scan (detection only)" : "Quick scan (removal)")}") +
                       (summaryText.Length > 0 ? "\nMRT: " + summaryText : string.Empty);
 
         ModuleResult R(ComponentStatus s, string sum, string? reason = null, int actionable = 0, bool reboot = false) => new()
@@ -131,7 +131,7 @@ public sealed class MrtManager(Logger logger) : IMaintenanceModule, IProgressRep
             [
                 new UpdateItem
                 {
-                    Name = "MRT hızlı tarama",
+                    Name = L.T("MRT hızlı tarama", "MRT quick scan"),
                     CurrentVersion = version,
                     UpdateAvailable = actionable > 0,
                     AutoUpdatable = actionable > 0,
@@ -142,29 +142,29 @@ public sealed class MrtManager(Logger logger) : IMaintenanceModule, IProgressRep
 
         return code switch
         {
-            0 => R(ComponentStatus.UpToDate, "Tehdit bulunamadı"),
-            6 when detectOnly => R(ComponentStatus.UpdateAvailable, "Tehdit tespit edildi",
-                "Tespit edilen tehditler henüz temizlenmedi. Temizlik yalnızca onayınızla yapılır.", actionable: 1),
-            6 => R(ComponentStatus.Failed, "Tehdit tespit edildi ancak temizlenemedi",
-                "MRT tehdidi tespit etti fakat kaldıramadı. Microsoft Defender ile tam tarama önerilir."),
-            7 => R(ComponentStatus.Updated, "Tehdit tespit edildi ve temizlendi"),
-            8 => R(ComponentStatus.PartiallyUpdated, "Temizlendi – elle yapılması gereken adımlar var",
-                "Tam temizlik için ek adımlar gerekiyor; ayrıntılar %windir%\\debug\\mrt.log dosyasında."),
-            9 => R(ComponentStatus.PartiallyUpdated, "Temizlendi – elle adım gerekli ve hatalar oluştu",
-                "Ayrıntılar %windir%\\debug\\mrt.log dosyasında."),
-            10 => R(ComponentStatus.RebootRequired, "Temizlendi – yeniden başlatma gerekli",
-                "Tam temizlik için bilgisayarın yeniden başlatılması gerekiyor.", reboot: true),
-            11 => R(ComponentStatus.RebootRequired, "Temizlendi – yeniden başlatma gerekli (hatalarla)",
-                "Tam temizlik için yeniden başlatma gerekiyor; bazı hatalar oluştu.", reboot: true),
-            12 or 13 => R(ComponentStatus.RebootRequired, "Temizlendi – elle adım ve yeniden başlatma gerekli",
-                "Ayrıntılar %windir%\\debug\\mrt.log dosyasında.", reboot: true),
-            1 => R(detectOnly ? ComponentStatus.CheckFailed : ComponentStatus.Failed, "Tarama başarısız", "MRT: işletim sistemi ortam hatası (kod 1)."),
-            2 => R(ComponentStatus.AdminRequired, "Yönetici izni gerekli", "MRT yönetici olarak çalışmadı (kod 2)."),
-            3 => R(detectOnly ? ComponentStatus.CheckFailed : ComponentStatus.Failed, "Tarama başarısız", "MRT: desteklenmeyen işletim sistemi (kod 3)."),
-            4 => R(detectOnly ? ComponentStatus.CheckFailed : ComponentStatus.Failed, "Tarama başarısız",
-                "MRT tarayıcısı başlatılamadı (kod 4). Windows Update ile MRT'nin güncel sürümünü alın."),
-            _ => R(detectOnly ? ComponentStatus.CheckFailed : ComponentStatus.Failed, "Tarama başarısız",
-                $"MRT bilinmeyen bir dönüş kodu verdi: {code}.")
+            0 => R(ComponentStatus.UpToDate, L.T("Tehdit bulunamadı", "No threats found")),
+            6 when detectOnly => R(ComponentStatus.UpdateAvailable, L.T("Tehdit tespit edildi", "Threats detected"),
+                L.T("Tespit edilen tehditler henüz temizlenmedi. Temizlik yalnızca onayınızla yapılır.", "The detected threats have not been removed yet. Removal is done only with your approval."), actionable: 1),
+            6 => R(ComponentStatus.Failed, L.T("Tehdit tespit edildi ancak temizlenemedi", "Threats detected but could not be removed"),
+                L.T("MRT tehdidi tespit etti fakat kaldıramadı. Microsoft Defender ile tam tarama önerilir.", "MRT detected the threat but could not remove it. A full scan with Microsoft Defender is recommended.")),
+            7 => R(ComponentStatus.Updated, L.T("Tehdit tespit edildi ve temizlendi", "Threats detected and removed")),
+            8 => R(ComponentStatus.PartiallyUpdated, L.T("Temizlendi – elle yapılması gereken adımlar var", "Removed – manual steps required"),
+                L.T("Tam temizlik için ek adımlar gerekiyor; ayrıntılar %windir%\\debug\\mrt.log dosyasında.", "Additional steps are required for full removal; details are in %windir%\\debug\\mrt.log.")),
+            9 => R(ComponentStatus.PartiallyUpdated, L.T("Temizlendi – elle adım gerekli ve hatalar oluştu", "Removed – manual steps required and errors occurred"),
+                L.T("Ayrıntılar %windir%\\debug\\mrt.log dosyasında.", "Details are in %windir%\\debug\\mrt.log.")),
+            10 => R(ComponentStatus.RebootRequired, L.T("Temizlendi – yeniden başlatma gerekli", "Removed – restart required"),
+                L.T("Tam temizlik için bilgisayarın yeniden başlatılması gerekiyor.", "The computer must be restarted for full removal."), reboot: true),
+            11 => R(ComponentStatus.RebootRequired, L.T("Temizlendi – yeniden başlatma gerekli (hatalarla)", "Removed – restart required (with errors)"),
+                L.T("Tam temizlik için yeniden başlatma gerekiyor; bazı hatalar oluştu.", "A restart is required for full removal; some errors occurred."), reboot: true),
+            12 or 13 => R(ComponentStatus.RebootRequired, L.T("Temizlendi – elle adım ve yeniden başlatma gerekli", "Removed – manual steps and restart required"),
+                L.T("Ayrıntılar %windir%\\debug\\mrt.log dosyasında.", "Details are in %windir%\\debug\\mrt.log."), reboot: true),
+            1 => R(detectOnly ? ComponentStatus.CheckFailed : ComponentStatus.Failed, L.T("Tarama başarısız", "Scan failed"), L.T("MRT: işletim sistemi ortam hatası (kod 1).", "MRT: operating system environment error (code 1).")),
+            2 => R(ComponentStatus.AdminRequired, L.T("Yönetici izni gerekli", "Administrator permission required"), L.T("MRT yönetici olarak çalışmadı (kod 2).", "MRT did not run as administrator (code 2).")),
+            3 => R(detectOnly ? ComponentStatus.CheckFailed : ComponentStatus.Failed, L.T("Tarama başarısız", "Scan failed"), L.T("MRT: desteklenmeyen işletim sistemi (kod 3).", "MRT: unsupported operating system (code 3).")),
+            4 => R(detectOnly ? ComponentStatus.CheckFailed : ComponentStatus.Failed, L.T("Tarama başarısız", "Scan failed"),
+                L.T("MRT tarayıcısı başlatılamadı (kod 4). Windows Update ile MRT'nin güncel sürümünü alın.", "The MRT scanner could not be started (code 4). Get the latest MRT version with Windows Update.")),
+            _ => R(detectOnly ? ComponentStatus.CheckFailed : ComponentStatus.Failed, L.T("Tarama başarısız", "Scan failed"),
+                L.T($"MRT bilinmeyen bir dönüş kodu verdi: {code}.", $"MRT returned an unknown return code: {code}."))
         };
     }
 
@@ -269,8 +269,8 @@ public sealed class MrtManager(Logger logger) : IMaintenanceModule, IProgressRep
             {
                 await Task.Delay(TimeSpan.FromSeconds(60), ct);
                 var minutes = (int)(DateTime.Now - started).TotalMinutes;
-                logger.Info($"[MRT] Tarama devam ediyor... ({minutes} dk)");
-                Report($"Hızlı tarama sürüyor... ({minutes} dk)", null);
+                logger.Info(L.T($"[MRT] Tarama devam ediyor... ({minutes} dk)", $"[MRT] Scan in progress... ({minutes} min)"));
+                Report(L.T($"Hızlı tarama sürüyor... ({minutes} dk)", $"Quick scan in progress... ({minutes} min)"), null);
             }
         }
         catch (OperationCanceledException) { }
@@ -286,15 +286,15 @@ public sealed class MrtManager(Logger logger) : IMaintenanceModule, IProgressRep
     {
         Key = Key,
         Status = ComponentStatus.AdminRequired,
-        Summary = "Yönetici izni gerekli",
-        Reason = "MRT yalnızca yönetici yetkisiyle çalışır."
+        Summary = L.T("Yönetici izni gerekli", "Administrator permission required"),
+        Reason = L.T("MRT yalnızca yönetici yetkisiyle çalışır.", "MRT only runs with administrator rights.")
     };
 
     private ModuleResult Failed(bool detectOnly, string reason) => new()
     {
         Key = Key,
         Status = detectOnly ? ComponentStatus.CheckFailed : ComponentStatus.Failed,
-        Summary = "Tarama başarısız",
+        Summary = L.T("Tarama başarısız", "Scan failed"),
         Reason = reason
     };
 

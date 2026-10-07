@@ -56,9 +56,9 @@ public sealed class UpdateViewModel : ObservableObject
         _service = new UpdateService(UpdateService.DefaultLatestReleaseUrl, logger.Info);
         _launchSetup = LaunchSetup;
         _shutdown = AppLifetime.Exit;
-        UpdateCommand = new AsyncCommand(UpdateAsync, () => CanUpdate, ex => Fail("Beklenmeyen hata: " + ex.Message));
+        UpdateCommand = new AsyncCommand(UpdateAsync, () => CanUpdate, ex => Fail(L.T("Beklenmeyen hata: ", "Unexpected error: ") + ex.Message));
         CloseAppCommand = new RelayCommand(() => _shutdown(), () => !IsWorking);
-        CheckCommand = new AsyncCommand(CheckAsync, () => !IsWorking && Stage != UpdateStage.Checking, ex => _logger.Warning("Güncelleme denetimi hatası: " + ex.Message));
+        CheckCommand = new AsyncCommand(CheckAsync, () => !IsWorking && Stage != UpdateStage.Checking, ex => _logger.Warning(L.T("Güncelleme denetimi hatası: ", "Update check error: ") + ex.Message));
     }
 
     public ICommand UpdateCommand { get; }
@@ -98,18 +98,18 @@ public sealed class UpdateViewModel : ObservableObject
     public string NewVersionText => Available is null ? string.Empty : "v" + Available.Version.ToString(3);
     public string NotesText => Available?.Notes ?? string.Empty;
     public bool HasNotes => NotesText.Length > 0;
-    public string ButtonText => IsFailed ? "Tekrar dene" : "Güncelle";
+    public string ButtonText => IsFailed ? L.T("Tekrar dene", "Try again") : L.T("Güncelle", "Update");
 
     public string DetailText => Available is null
         ? string.Empty
-        : $"Yüklü sürüm {CurrentVersionText} · yeni sürüm {NewVersionText}" +
-          (Available.PublishedAt is { } at ? $" · yayın {at.ToLocalTime():dd.MM.yyyy HH:mm}" : "") +
+        : L.T($"Yüklü sürüm {CurrentVersionText} · yeni sürüm {NewVersionText}", $"Installed version {CurrentVersionText} · new version {NewVersionText}") +
+          (Available.PublishedAt is { } at ? L.T($" · yayın {at.ToLocalTime():dd.MM.yyyy HH:mm}", $" · released {at.ToLocalTime():dd.MM.yyyy HH:mm}") : "") +
           $" · {Available.SetupSize / 1048576.0:0.0} MB";
 
     /// <summary>Taşınabilir kopyada çalışıyorsa: güncelleme uygulamayı Program Files'a kurar (bu kopya eski kalır).</summary>
     public string? PortableNote => string.Equals(Environment.ProcessPath, InstallLayout.Machine.ExePath, StringComparison.OrdinalIgnoreCase)
         ? null
-        : $"Bu taşınabilir bir kopya: güncelleme uygulamayı {InstallLayout.Machine.InstallDir} klasörüne kurar; bundan sonra Başlat menüsünden açın.";
+        : L.T($"Bu taşınabilir bir kopya: güncelleme uygulamayı {InstallLayout.Machine.InstallDir} klasörüne kurar; bundan sonra Başlat menüsünden açın.", $"This is a portable copy: the update installs the app to the {InstallLayout.Machine.InstallDir} folder; open it from the Start menu afterwards.");
 
     public string StatusText { get => _statusText; private set => Set(ref _statusText, value); }
     public double Progress { get => _progress; private set => Set(ref _progress, value); }
@@ -119,11 +119,11 @@ public sealed class UpdateViewModel : ObservableObject
     /// <summary>Hakkında → Güncelleme satırı (gerçek son denetim sonucu).</summary>
     public string AboutText => Stage switch
     {
-        UpdateStage.Idle => "Henüz denetlenmedi",
-        UpdateStage.Checking => "Denetleniyor…",
-        UpdateStage.UpToDate => $"{_checkMessage} · son denetim {_checkedAt:HH:mm}",
-        UpdateStage.CheckFailed => $"Denetlenemedi ({_checkedAt:HH:mm}): {_checkMessage}",
-        _ => $"Yeni sürüm yayımlandı: {NewVersionText}"
+        UpdateStage.Idle => L.T("Henüz denetlenmedi", "Not checked yet"),
+        UpdateStage.Checking => L.T("Denetleniyor…", "Checking…"),
+        UpdateStage.UpToDate => L.T($"{_checkMessage} · son denetim {_checkedAt:HH:mm}", $"{_checkMessage} · last check {_checkedAt:HH:mm}"),
+        UpdateStage.CheckFailed => L.T($"Denetlenemedi ({_checkedAt:HH:mm}): {_checkMessage}", $"Could not check ({_checkedAt:HH:mm}): {_checkMessage}"),
+        _ => L.T($"Yeni sürüm yayımlandı: {NewVersionText}", $"New version released: {NewVersionText}")
     };
 
     /// <summary>Açılışta arka planda çağrılır (gereksinimler geçtikten sonra) ve Hakkında → "Şimdi denetle".</summary>
@@ -177,7 +177,7 @@ public sealed class UpdateViewModel : ObservableObject
         {
             if (result.RetryAt is { } retry) _nextAllowedCheck = retry.LocalDateTime;
             // Düzenli denetimde aynı hata (ör. internet yok) her 5 dakikada bir günlüğe yazılmaz.
-            if (!background || result.Message != previousMessage) _logger.Warning("Güncelleme denetlenemedi: " + result.Message);
+            if (!background || result.Message != previousMessage) _logger.Warning(L.T("Güncelleme denetlenemedi: ", "Could not check for updates: ") + result.Message);
             Available = null;
             Stage = UpdateStage.CheckFailed;
             return;
@@ -189,9 +189,9 @@ public sealed class UpdateViewModel : ObservableObject
             return;
         }
         Available = result.Update;
-        StatusText = "Yeni sürüm yayınlandı";
-        _logger.Info($"Yeni sürüm yayımlandı: {result.Update.Tag} (yüklü v{AppInfo.Version}" +
-                     (background ? ", uygulama açıkken denetlendi" : "") + "). Güncelleme penceresi gösteriliyor.");
+        StatusText = L.T("Yeni sürüm yayınlandı", "New version available");
+        _logger.Info(L.T($"Yeni sürüm yayımlandı: {result.Update.Tag} (yüklü v{AppInfo.Version}", $"New version released: {result.Update.Tag} (installed v{AppInfo.Version}") +
+                     (background ? L.T(", uygulama açıkken denetlendi", ", checked while the app was open") : "") + L.T("). Güncelleme penceresi gösteriliyor.", "). Showing the update window."));
         Stage = UpdateStage.Available;
         if (background) UpdateFound?.Invoke(result.Update);
     }
@@ -202,9 +202,9 @@ public sealed class UpdateViewModel : ObservableObject
         ErrorText = null;
         Progress = 0;
         ProgressText = string.Empty;
-        StatusText = "İndiriliyor…";
+        StatusText = L.T("İndiriliyor…", "Downloading…");
         Stage = UpdateStage.Downloading;
-        _logger.Info($"Güncelleme başlatıldı: v{AppInfo.Version} → {info.Tag}.");
+        _logger.Info(L.T($"Güncelleme başlatıldı: v{AppInfo.Version} → {info.Tag}.", $"Update started: v{AppInfo.Version} → {info.Tag}."));
 
         // Yönetici olarak çalışırken yalnızca Yöneticiler + SYSTEM erişimli klasöre indirilir (doğrulandıktan sonra değiştirilemesin).
         var elevated = AdminPrivilegeManager.IsElevated;
@@ -227,16 +227,16 @@ public sealed class UpdateViewModel : ObservableObject
         }
         catch (TaskCanceledException)
         {
-            Fail("İndirme zaman aşımına uğradı; internet bağlantınızı kontrol edip yeniden deneyin.");
+            Fail(L.T("İndirme zaman aşımına uğradı; internet bağlantınızı kontrol edip yeniden deneyin.", "The download timed out; check your internet connection and try again."));
             return;
         }
         catch (Exception ex) when (ex is InvalidDataException or HttpRequestException or IOException or UnauthorizedAccessException)
         {
-            Fail("Güncelleme indirilemedi: " + ex.Message);
+            Fail(L.T("Güncelleme indirilemedi: ", "Could not download the update: ") + ex.Message);
             return;
         }
 
-        StatusText = "Doğrulandı (SHA-256, sürüm). Kurulum başlatılıyor…";
+        StatusText = L.T("Doğrulandı (SHA-256, sürüm). Kurulum başlatılıyor…", "Verified (SHA-256, version). Starting setup…");
         Stage = UpdateStage.Launching;
         bool started;
         string? error;
@@ -252,7 +252,7 @@ public sealed class UpdateViewModel : ObservableObject
                 var sha = Convert.ToHexString(await System.Security.Cryptography.SHA256.HashDataAsync(guard));
                 if (!string.Equals(sha, info.Sha256, StringComparison.OrdinalIgnoreCase))
                 {
-                    Fail("Kurulum dosyası doğrulamadan sonra değişti; güncelleme başlatılmadı.");
+                    Fail(L.T("Kurulum dosyası doğrulamadan sonra değişti; güncelleme başlatılmadı.", "The setup file changed after verification; the update was not started."));
                     return;
                 }
             }
@@ -260,7 +260,7 @@ public sealed class UpdateViewModel : ObservableObject
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
         {
-            Fail("Kurulum dosyası açılamadı: " + ex.Message);
+            Fail(L.T("Kurulum dosyası açılamadı: ", "Could not open the setup file: ") + ex.Message);
             return;
         }
         finally
@@ -269,18 +269,18 @@ public sealed class UpdateViewModel : ObservableObject
         }
         if (!started)
         {
-            Fail(error ?? "Kurulum başlatılamadı.");
+            Fail(error ?? L.T("Kurulum başlatılamadı.", "Setup could not be started."));
             return;
         }
-        _logger.Info($"Güncelleme kurulumu başlatıldı ({info.Tag}); uygulama kapanıyor, kurulum bitince yeni sürüm açılacak.");
+        _logger.Info(L.T($"Güncelleme kurulumu başlatıldı ({info.Tag}); uygulama kapanıyor, kurulum bitince yeni sürüm açılacak.", $"Update setup started ({info.Tag}); the app is closing, the new version will open when setup finishes."));
         _shutdown();
     }
 
     private void Fail(string message)
     {
         ErrorText = message;
-        StatusText = "Güncelleme yapılamadı";
-        _logger.Warning("Güncelleme yapılamadı: " + message);
+        StatusText = L.T("Güncelleme yapılamadı", "Update failed");
+        _logger.Warning(L.T("Güncelleme yapılamadı: ", "Update failed: ") + message);
         Stage = UpdateStage.Failed;
     }
 
@@ -295,7 +295,7 @@ public sealed class UpdateViewModel : ObservableObject
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
         {
-            _logger.Warning("Eski güncelleme dosyaları temizlenemedi: " + ex.Message);
+            _logger.Warning(L.T("Eski güncelleme dosyaları temizlenemedi: ", "Could not clean up old update files: ") + ex.Message);
         }
     }
 
@@ -305,7 +305,7 @@ public sealed class UpdateViewModel : ObservableObject
     /// </summary>
     private static (bool Started, string? Error) LaunchSetup(string setup)
     {
-        var args = $"{LaunchModes.ArgInstall} {LaunchModes.ArgUpdate} {LaunchModes.ArgWaitPid} {Environment.ProcessId}";
+        var args = $"{LaunchModes.ArgInstall} {LaunchModes.ArgUpdate} {LaunchModes.ArgWaitPid} {Environment.ProcessId} {string.Join(' ', LaunchModes.PreferenceArgs())}";
         var psi = new ProcessStartInfo(setup, args) { WorkingDirectory = Path.GetDirectoryName(setup)! };
         if (AdminPrivilegeManager.IsElevated)
         {
@@ -323,11 +323,11 @@ public sealed class UpdateViewModel : ObservableObject
         }
         catch (Win32Exception ex) when (ex.NativeErrorCode == 1223)
         {
-            return (false, "Güncelleme için yönetici izni verilmedi; güncelleme yapılmadı.");
+            return (false, L.T("Güncelleme için yönetici izni verilmedi; güncelleme yapılmadı.", "Administrator permission was not granted for the update; the update was not performed."));
         }
         catch (Exception ex) when (ex is Win32Exception or InvalidOperationException)
         {
-            return (false, "Kurulum başlatılamadı: " + ex.Message);
+            return (false, L.T("Kurulum başlatılamadı: ", "Could not start setup: ") + ex.Message);
         }
     }
 }

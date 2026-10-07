@@ -16,6 +16,7 @@ public partial class UninstallWindow : Window
         DataContext = vm;
         vm.RequestClose += OnRequestClose;
         SourceInitialized += (_, _) => WindowFrame.Apply(this);
+        UpdateThemeButton();
         Closing += OnClosing;
     }
 
@@ -31,4 +32,18 @@ public partial class UninstallWindow : Window
     }
 
     private void Minimize_Click(object sender, RoutedEventArgs e) => WindowState = WindowState.Minimized;
+
+    /// <summary>Başlık çubuğundaki tema düğmesi (v2.0.0): koyu / açık tema anında değişir; seçim kurulan uygulamaya iletilir.</summary>
+    private void Theme_Click(object sender, RoutedEventArgs e)
+    {
+        ThemeManager.Toggle();
+        UpdateThemeButton();
+    }
+
+    private void UpdateThemeButton()
+    {
+        ThemeButton.Content = ThemeManager.ToggleGlyph;
+        ThemeButton.ToolTip = ThemeManager.ToggleToolTip;
+        System.Windows.Automation.AutomationProperties.SetName(ThemeButton, ThemeManager.ToggleToolTip);
+    }
 }

@@ -18,28 +18,28 @@ public sealed partial class MainViewModel
         {
             if (p is not string url || !AppInfo.LegalLinks.Contains(url)) return;
             var error = ShellOpen.OpenUrl(url);
-            if (error is null) _logger.Info("Bağlantı açıldı: " + url);
-            else _logger.Warning($"Bağlantı açılamadı ({url}): {error}");
+            if (error is null) _logger.Info(L.T("Bağlantı açıldı: ", "Link opened: ") + url);
+            else _logger.Warning(L.T($"Bağlantı açılamadı ({url}): {error}", $"Could not open the link ({url}): {error}"));
         });
 
     /// <summary>Güncel yasal belge sürümü bu bilgisayarda kabul edilmiş mi (state.json).</summary>
     private bool IsLegalAccepted => _state.State.LegalAcceptedVersion == AppInfo.LegalVersion;
 
-    public string LegalVersionText => $"Belge sürümü {AppInfo.LegalVersion}";
+    public string LegalVersionText => L.T($"Belge sürümü {AppInfo.LegalVersion}", $"Document version {AppInfo.LegalVersion}");
 
     /// <summary>Genel Ayarlar → Yasal: kabul kaydı (yalnızca bu bilgisayarda).</summary>
     public string LegalAcceptanceText =>
         _state.State.LegalAcceptedVersion is { } v && _state.State.LegalAcceptedAt is { } at
-            ? $"Kullanım Koşulları ve Gizlilik Politikası (sürüm {v}) {at:dd.MM.yyyy HH:mm} tarihinde bu bilgisayarda kabul edildi." +
-              (v == AppInfo.LegalVersion ? string.Empty : $" Güncel sürüm {AppInfo.LegalVersion}; bir sonraki girişte yeniden kabul edilir.")
-            : "Bu bilgisayarda henüz kabul kaydı yok (gereksinim sayfasındaki kutuyla kabul edilir).";
+            ? L.T($"Kullanım Koşulları ve Gizlilik Politikası (sürüm {v}) {at:dd.MM.yyyy HH:mm} tarihinde bu bilgisayarda kabul edildi.", $"The Terms of Use and Privacy Policy (version {v}) were accepted on this computer on {at:yyyy-MM-dd HH:mm}.") +
+              (v == AppInfo.LegalVersion ? string.Empty : L.T($" Güncel sürüm {AppInfo.LegalVersion}; bir sonraki girişte yeniden kabul edilir.", $" Current version {AppInfo.LegalVersion}; it will be accepted again at the next entry."))
+            : L.T("Bu bilgisayarda henüz kabul kaydı yok (gereksinim sayfasındaki kutuyla kabul edilir).", "No acceptance record on this computer yet (accepted with the box on the requirements page).");
 
     /// <summary>Gereksinim sayfasından girişte kabul kaydedilir (yalnızca sürüm değiştiyse / ilk kez).</summary>
     private void RecordLegalAcceptance()
     {
         if (IsLegalAccepted) return;
         _state.MarkLegalAccepted(AppInfo.LegalVersion, DateTime.Now);
-        _logger.Info($"Kullanım Koşulları ve Gizlilik Politikası kabul edildi (sürüm {AppInfo.LegalVersion}).");
+        _logger.Info(L.T($"Kullanım Koşulları ve Gizlilik Politikası kabul edildi (sürüm {AppInfo.LegalVersion}).", $"Terms of Use and Privacy Policy accepted (version {AppInfo.LegalVersion})."));
         OnPropertyChanged(nameof(LegalAcceptanceText));
     }
 }

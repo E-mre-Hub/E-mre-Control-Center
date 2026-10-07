@@ -116,37 +116,37 @@ public sealed class UpdateOrchestrator : IDisposable
 
     private static readonly Dictionary<string, string> CheckTexts = new()
     {
-        [ComponentKeys.Winget] = "Winget kontrol ediliyor...",
-        [ComponentKeys.WindowsUpdate] = "Windows Update kontrol ediliyor...",
-        [ComponentKeys.Store] = "Microsoft Store güncellemeleri kontrol ediliyor...",
-        [ComponentKeys.Nvidia] = "NVIDIA sürücüleri kontrol ediliyor...",
-        [ComponentKeys.Defender] = "Microsoft Defender güncellemeleri kontrol ediliyor...",
-        [ComponentKeys.Sfc] = "Sistem dosyaları doğrulanıyor (sfc /verifyonly)...",
-        [ComponentKeys.Dism] = "Windows image sağlık durumu kontrol ediliyor (DISM CheckHealth)...",
-        [ComponentKeys.Mrt] = "MRT hızlı tarama yapılıyor (yalnızca tespit)...",
-        [ComponentKeys.TempFiles] = "Windows geçici dosyaları ölçülüyor...",
-        [ComponentKeys.RecycleBin] = "Çöp kutusu kontrol ediliyor..."
+        [ComponentKeys.Winget] = L.T("Winget kontrol ediliyor...", "Checking winget..."),
+        [ComponentKeys.WindowsUpdate] = L.T("Windows Update kontrol ediliyor...", "Checking Windows Update..."),
+        [ComponentKeys.Store] = L.T("Microsoft Store güncellemeleri kontrol ediliyor...", "Checking Microsoft Store updates..."),
+        [ComponentKeys.Nvidia] = L.T("NVIDIA sürücüleri kontrol ediliyor...", "Checking NVIDIA drivers..."),
+        [ComponentKeys.Defender] = L.T("Microsoft Defender güncellemeleri kontrol ediliyor...", "Checking Microsoft Defender updates..."),
+        [ComponentKeys.Sfc] = L.T("Sistem dosyaları doğrulanıyor (sfc /verifyonly)...", "Verifying system files (sfc /verifyonly)..."),
+        [ComponentKeys.Dism] = L.T("Windows image sağlık durumu kontrol ediliyor (DISM CheckHealth)...", "Checking Windows image health (DISM CheckHealth)..."),
+        [ComponentKeys.Mrt] = L.T("MRT hızlı tarama yapılıyor (yalnızca tespit)...", "Running MRT quick scan (detection only)..."),
+        [ComponentKeys.TempFiles] = L.T("Windows geçici dosyaları ölçülüyor...", "Measuring Windows temporary files..."),
+        [ComponentKeys.RecycleBin] = L.T("Çöp kutusu kontrol ediliyor...", "Checking the Recycle Bin...")
     };
 
     private static readonly Dictionary<string, string> UpdateTexts = new()
     {
-        [ComponentKeys.Winget] = "Winget paketleri güncelleniyor...",
-        [ComponentKeys.WindowsUpdate] = "Windows güncelleştirmeleri indiriliyor ve kuruluyor...",
-        [ComponentKeys.Store] = "Microsoft Store uygulamaları güncelleniyor...",
-        [ComponentKeys.Nvidia] = "NVIDIA sürücüsü indiriliyor ve kuruluyor...",
-        [ComponentKeys.Defender] = "Microsoft Defender tanımları güncelleniyor...",
-        [ComponentKeys.Sfc] = "Sistem dosyaları onarılıyor (sfc /scannow)...",
-        [ComponentKeys.Dism] = "Windows bileşen deposu onarılıyor (DISM /RestoreHealth)...",
-        [ComponentKeys.Mrt] = "Tespit edilen tehditler temizleniyor (MRT hızlı tarama)...",
-        [ComponentKeys.TempFiles] = "Windows geçici dosyaları temizleniyor...",
-        [ComponentKeys.RecycleBin] = "Çöp kutusu temizleniyor..."
+        [ComponentKeys.Winget] = L.T("Winget paketleri güncelleniyor...", "Updating winget packages..."),
+        [ComponentKeys.WindowsUpdate] = L.T("Windows güncelleştirmeleri indiriliyor ve kuruluyor...", "Downloading and installing Windows updates..."),
+        [ComponentKeys.Store] = L.T("Microsoft Store uygulamaları güncelleniyor...", "Updating Microsoft Store apps..."),
+        [ComponentKeys.Nvidia] = L.T("NVIDIA sürücüsü indiriliyor ve kuruluyor...", "Downloading and installing the NVIDIA driver..."),
+        [ComponentKeys.Defender] = L.T("Microsoft Defender tanımları güncelleniyor...", "Updating Microsoft Defender definitions..."),
+        [ComponentKeys.Sfc] = L.T("Sistem dosyaları onarılıyor (sfc /scannow)...", "Repairing system files (sfc /scannow)..."),
+        [ComponentKeys.Dism] = L.T("Windows bileşen deposu onarılıyor (DISM /RestoreHealth)...", "Repairing the Windows component store (DISM /RestoreHealth)..."),
+        [ComponentKeys.Mrt] = L.T("Tespit edilen tehditler temizleniyor (MRT hızlı tarama)...", "Removing detected threats (MRT quick scan)..."),
+        [ComponentKeys.TempFiles] = L.T("Windows geçici dosyaları temizleniyor...", "Cleaning Windows temporary files..."),
+        [ComponentKeys.RecycleBin] = L.T("Çöp kutusu temizleniyor...", "Emptying the Recycle Bin...")
     };
 
     private static readonly Dictionary<string, string> ActionTexts = new()
     {
-        [ComponentKeys.Sfc] = "Sistem dosyası taraması sürüyor (sfc /scannow)...",
-        [ComponentKeys.Dism] = "Windows image sağlık kontrolü sürüyor (DISM CheckHealth)...",
-        [ComponentKeys.Mrt] = "MRT hızlı tarama sürüyor..."
+        [ComponentKeys.Sfc] = L.T("Sistem dosyası taraması sürüyor (sfc /scannow)...", "System file scan in progress (sfc /scannow)..."),
+        [ComponentKeys.Dism] = L.T("Windows image sağlık kontrolü sürüyor (DISM CheckHealth)...", "Windows image health check in progress (DISM CheckHealth)..."),
+        [ComponentKeys.Mrt] = L.T("MRT hızlı tarama sürüyor...", "MRT quick scan in progress...")
     };
 
     /// <summary>İşlemin nasıl başlatıldığı: tüm kartlar, seçilen kartlar veya tek bir kartın kendi butonu.</summary>
@@ -155,11 +155,11 @@ public sealed class UpdateOrchestrator : IDisposable
     /// <summary>Kartta işlem sürerken gösterilen, işlem türüne uygun metin.</summary>
     private static string RunningText(string key, bool check) => key switch
     {
-        ComponentKeys.Sfc or ComponentKeys.Mrt => "Tarama devam ediyor...",
-        ComponentKeys.Dism => check ? "Kontrol ediliyor..." : "Onarılıyor...",
-        ComponentKeys.RecycleBin or ComponentKeys.TempFiles when !check => "Temizleniyor...",
-        ComponentKeys.TempFiles => "Ölçülüyor...",
-        _ => check ? "Kontrol ediliyor..." : "Güncelleniyor..."
+        ComponentKeys.Sfc or ComponentKeys.Mrt => L.T("Tarama devam ediyor...", "Scan in progress..."),
+        ComponentKeys.Dism => check ? L.T("Kontrol ediliyor...", "Checking...") : L.T("Onarılıyor...", "Repairing..."),
+        ComponentKeys.RecycleBin or ComponentKeys.TempFiles when !check => L.T("Temizleniyor...", "Cleaning..."),
+        ComponentKeys.TempFiles => L.T("Ölçülüyor...", "Measuring..."),
+        _ => check ? L.T("Kontrol ediliyor...", "Checking...") : L.T("Güncelleniyor...", "Updating...")
     };
 
     // ================================================================= KONTROL
@@ -189,24 +189,24 @@ public sealed class UpdateOrchestrator : IDisposable
         _activity = rep.Activity;
         try
         {
-            rep.Step.Report(new StepProgress("Sistem hazırlanıyor...", 2));
-            if (selectedMode) LogSelection(keys, "Seçilen işlemler hazırlanıyor...");
-            else if (mode == RunMode.Single) _logger.Info($"{targets[0].DisplayName}: kontrol başlatıldı.");
-            else _logger.Info("Tüm kartların kontrolü başlatıldı.");
+            rep.Step.Report(new StepProgress(L.T("Sistem hazırlanıyor...", "Preparing the system..."), 2));
+            if (selectedMode) LogSelection(keys, L.T("Seçilen işlemler hazırlanıyor...", "Preparing the selected operations..."));
+            else if (mode == RunMode.Single) _logger.Info(L.T($"{targets[0].DisplayName}: kontrol başlatıldı.", $"{targets[0].DisplayName}: check started."));
+            else _logger.Info(L.T("Tüm kartların kontrolü başlatıldı.", "Check of all cards started."));
             foreach (var k in keys.Where(IsUnavailable))
-                _logger.Info($"{NameOf(k)}: bu sistemde kullanım dışı, kontrol edilmedi.");
+                _logger.Info(L.T($"{NameOf(k)}: bu sistemde kullanım dışı, kontrol edilmedi.", $"{NameOf(k)}: unavailable on this system, not checked."));
 
-            rep.Step.Report(new StepProgress("Yönetici izinleri kontrol ediliyor...", 4));
+            rep.Step.Report(new StepProgress(L.T("Yönetici izinleri kontrol ediliyor...", "Checking administrator permissions..."), 4));
             if (!AdminPrivilegeManager.IsElevated)
             {
-                _logger.Error("Yönetici yetkisi yok – sistem üzerinde işlem yapılmayacak.");
+                _logger.Error(L.T("Yönetici yetkisi yok – sistem üzerinde işlem yapılmayacak.", "No administrator rights – no operation will be performed on the system."));
                 foreach (var m in targets)
                 {
                     var r = AdminRequiredResult(m.Key);
                     results[m.Key] = r;
                     rep.ModuleState.Report(r);
                 }
-                rep.Step.Report(new StepProgress("Yönetici izni gerekli", 100));
+                rep.Step.Report(new StepProgress(L.T("Yönetici izni gerekli", "Administrator permission required"), 100));
                 return results;
             }
             // Yönetici yetkisi uygulama açılışında doğrulanıp günlüğe yazıldı; burada yalnızca (önbellekten) denetlenir.
@@ -214,21 +214,21 @@ public sealed class UpdateOrchestrator : IDisposable
             var network = NetworkState.Verified;
             if (targets.Any(t => OnlineModules.Contains(t.Key)))
             {
-                rep.Step.Report(new StepProgress("İnternet bağlantısı kontrol ediliyor...", 6));
+                rep.Step.Report(new StepProgress(L.T("İnternet bağlantısı kontrol ediliyor...", "Checking the internet connection..."), 6));
                 network = await CheckNetworkAsync(ct);
             }
 
             if (targets.Any(t => t.Key is ComponentKeys.Sfc or ComponentKeys.Mrt))
-                _logger.Info("Not: SFC doğrulaması ve MRT hızlı taraması birkaç dakika ile yarım saat arasında sürebilir.");
+                _logger.Info(L.T("Not: SFC doğrulaması ve MRT hızlı taraması birkaç dakika ile yarım saat arasında sürebilir.", "Note: the SFC verification and the MRT quick scan can take from a few minutes to half an hour."));
 
-            if (selectedMode) _logger.Info("Seçilen işlemler başlatılıyor...");
+            if (selectedMode) _logger.Info(L.T("Seçilen işlemler başlatılıyor...", "Starting the selected operations..."));
 
             for (var i = 0; i < targets.Count; i++)
             {
                 var m = targets[i];
                 if (ct.IsCancellationRequested)
                 {
-                    MarkSkipped(m, results, rep.ModuleState, "Kontrol iptal edildi.");
+                    MarkSkipped(m, results, rep.ModuleState, L.T("Kontrol iptal edildi.", "Check cancelled."));
                     continue;
                 }
 
@@ -240,26 +240,26 @@ public sealed class UpdateOrchestrator : IDisposable
                 _stepContext = null;
                 var labeled = ApplyNetworkCaveat(r, network);
                 if (!ReferenceEquals(labeled, r))
-                    _logger.Warning($"{m.DisplayName}: internet bağlantısı doğrulanamadığı için sonuç \"Dikkat\" olarak işaretlendi (winget önbellekteki listeyi kullanmış olabilir).");
+                    _logger.Warning(L.T($"{m.DisplayName}: internet bağlantısı doğrulanamadığı için sonuç \"Dikkat\" olarak işaretlendi (winget önbellekteki listeyi kullanmış olabilir).", $"{m.DisplayName}: the result was marked \"Attention\" because the internet connection could not be verified (winget may have used its cached list)."));
                 results[m.Key] = labeled;
                 rep.ModuleState.Report(labeled);
             }
 
-            rep.Step.Report(new StepProgress(ct.IsCancellationRequested ? "Kontrol iptal edildi" : "Kontrol tamamlandı", 100));
+            rep.Step.Report(new StepProgress(ct.IsCancellationRequested ? L.T("Kontrol iptal edildi", "Check cancelled") : L.T("Kontrol tamamlandı", "Check completed"), 100));
             if (ct.IsCancellationRequested)
             {
-                _logger.Warning("Kontrol kullanıcı tarafından iptal edildi.");
+                _logger.Warning(L.T("Kontrol kullanıcı tarafından iptal edildi.", "The check was cancelled by the user."));
             }
             else
             {
                 var failed = results.Values.Count(r => r.Status is ComponentStatus.CheckFailed or ComponentStatus.Failed or ComponentStatus.AdminRequired);
                 var text = mode switch
                 {
-                    RunMode.Selected => "Seçilen kontroller tamamlandı",
-                    RunMode.Single => $"{targets[0].DisplayName}: kontrol tamamlandı",
-                    _ => "Tüm kontroller tamamlandı"
+                    RunMode.Selected => L.T("Seçilen kontroller tamamlandı", "Selected checks completed"),
+                    RunMode.Single => L.T($"{targets[0].DisplayName}: kontrol tamamlandı", $"{targets[0].DisplayName}: check completed"),
+                    _ => L.T("Tüm kontroller tamamlandı", "All checks completed")
                 };
-                if (failed > 0) _logger.Warning($"{text} – {failed} kontrol başarısız.");
+                if (failed > 0) _logger.Warning(L.T($"{text} – {failed} kontrol başarısız.", $"{text} – {failed} check(s) failed."));
                 else _logger.Info(text + ".");
             }
             return results;
@@ -302,28 +302,28 @@ public sealed class UpdateOrchestrator : IDisposable
 
         if (!AdminPrivilegeManager.IsElevated)
         {
-            _logger.Error("Yönetici yetkisi olmadan güncelleme yapılamaz.");
+            _logger.Error(L.T("Yönetici yetkisi olmadan güncelleme yapılamaz.", "Updates cannot be run without administrator rights."));
             return results;
         }
 
-        if (selectedMode) LogSelection(keys, "Seçilen işlemler hazırlanıyor...");
+        if (selectedMode) LogSelection(keys, L.T("Seçilen işlemler hazırlanıyor...", "Preparing the selected operations..."));
 
         var targets = new List<IUpdateModule>();
         foreach (var m in AvailableModules(keys))
         {
             if (!checks.TryGetValue(m.Key, out var c))
             {
-                _logger.Info($"{m.DisplayName}: kontrol sonucu yok, atlandı.");
+                _logger.Info(L.T($"{m.DisplayName}: kontrol sonucu yok, atlandı.", $"{m.DisplayName}: no check result, skipped."));
                 continue;
             }
             if (m.Key == ComponentKeys.RecycleBin && !cleanRecycleBin) continue;
             if (c.HasActionableUpdates) targets.Add(m);
-            else if (mode != RunMode.All) _logger.Info($"{m.DisplayName}: işlem gerekmiyor ({c.Summary}), atlandı.");
+            else if (mode != RunMode.All) _logger.Info(L.T($"{m.DisplayName}: işlem gerekmiyor ({c.Summary}), atlandı.", $"{m.DisplayName}: no action needed ({c.Summary}), skipped."));
         }
 
         _logger.Info(targets.Count == 0
-            ? "İşlem gerektiren bileşen yok."
-            : $"{mode switch { RunMode.Selected => "Seçilen işlemler başlatılıyor", RunMode.Single => "İşlem başlatılıyor", _ => "Güncelleme başlatıldı" }}: {string.Join(", ", targets.Select(t => t.DisplayName))}");
+            ? L.T("İşlem gerektiren bileşen yok.", "No component needs action.")
+            : L.T($"{mode switch { RunMode.Selected => "Seçilen işlemler başlatılıyor", RunMode.Single => "İşlem başlatılıyor", _ => "Güncelleme başlatıldı" }}: {string.Join(", ", targets.Select(t => t.DisplayName))}", $"{mode switch { RunMode.Selected => "Starting the selected operations", RunMode.Single => "Starting the operation", _ => "Update started" }}: {string.Join(", ", targets.Select(t => t.DisplayName))}"));
 
         _activity = rep.Activity;
         try
@@ -333,7 +333,7 @@ public sealed class UpdateOrchestrator : IDisposable
                 var m = targets[i];
                 if (ct.IsCancellationRequested)
                 {
-                    MarkSkipped(m, results, rep.ModuleState, "Kullanıcı kalan işlemleri iptal etti.");
+                    MarkSkipped(m, results, rep.ModuleState, L.T("Kullanıcı kalan işlemleri iptal etti.", "The user cancelled the remaining operations."));
                     continue;
                 }
 
@@ -364,20 +364,20 @@ public sealed class UpdateOrchestrator : IDisposable
             {
                 Key = ComponentKeys.RecycleBin,
                 Status = ComponentStatus.Skipped,
-                Summary = "Temizlenmedi (seçilmedi)",
+                Summary = L.T("Temizlenmedi (seçilmedi)", "Not emptied (not selected)"),
                 Details = rb.Details,
-                Reason = "Çöp kutusu temizliği seçilmediği için dokunulmadı."
+                Reason = L.T("Çöp kutusu temizliği seçilmediği için dokunulmadı.", "Not touched because emptying the Recycle Bin was not selected.")
             };
             results[ComponentKeys.RecycleBin] = skipped;
             rep.ModuleState.Report(skipped);
         }
 
-        rep.Step.Report(new StepProgress("İşlem tamamlandı", 100));
+        rep.Step.Report(new StepProgress(L.T("İşlem tamamlandı", "Operation completed"), 100));
         LogUpdateOutcome(mode switch
         {
-            RunMode.Selected => "Seçilen işlemler tamamlandı",
-            RunMode.Single => "İşlem tamamlandı",
-            _ => "Güncelleme işlemleri tamamlandı"
+            RunMode.Selected => L.T("Seçilen işlemler tamamlandı", "Selected operations completed"),
+            RunMode.Single => L.T("İşlem tamamlandı", "Operation completed"),
+            _ => L.T("Güncelleme işlemleri tamamlandı", "Update operations completed")
         }, results);
         return results;
     }
@@ -387,7 +387,7 @@ public sealed class UpdateOrchestrator : IDisposable
     {
         var errors = results.Values.Count(r => r.Status is ComponentStatus.Failed or ComponentStatus.CheckFailed or ComponentStatus.AdminRequired);
         var warnings = results.Values.Count(r => r.Status is ComponentStatus.PartiallyUpdated or ComponentStatus.RebootRequired or ComponentStatus.Attention);
-        if (errors > 0 || warnings > 0) _logger.Warning($"{text} – {errors} hata, {warnings} uyarı.");
+        if (errors > 0 || warnings > 0) _logger.Warning(L.T($"{text} – {errors} hata, {warnings} uyarı.", $"{text} – {errors} error(s), {warnings} warning(s)."));
         else _logger.Success(text + ".");
     }
 
@@ -402,24 +402,24 @@ public sealed class UpdateOrchestrator : IDisposable
         if (Find(check.Key) is not { } module || module is not IManualUpdateModule manual) return null;
         if (!AdminPrivilegeManager.IsElevated)
         {
-            _logger.Error("Yönetici yetkisi olmadan güncelleme yapılamaz.");
+            _logger.Error(L.T("Yönetici yetkisi olmadan güncelleme yapılamaz.", "Updates cannot be run without administrator rights."));
             return null;
         }
 
         _activity = rep.Activity;
         try
         {
-            _logger.Info($"{module.DisplayName}: seçilen manuel güncellemeler başlatıldı ({ids.Count} paket).");
-            rep.Step.Report(new StepProgress($"{module.DisplayName}: seçilen manuel güncellemeler uygulanıyor...", 5));
-            rep.ModuleState.Report(new ModuleResult { Key = module.Key, Status = ComponentStatus.Updating, Summary = "Manuel güncelleme uygulanıyor..." });
+            _logger.Info(L.T($"{module.DisplayName}: seçilen manuel güncellemeler başlatıldı ({ids.Count} paket).", $"{module.DisplayName}: selected manual updates started ({ids.Count} package(s))."));
+            rep.Step.Report(new StepProgress(L.T($"{module.DisplayName}: seçilen manuel güncellemeler uygulanıyor...", $"{module.DisplayName}: applying the selected manual updates..."), 5));
+            rep.ModuleState.Report(new ModuleResult { Key = module.Key, Status = ComponentStatus.Updating, Summary = L.T("Manuel güncelleme uygulanıyor...", "Applying manual update...") });
             // Kaldırma/kurulum başladıktan sonra yarıda kesilmez.
             _stepContext = new StepContext(module.Key, module.DisplayName, rep.Step, 5, 90);
             var r = await SafeRunAsync(() => manual.UpdateManualAsync(check, ids, CancellationToken.None),
                 module, OperationKind.Update, isCheck: false, CancellationToken.None);
             _stepContext = null;
             rep.ModuleState.Report(r);
-            rep.Step.Report(new StepProgress("İşlem tamamlandı", 100));
-            LogUpdateOutcome($"{module.DisplayName}: manuel güncellemeler tamamlandı", new Dictionary<string, ModuleResult> { [r.Key] = r });
+            rep.Step.Report(new StepProgress(L.T("İşlem tamamlandı", "Operation completed"), 100));
+            LogUpdateOutcome(L.T($"{module.DisplayName}: manuel güncellemeler tamamlandı", $"{module.DisplayName}: manual updates completed"), new Dictionary<string, ModuleResult> { [r.Key] = r });
             return r;
         }
         finally
@@ -441,23 +441,23 @@ public sealed class UpdateOrchestrator : IDisposable
         if (Find(previous.Key) is not { } module || module is not IInUseRetryModule retry) return null;
         if (!AdminPrivilegeManager.IsElevated)
         {
-            _logger.Error("Yönetici yetkisi olmadan güncelleme yapılamaz.");
+            _logger.Error(L.T("Yönetici yetkisi olmadan güncelleme yapılamaz.", "Updates cannot be run without administrator rights."));
             return null;
         }
 
         _activity = rep.Activity;
         try
         {
-            rep.Step.Report(new StepProgress($"{module.DisplayName}: çalışan uygulamalar kapatılıp güncelleme yeniden deneniyor...", 5));
-            rep.ModuleState.Report(new ModuleResult { Key = module.Key, Status = ComponentStatus.Updating, Summary = "Yeniden deneniyor..." });
+            rep.Step.Report(new StepProgress(L.T($"{module.DisplayName}: çalışan uygulamalar kapatılıp güncelleme yeniden deneniyor...", $"{module.DisplayName}: closing running apps and retrying the update..."), 5));
+            rep.ModuleState.Report(new ModuleResult { Key = module.Key, Status = ComponentStatus.Updating, Summary = L.T("Yeniden deneniyor...", "Retrying...") });
             // Kapatma ve kurulum başladıktan sonra yarıda kesilmez.
             _stepContext = new StepContext(module.Key, module.DisplayName, rep.Step, 5, 90);
             var r = await SafeRunAsync(() => retry.RetryAfterClosingAsync(previous, approved, CancellationToken.None),
                 module, OperationKind.Update, isCheck: false, CancellationToken.None);
             _stepContext = null;
             rep.ModuleState.Report(r);
-            rep.Step.Report(new StepProgress("İşlem tamamlandı", 100));
-            LogUpdateOutcome($"{module.DisplayName}: yeniden deneme tamamlandı", new Dictionary<string, ModuleResult> { [r.Key] = r });
+            rep.Step.Report(new StepProgress(L.T("İşlem tamamlandı", "Operation completed"), 100));
+            LogUpdateOutcome(L.T($"{module.DisplayName}: yeniden deneme tamamlandı", $"{module.DisplayName}: retry completed"), new Dictionary<string, ModuleResult> { [r.Key] = r });
             return r;
         }
         finally
@@ -473,11 +473,11 @@ public sealed class UpdateOrchestrator : IDisposable
     public async Task<ModuleResult> RunMaintenanceActionAsync(string key, OrchestratorReporters rep, CancellationToken ct)
     {
         if (Find(key) is not IMaintenanceModule m)
-            return ModuleResult.CheckFailed(key, "Bu kart için çalıştırılabilir bir işlem yok.");
+            return ModuleResult.CheckFailed(key, L.T("Bu kart için çalıştırılabilir bir işlem yok.", "There is no runnable operation for this card."));
 
         if (!AdminPrivilegeManager.IsElevated)
         {
-            _logger.Error($"{m.DisplayName}: yönetici yetkisi yok – işlem yapılmadı.");
+            _logger.Error(L.T($"{m.DisplayName}: yönetici yetkisi yok – işlem yapılmadı.", $"{m.DisplayName}: no administrator rights – no operation performed."));
             var denied = AdminRequiredResult(key);
             rep.ModuleState.Report(denied);
             return denied;
@@ -492,7 +492,7 @@ public sealed class UpdateOrchestrator : IDisposable
             var r = await SafeRunAsync(() => m.RunActionAsync(ct), m, OperationKind.Action, isCheck: key != ComponentKeys.Sfc, ct);
             _stepContext = null;
             rep.ModuleState.Report(r);
-            rep.Step.Report(new StepProgress("İşlem tamamlandı", 100));
+            rep.Step.Report(new StepProgress(L.T("İşlem tamamlandı", "Operation completed"), 100));
             return r;
         }
         finally
@@ -509,8 +509,8 @@ public sealed class UpdateOrchestrator : IDisposable
         _logger.Info(header);
         foreach (var m in Modules)
         {
-            if (keys.Contains(m.Key)) _logger.Info($"{m.DisplayName} seçildi.");
-            else _logger.Output($"{m.DisplayName} seçilmedi, atlandı.");
+            if (keys.Contains(m.Key)) _logger.Info(L.T($"{m.DisplayName} seçildi.", $"{m.DisplayName} selected."));
+            else _logger.Output(L.T($"{m.DisplayName} seçilmedi, atlandı.", $"{m.DisplayName} not selected, skipped."));
         }
     }
 
@@ -518,8 +518,8 @@ public sealed class UpdateOrchestrator : IDisposable
     {
         Key = key,
         Status = ComponentStatus.AdminRequired,
-        Summary = "Yönetici izni gerekli",
-        Reason = "Uygulama yönetici yetkisiyle çalışmıyor."
+        Summary = L.T("Yönetici izni gerekli", "Administrator permission required"),
+        Reason = L.T("Uygulama yönetici yetkisiyle çalışmıyor.", "The app is not running with administrator rights.")
     };
 
     /// <summary>
@@ -540,18 +540,18 @@ public sealed class UpdateOrchestrator : IDisposable
         }
         catch (OperationCanceledException) when (ct.IsCancellationRequested)
         {
-            _logger.Warning($"{m.DisplayName}: işlem iptal edildi.");
+            _logger.Warning(L.T($"{m.DisplayName}: işlem iptal edildi.", $"{m.DisplayName}: operation cancelled."));
             result = new ModuleResult
             {
                 Key = m.Key,
                 Status = ComponentStatus.Skipped,
-                Summary = "İptal edildi",
-                Reason = "İşlem kullanıcı tarafından iptal edildi."
+                Summary = L.T("İptal edildi", "Cancelled"),
+                Reason = L.T("İşlem kullanıcı tarafından iptal edildi.", "The operation was cancelled by the user.")
             };
         }
         catch (Exception ex)
         {
-            var reason = $"Beklenmeyen hata: {ex.Message}";
+            var reason = L.T($"Beklenmeyen hata: {ex.Message}", $"Unexpected error: {ex.Message}");
             _logger.Error($"{m.DisplayName}: {reason}");
             result = isCheck ? ModuleResult.CheckFailed(m.Key, reason) : ModuleResult.Failed(m.Key, reason);
         }
@@ -565,20 +565,20 @@ public sealed class UpdateOrchestrator : IDisposable
         result.Duration = watch.Elapsed;
         result.Commands = trace.Commands;
         result.Notes = trace.Notes;
-        _logger.Info($"{m.DisplayName}: işlem süresi {FormatDuration(watch.Elapsed)}.");
+        _logger.Info(L.T($"{m.DisplayName}: işlem süresi {FormatDuration(watch.Elapsed)}.", $"{m.DisplayName}: operation took {FormatDuration(watch.Elapsed)}."));
         return result;
     }
 
     /// <summary>Süreyi "4 dk 21 sn" biçiminde yazar.</summary>
     public static string FormatDuration(TimeSpan d) =>
-        d.TotalHours >= 1 ? $"{(int)d.TotalHours} sa {d.Minutes} dk"
-        : d.TotalMinutes >= 1 ? $"{(int)d.TotalMinutes} dk {d.Seconds} sn"
-        : d.TotalSeconds >= 1 ? $"{(int)d.TotalSeconds} sn"
+        d.TotalHours >= 1 ? L.T($"{(int)d.TotalHours} sa {d.Minutes} dk", $"{(int)d.TotalHours} h {d.Minutes} min")
+        : d.TotalMinutes >= 1 ? L.T($"{(int)d.TotalMinutes} dk {d.Seconds} sn", $"{(int)d.TotalMinutes} min {d.Seconds} sec")
+        : d.TotalSeconds >= 1 ? L.T($"{(int)d.TotalSeconds} sn", $"{(int)d.TotalSeconds} sec")
         : $"{Math.Max(1, (int)d.TotalMilliseconds)} ms";
 
     private void MarkSkipped(IUpdateModule m, Dictionary<string, ModuleResult> results, IProgress<ModuleResult> state, string reason)
     {
-        var r = new ModuleResult { Key = m.Key, Status = ComponentStatus.Skipped, Summary = "Atlandı", Reason = reason };
+        var r = new ModuleResult { Key = m.Key, Status = ComponentStatus.Skipped, Summary = L.T("Atlandı", "Skipped"), Reason = reason };
         results[m.Key] = r;
         state.Report(r);
     }
@@ -590,7 +590,7 @@ public sealed class UpdateOrchestrator : IDisposable
     {
         if (!NetworkInterface.GetIsNetworkAvailable())
         {
-            _logger.Error("Ağ bağlantısı bulunamadı. Çevrimiçi kontroller başarısız olacaktır.");
+            _logger.Error(L.T("Ağ bağlantısı bulunamadı. Çevrimiçi kontroller başarısız olacaktır.", "No network connection found. Online checks will fail."));
             return NetworkState.NoNetwork;
         }
         try
@@ -600,15 +600,15 @@ public sealed class UpdateOrchestrator : IDisposable
             var text = await _http.GetStringAsync("http://www.msftconnecttest.com/connecttest.txt", cts.Token);
             if (text.Contains("Microsoft Connect Test", StringComparison.Ordinal))
             {
-                _logger.Success("İnternet bağlantısı doğrulandı.");
+                _logger.Success(L.T("İnternet bağlantısı doğrulandı.", "Internet connection verified."));
                 return NetworkState.Verified;
             }
-            _logger.Warning("İnternet bağlantısı sınırlı görünüyor (yakalama portalı / proxy olabilir).");
+            _logger.Warning(L.T("İnternet bağlantısı sınırlı görünüyor (yakalama portalı / proxy olabilir).", "The internet connection looks limited (possibly a captive portal / proxy)."));
             return NetworkState.Limited;
         }
         catch (Exception ex) when (!ct.IsCancellationRequested)
         {
-            _logger.Warning($"İnternet bağlantısı doğrulanamadı: {ex.Message}");
+            _logger.Warning(L.T($"İnternet bağlantısı doğrulanamadı: {ex.Message}", $"The internet connection could not be verified: {ex.Message}"));
             return NetworkState.NotVerified;
         }
     }
@@ -626,18 +626,18 @@ public sealed class UpdateOrchestrator : IDisposable
             return r;
         var why = network switch
         {
-            NetworkState.NoNetwork => "ağ bağlantısı yok",
-            NetworkState.Limited => "internet bağlantısı sınırlı",
-            _ => "internet bağlantısı doğrulanamadı"
+            NetworkState.NoNetwork => L.T("ağ bağlantısı yok", "no network connection"),
+            NetworkState.Limited => L.T("internet bağlantısı sınırlı", "internet connection limited"),
+            _ => L.T("internet bağlantısı doğrulanamadı", "internet connection could not be verified")
         };
-        var note = $"Dikkat: {why}. Winget bu durumda kendi önbelleğindeki paket listesini kullanabilir; sonuç güncel olmayabilir. " +
-                   "Bağlantıyı kontrol edip yeniden kontrol edin.";
+        var note = L.T($"Dikkat: {why}. Winget bu durumda kendi önbelleğindeki paket listesini kullanabilir; sonuç güncel olmayabilir. ", $"Attention: {why}. In this case winget may use the package list from its own cache; the result may be out of date. ") +
+                   L.T("Bağlantıyı kontrol edip yeniden kontrol edin.", "Check the connection and check again.");
         var upToDate = r.Status == ComponentStatus.UpToDate;
         return new ModuleResult
         {
             Key = r.Key,
             Status = upToDate ? ComponentStatus.Attention : r.Status,
-            Summary = upToDate ? $"Güncel görünüyor – {why}" : r.Summary,
+            Summary = upToDate ? L.T($"Güncel görünüyor – {why}", $"Looks up to date – {why}") : r.Summary,
             Details = r.Details,
             Reason = string.IsNullOrEmpty(r.Reason) ? note : r.Reason + "\n" + note,
             Items = r.Items,

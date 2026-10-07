@@ -21,20 +21,20 @@ public sealed record CrashEvent(
     public string TimeText => Formats.Date(Time);
     public string KindText => Kind switch
     {
-        CrashKind.BugCheck => "Mavi ekran (BugCheck)",
-        CrashKind.KernelPower => BugCheckCode is > 0 ? "Beklenmedik yeniden başlatma (hata denetimi)" : "Beklenmedik güç kaybı / kilitlenme",
-        CrashKind.UnexpectedShutdown => "Beklenmedik kapanma",
-        CrashKind.DisplayReset => "Ekran sürücüsü yanıt vermedi (kurtarıldı)",
-        _ => "Donanım hatası (WHEA)"
+        CrashKind.BugCheck => L.T("Mavi ekran (BugCheck)", "Blue screen (BugCheck)"),
+        CrashKind.KernelPower => BugCheckCode is > 0 ? L.T("Beklenmedik yeniden başlatma (hata denetimi)", "Unexpected restart (bug check)") : L.T("Beklenmedik güç kaybı / kilitlenme", "Unexpected power loss / hang"),
+        CrashKind.UnexpectedShutdown => L.T("Beklenmedik kapanma", "Unexpected shutdown"),
+        CrashKind.DisplayReset => L.T("Ekran sürücüsü yanıt vermedi (kurtarıldı)", "Display driver stopped responding (recovered)"),
+        _ => L.T("Donanım hatası (WHEA)", "Hardware error (WHEA)")
     };
     public string CodeText => BugCheckCode is { } c and > 0 ? $"0x{c:X8} {BugCheckNames.Name(c)}" : "—";
     public string RelationText => BugCheckCode is { } c and > 0 ? BugCheckNames.Relation(c)
         : Kind switch
         {
-            CrashKind.DisplayReset => Module is null ? "Ekran kartı sürücüsüyle ilişkili olabilir." : $"{Module} (ekran sürücüsü) ile ilişkili olabilir.",
-            CrashKind.KernelPower => "Hata kodu yok: güç kesintisi, güç düğmesiyle kapatma veya donanım kilitlenmesiyle ilişkili olabilir.",
-            CrashKind.Hardware => "Donanım (CPU / bellek / PCIe aygıtı) hata bildirdi; ayrıntı olay iletisinde.",
-            _ => "Windows kapanma nedenini kaydedemedi."
+            CrashKind.DisplayReset => Module is null ? L.T("Ekran kartı sürücüsüyle ilişkili olabilir.", "May be related to the graphics card driver.") : L.T($"{Module} (ekran sürücüsü) ile ilişkili olabilir.", $"May be related to {Module} (display driver)."),
+            CrashKind.KernelPower => L.T("Hata kodu yok: güç kesintisi, güç düğmesiyle kapatma veya donanım kilitlenmesiyle ilişkili olabilir.", "No error code: may be related to a power cut, shutting down with the power button or a hardware hang."),
+            CrashKind.Hardware => L.T("Donanım (CPU / bellek / PCIe aygıtı) hata bildirdi; ayrıntı olay iletisinde.", "The hardware (CPU / memory / PCIe device) reported an error; details are in the event message."),
+            _ => L.T("Windows kapanma nedenini kaydedemedi.", "Windows could not record the shutdown reason.")
         };
     public string ModuleText => Module ?? "—";
     public string DumpText => DumpPath ?? "—";
@@ -102,7 +102,7 @@ public sealed class CrashAnalysisService(Logger logger)
         catch (OperationCanceledException) { throw; }
         catch (Exception ex) when (ex is EventLogException or UnauthorizedAccessException or InvalidOperationException)
         {
-            eventError = "Sistem günlüğü okunamadı: " + EventLogService.Describe(ex);
+            eventError = L.T("Sistem günlüğü okunamadı: ", "Could not read the System log: ") + EventLogService.Describe(ex);
         }
 
         var dumps = new List<DumpFileInfo>();
@@ -114,23 +114,23 @@ public sealed class CrashAnalysisService(Logger logger)
             try
             {
                 if (!Directory.Exists(dir))
-                    dumpNote = "Minidump klasörü yok (bu sistemde küçük bellek dökümü oluşmamış).";
+                    dumpNote = L.T("Minidump klasörü yok (bu sistemde küçük bellek dökümü oluşmamış).", "No Minidump folder (no small memory dump has been created on this system).");
                 else
                     foreach (var f in new DirectoryInfo(dir).EnumerateFiles("*.dmp").OrderByDescending(f => f.LastWriteTime).Take(50))
                         dumps.Add(ReadDump(f));
             }
             catch (UnauthorizedAccessException)
             {
-                dumpNote = "Minidump klasörü (" + dir + ") yalnızca yönetici yetkisiyle okunabilir.";
+                dumpNote = L.T("Minidump klasörü (", "The Minidump folder (") + dir + L.T(") yalnızca yönetici yetkisiyle okunabilir.", ") can only be read with administrator rights.");
             }
             catch (IOException ex)
             {
-                dumpNote = "Minidump klasörü okunamadı: " + ex.Message;
+                dumpNote = L.T("Minidump klasörü okunamadı: ", "Could not read the Minidump folder: ") + ex.Message;
             }
         }
         else
         {
-            dumpNote = "Minidump klasörü yalnızca yönetici yetkisiyle okunabilir.";
+            dumpNote = L.T("Minidump klasörü yalnızca yönetici yetkisiyle okunabilir.", "The Minidump folder can only be read with administrator rights.");
         }
 
         var full = new FileInfo(Path.Combine(windows, "MEMORY.DMP"));
@@ -147,8 +147,8 @@ public sealed class CrashAnalysisService(Logger logger)
         }
 
         var report = new CrashReport(events, dumps, dumpNote, fullExists, fullSize, eventError, period);
-        logger.Info($"Çökme analizi ({period.TotalDays:0} gün): {report.BugChecks} BugCheck, {report.Unexpected} beklenmedik kapanma kaydı, " +
-                    $"{report.DisplayResets} ekran sürücüsü sıfırlama, {report.Hardware} WHEA, {dumps.Count} minidump" +
+        logger.Info(L.T($"Çökme analizi ({period.TotalDays:0} gün): {report.BugChecks} BugCheck, {report.Unexpected} beklenmedik kapanma kaydı, ", $"Crash analysis ({period.TotalDays:0} days): {report.BugChecks} BugCheck, {report.Unexpected} unexpected shutdown record(s), ") +
+                    L.T($"{report.DisplayResets} ekran sürücüsü sıfırlama, {report.Hardware} WHEA, {dumps.Count} minidump", $"{report.DisplayResets} display driver reset(s), {report.Hardware} WHEA, {dumps.Count} minidump(s)") +
                     (eventError is null ? "" : "; " + eventError) + (dumpNote is null ? "." : "; " + dumpNote));
         return report;
     }, ct);
@@ -204,7 +204,7 @@ public sealed class CrashAnalysisService(Logger logger)
         {
             using var s = new FileStream(f.FullName, FileMode.Open, FileAccess.Read, FileShare.ReadWrite | FileShare.Delete);
             var head = new byte[0x60];
-            if (s.Read(head, 0, head.Length) < head.Length) return new DumpFileInfo(f.FullName, f.LastWriteTime, f.Length, null, [], "Dosya çok kısa");
+            if (s.Read(head, 0, head.Length) < head.Length) return new DumpFileInfo(f.FullName, f.LastWriteTime, f.Length, null, [], L.T("Dosya çok kısa", "File too short"));
             var sig = System.Text.Encoding.ASCII.GetString(head, 0, 8);
             if (sig == "PAGEDU64")
             {
@@ -218,11 +218,11 @@ public sealed class CrashAnalysisService(Logger logger)
                 var p = new ulong[] { BitConverter.ToUInt32(head, 0x2C), BitConverter.ToUInt32(head, 0x30), BitConverter.ToUInt32(head, 0x34), BitConverter.ToUInt32(head, 0x38) };
                 return new DumpFileInfo(f.FullName, f.LastWriteTime, f.Length, code, p, null);
             }
-            return new DumpFileInfo(f.FullName, f.LastWriteTime, f.Length, null, [], "Tanınmayan döküm biçimi");
+            return new DumpFileInfo(f.FullName, f.LastWriteTime, f.Length, null, [], L.T("Tanınmayan döküm biçimi", "Unrecognized dump format"));
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
         {
-            return new DumpFileInfo(f.FullName, f.LastWriteTime, f.Length, null, [], "Okunamadı: " + ex.Message);
+            return new DumpFileInfo(f.FullName, f.LastWriteTime, f.Length, null, [], L.T("Okunamadı: ", "Unreadable: ") + ex.Message);
         }
     }
 }
@@ -235,51 +235,51 @@ public static class BugCheckNames
 {
     private static readonly Dictionary<uint, (string Name, string Relation)> Table = new()
     {
-        [0x0A] = ("IRQL_NOT_LESS_OR_EQUAL", "Bir çekirdek sürücüsünün geçersiz bellek erişimiyle ilişkili olabilir."),
-        [0x0D1] = ("DRIVER_IRQL_NOT_LESS_OR_EQUAL", "Bir sürücünün geçersiz bellek erişimiyle ilişkili olabilir (sık: ağ / depolama / ekran sürücüleri)."),
-        [0x1A] = ("MEMORY_MANAGEMENT", "Bellek (RAM) hatası veya bellek yöneten bir sürücüyle ilişkili olabilir."),
-        [0x1E] = ("KMODE_EXCEPTION_NOT_HANDLED", "Çekirdek modunda işlenmeyen bir özel durum; bir sürücüyle ilişkili olabilir."),
-        [0x3B] = ("SYSTEM_SERVICE_EXCEPTION", "Sistem hizmeti çağrısında özel durum; ekran / güvenlik yazılımı sürücüleriyle ilişkili olabilir."),
-        [0x50] = ("PAGE_FAULT_IN_NONPAGED_AREA", "Geçersiz bellek adresi; RAM, disk veya bir sürücüyle ilişkili olabilir."),
-        [0x7A] = ("KERNEL_DATA_INPAGE_ERROR", "Diskten bellek sayfası okunamadı; disk / kablo / depolama sürücüsüyle ilişkili olabilir."),
-        [0x7E] = ("SYSTEM_THREAD_EXCEPTION_NOT_HANDLED", "Sistem iş parçacığında işlenmeyen özel durum; bir sürücüyle ilişkili olabilir."),
-        [0x7F] = ("UNEXPECTED_KERNEL_MODE_TRAP", "İşlemci tuzağı; donanım (RAM / CPU / hız aşırtma) veya sürücüyle ilişkili olabilir."),
-        [0x9F] = ("DRIVER_POWER_STATE_FAILURE", "Uyku / uyanma sırasında yanıt vermeyen bir sürücüyle ilişkili olabilir."),
-        [0xA0] = ("INTERNAL_POWER_ERROR", "Güç yönetimi hatası; güç / ACPI sürücüleriyle ilişkili olabilir."),
-        [0xC2] = ("BAD_POOL_CALLER", "Hatalı bellek havuzu isteği; bir sürücüyle ilişkili olabilir."),
-        [0xC4] = ("DRIVER_VERIFIER_DETECTED_VIOLATION", "Sürücü Doğrulayıcı bir sürücü ihlali yakaladı."),
-        [0xC5] = ("DRIVER_CORRUPTED_EXPOOL", "Bir sürücünün bellek havuzunu bozmasıyla ilişkili olabilir."),
-        [0xEF] = ("CRITICAL_PROCESS_DIED", "Kritik bir sistem işlemi sonlandı; sistem dosyaları, disk veya güvenlik yazılımıyla ilişkili olabilir."),
-        [0xF4] = ("CRITICAL_OBJECT_TERMINATION", "Kritik bir işlem sonlandı; disk / depolama sorunuyla ilişkili olabilir."),
-        [0xFC] = ("ATTEMPTED_EXECUTE_OF_NOEXECUTE_MEMORY", "Çalıştırılamaz belleği çalıştırma girişimi; bir sürücüyle ilişkili olabilir."),
-        [0x101] = ("CLOCK_WATCHDOG_TIMEOUT", "Bir işlemci çekirdeği yanıt vermedi; CPU / hız aşırtma / BIOS ile ilişkili olabilir."),
-        [0x109] = ("CRITICAL_STRUCTURE_CORRUPTION", "Çekirdek yapısı bozuldu; bellek veya bir sürücüyle ilişkili olabilir."),
-        [0x10E] = ("VIDEO_MEMORY_MANAGEMENT_INTERNAL", "Ekran kartı bellek yönetimi hatası; ekran sürücüsüyle ilişkili olabilir."),
-        [0x113] = ("VIDEO_DXGKRNL_FATAL_ERROR", "DirectX çekirdek hatası; ekran sürücüsüyle ilişkili olabilir."),
-        [0x116] = ("VIDEO_TDR_FAILURE", "Ekran sürücüsü zaman aşımından kurtarılamadı; ekran kartı / sürücüsüyle ilişkili olabilir."),
-        [0x117] = ("VIDEO_TDR_TIMEOUT_DETECTED", "Ekran sürücüsü zaman aşımı; ekran kartı / sürücüsüyle ilişkili olabilir."),
-        [0x119] = ("VIDEO_SCHEDULER_INTERNAL_ERROR", "Ekran zamanlayıcı hatası; ekran sürücüsüyle ilişkili olabilir."),
-        [0x124] = ("WHEA_UNCORRECTABLE_ERROR", "Donanımın bildirdiği düzeltilemeyen hata; CPU / RAM / anakart / güç kaynağı / hız aşırtma ile ilişkili olabilir."),
-        [0x133] = ("DPC_WATCHDOG_VIOLATION", "Bir sürücü çok uzun süre işlemciyi tuttu; depolama (SSD ürün yazılımı) / ağ / ekran sürücüleriyle ilişkili olabilir."),
-        [0x139] = ("KERNEL_SECURITY_CHECK_FAILURE", "Çekirdek veri yapısı bozulması; bir sürücü veya bellekle ilişkili olabilir."),
-        [0x13A] = ("KERNEL_MODE_HEAP_CORRUPTION", "Çekirdek yığın bozulması; bir sürücüyle ilişkili olabilir."),
-        [0x154] = ("UNEXPECTED_STORE_EXCEPTION", "Bellek sıkıştırma deposu hatası; disk veya bellekle ilişkili olabilir."),
-        [0x15F] = ("CONNECTED_STANDBY_WATCHDOG_TIMEOUT_LIVEDUMP", "Modern bekleme sırasında zaman aşımı; güç yönetimi sürücüleriyle ilişkili olabilir."),
-        [0x1D8] = ("SWITCH_TO_DEBUGGER", "Hata ayıklayıcıya geçiş istendi."),
-        [0xE2] = ("MANUALLY_INITIATED_CRASH", "Çökme kullanıcı tarafından bilerek başlatıldı (klavye kısayolu / araç)."),
-        [0x1E0] = ("MANUALLY_INITIATED_POWER_BUTTON_HOLD", "Güç düğmesine uzun basılarak başlatıldı."),
-        [0x19] = ("BAD_POOL_HEADER", "Bellek havuzu başlığı bozuk; bir sürücü veya RAM ile ilişkili olabilir."),
-        [0x24] = ("NTFS_FILE_SYSTEM", "NTFS dosya sistemi hatası; disk veya dosya sistemi bozulmasıyla ilişkili olabilir."),
-        [0x3D] = ("INTERRUPT_EXCEPTION_NOT_HANDLED", "Kesme işlenemedi; bir aygıt sürücüsüyle ilişkili olabilir."),
-        [0x4E] = ("PFN_LIST_CORRUPT", "Bellek sayfa listesi bozuk; RAM veya bir sürücüyle ilişkili olabilir."),
-        [0x7B] = ("INACCESSIBLE_BOOT_DEVICE", "Önyükleme diskine erişilemedi; depolama denetleyicisi / BIOS ayarıyla ilişkili olabilir."),
-        [0xD5] = ("DRIVER_PAGE_FAULT_IN_FREED_SPECIAL_POOL", "Bir sürücünün serbest bırakılmış belleğe erişmesiyle ilişkili olabilir."),
-        [0x1000007E] = ("SYSTEM_THREAD_EXCEPTION_NOT_HANDLED_M", "Sistem iş parçacığında işlenmeyen özel durum; bir sürücüyle ilişkili olabilir."),
-        [0x1000008E] = ("KERNEL_MODE_EXCEPTION_NOT_HANDLED_M", "Çekirdek modunda işlenmeyen özel durum; bir sürücüyle ilişkili olabilir.")
+        [0x0A] = ("IRQL_NOT_LESS_OR_EQUAL", L.T("Bir çekirdek sürücüsünün geçersiz bellek erişimiyle ilişkili olabilir.", "May be related to invalid memory access by a kernel driver.")),
+        [0x0D1] = ("DRIVER_IRQL_NOT_LESS_OR_EQUAL", L.T("Bir sürücünün geçersiz bellek erişimiyle ilişkili olabilir (sık: ağ / depolama / ekran sürücüleri).", "May be related to invalid memory access by a driver (common: network / storage / display drivers).")),
+        [0x1A] = ("MEMORY_MANAGEMENT", L.T("Bellek (RAM) hatası veya bellek yöneten bir sürücüyle ilişkili olabilir.", "May be related to a memory (RAM) error or a driver that manages memory.")),
+        [0x1E] = ("KMODE_EXCEPTION_NOT_HANDLED", L.T("Çekirdek modunda işlenmeyen bir özel durum; bir sürücüyle ilişkili olabilir.", "An unhandled exception in kernel mode; may be related to a driver.")),
+        [0x3B] = ("SYSTEM_SERVICE_EXCEPTION", L.T("Sistem hizmeti çağrısında özel durum; ekran / güvenlik yazılımı sürücüleriyle ilişkili olabilir.", "Exception in a system service call; may be related to display / security software drivers.")),
+        [0x50] = ("PAGE_FAULT_IN_NONPAGED_AREA", L.T("Geçersiz bellek adresi; RAM, disk veya bir sürücüyle ilişkili olabilir.", "Invalid memory address; may be related to RAM, disk or a driver.")),
+        [0x7A] = ("KERNEL_DATA_INPAGE_ERROR", L.T("Diskten bellek sayfası okunamadı; disk / kablo / depolama sürücüsüyle ilişkili olabilir.", "A memory page could not be read from disk; may be related to the disk / cable / storage driver.")),
+        [0x7E] = ("SYSTEM_THREAD_EXCEPTION_NOT_HANDLED", L.T("Sistem iş parçacığında işlenmeyen özel durum; bir sürücüyle ilişkili olabilir.", "Unhandled exception in a system thread; may be related to a driver.")),
+        [0x7F] = ("UNEXPECTED_KERNEL_MODE_TRAP", L.T("İşlemci tuzağı; donanım (RAM / CPU / hız aşırtma) veya sürücüyle ilişkili olabilir.", "Processor trap; may be related to hardware (RAM / CPU / overclocking) or a driver.")),
+        [0x9F] = ("DRIVER_POWER_STATE_FAILURE", L.T("Uyku / uyanma sırasında yanıt vermeyen bir sürücüyle ilişkili olabilir.", "May be related to a driver that did not respond during sleep / wake.")),
+        [0xA0] = ("INTERNAL_POWER_ERROR", L.T("Güç yönetimi hatası; güç / ACPI sürücüleriyle ilişkili olabilir.", "Power management error; may be related to power / ACPI drivers.")),
+        [0xC2] = ("BAD_POOL_CALLER", L.T("Hatalı bellek havuzu isteği; bir sürücüyle ilişkili olabilir.", "Bad memory pool request; may be related to a driver.")),
+        [0xC4] = ("DRIVER_VERIFIER_DETECTED_VIOLATION", L.T("Sürücü Doğrulayıcı bir sürücü ihlali yakaladı.", "Driver Verifier caught a driver violation.")),
+        [0xC5] = ("DRIVER_CORRUPTED_EXPOOL", L.T("Bir sürücünün bellek havuzunu bozmasıyla ilişkili olabilir.", "May be related to a driver corrupting the memory pool.")),
+        [0xEF] = ("CRITICAL_PROCESS_DIED", L.T("Kritik bir sistem işlemi sonlandı; sistem dosyaları, disk veya güvenlik yazılımıyla ilişkili olabilir.", "A critical system process ended; may be related to system files, the disk or security software.")),
+        [0xF4] = ("CRITICAL_OBJECT_TERMINATION", L.T("Kritik bir işlem sonlandı; disk / depolama sorunuyla ilişkili olabilir.", "A critical process ended; may be related to a disk / storage problem.")),
+        [0xFC] = ("ATTEMPTED_EXECUTE_OF_NOEXECUTE_MEMORY", L.T("Çalıştırılamaz belleği çalıştırma girişimi; bir sürücüyle ilişkili olabilir.", "Attempt to execute non-executable memory; may be related to a driver.")),
+        [0x101] = ("CLOCK_WATCHDOG_TIMEOUT", L.T("Bir işlemci çekirdeği yanıt vermedi; CPU / hız aşırtma / BIOS ile ilişkili olabilir.", "A processor core did not respond; may be related to the CPU / overclocking / BIOS.")),
+        [0x109] = ("CRITICAL_STRUCTURE_CORRUPTION", L.T("Çekirdek yapısı bozuldu; bellek veya bir sürücüyle ilişkili olabilir.", "A kernel structure was corrupted; may be related to memory or a driver.")),
+        [0x10E] = ("VIDEO_MEMORY_MANAGEMENT_INTERNAL", L.T("Ekran kartı bellek yönetimi hatası; ekran sürücüsüyle ilişkili olabilir.", "Graphics card memory management error; may be related to the display driver.")),
+        [0x113] = ("VIDEO_DXGKRNL_FATAL_ERROR", L.T("DirectX çekirdek hatası; ekran sürücüsüyle ilişkili olabilir.", "DirectX kernel error; may be related to the display driver.")),
+        [0x116] = ("VIDEO_TDR_FAILURE", L.T("Ekran sürücüsü zaman aşımından kurtarılamadı; ekran kartı / sürücüsüyle ilişkili olabilir.", "The display driver could not recover from a timeout; may be related to the graphics card / driver.")),
+        [0x117] = ("VIDEO_TDR_TIMEOUT_DETECTED", L.T("Ekran sürücüsü zaman aşımı; ekran kartı / sürücüsüyle ilişkili olabilir.", "Display driver timeout; may be related to the graphics card / driver.")),
+        [0x119] = ("VIDEO_SCHEDULER_INTERNAL_ERROR", L.T("Ekran zamanlayıcı hatası; ekran sürücüsüyle ilişkili olabilir.", "Display scheduler error; may be related to the display driver.")),
+        [0x124] = ("WHEA_UNCORRECTABLE_ERROR", L.T("Donanımın bildirdiği düzeltilemeyen hata; CPU / RAM / anakart / güç kaynağı / hız aşırtma ile ilişkili olabilir.", "Uncorrectable error reported by the hardware; may be related to the CPU / RAM / motherboard / power supply / overclocking.")),
+        [0x133] = ("DPC_WATCHDOG_VIOLATION", L.T("Bir sürücü çok uzun süre işlemciyi tuttu; depolama (SSD ürün yazılımı) / ağ / ekran sürücüleriyle ilişkili olabilir.", "A driver held the processor for too long; may be related to storage (SSD firmware) / network / display drivers.")),
+        [0x139] = ("KERNEL_SECURITY_CHECK_FAILURE", L.T("Çekirdek veri yapısı bozulması; bir sürücü veya bellekle ilişkili olabilir.", "Kernel data structure corruption; may be related to a driver or memory.")),
+        [0x13A] = ("KERNEL_MODE_HEAP_CORRUPTION", L.T("Çekirdek yığın bozulması; bir sürücüyle ilişkili olabilir.", "Kernel stack corruption; may be related to a driver.")),
+        [0x154] = ("UNEXPECTED_STORE_EXCEPTION", L.T("Bellek sıkıştırma deposu hatası; disk veya bellekle ilişkili olabilir.", "Memory compression store error; may be related to the disk or memory.")),
+        [0x15F] = ("CONNECTED_STANDBY_WATCHDOG_TIMEOUT_LIVEDUMP", L.T("Modern bekleme sırasında zaman aşımı; güç yönetimi sürücüleriyle ilişkili olabilir.", "Timeout during modern standby; may be related to power management drivers.")),
+        [0x1D8] = ("SWITCH_TO_DEBUGGER", L.T("Hata ayıklayıcıya geçiş istendi.", "A break into the debugger was requested.")),
+        [0xE2] = ("MANUALLY_INITIATED_CRASH", L.T("Çökme kullanıcı tarafından bilerek başlatıldı (klavye kısayolu / araç).", "The crash was started deliberately by the user (keyboard shortcut / tool).")),
+        [0x1E0] = ("MANUALLY_INITIATED_POWER_BUTTON_HOLD", L.T("Güç düğmesine uzun basılarak başlatıldı.", "Started by a long press of the power button.")),
+        [0x19] = ("BAD_POOL_HEADER", L.T("Bellek havuzu başlığı bozuk; bir sürücü veya RAM ile ilişkili olabilir.", "Memory pool header corrupted; may be related to a driver or RAM.")),
+        [0x24] = ("NTFS_FILE_SYSTEM", L.T("NTFS dosya sistemi hatası; disk veya dosya sistemi bozulmasıyla ilişkili olabilir.", "NTFS file system error; may be related to disk or file system corruption.")),
+        [0x3D] = ("INTERRUPT_EXCEPTION_NOT_HANDLED", L.T("Kesme işlenemedi; bir aygıt sürücüsüyle ilişkili olabilir.", "An interrupt could not be handled; may be related to a device driver.")),
+        [0x4E] = ("PFN_LIST_CORRUPT", L.T("Bellek sayfa listesi bozuk; RAM veya bir sürücüyle ilişkili olabilir.", "Memory page list corrupted; may be related to RAM or a driver.")),
+        [0x7B] = ("INACCESSIBLE_BOOT_DEVICE", L.T("Önyükleme diskine erişilemedi; depolama denetleyicisi / BIOS ayarıyla ilişkili olabilir.", "The boot disk could not be accessed; may be related to the storage controller / BIOS setting.")),
+        [0xD5] = ("DRIVER_PAGE_FAULT_IN_FREED_SPECIAL_POOL", L.T("Bir sürücünün serbest bırakılmış belleğe erişmesiyle ilişkili olabilir.", "May be related to a driver accessing freed memory.")),
+        [0x1000007E] = ("SYSTEM_THREAD_EXCEPTION_NOT_HANDLED_M", L.T("Sistem iş parçacığında işlenmeyen özel durum; bir sürücüyle ilişkili olabilir.", "Unhandled exception in a system thread; may be related to a driver.")),
+        [0x1000008E] = ("KERNEL_MODE_EXCEPTION_NOT_HANDLED_M", L.T("Çekirdek modunda işlenmeyen özel durum; bir sürücüyle ilişkili olabilir.", "Unhandled exception in kernel mode; may be related to a driver."))
     };
 
     public static string Name(uint code) => Table.TryGetValue(code, out var t) ? t.Name : string.Empty;
 
     public static string Relation(uint code) =>
-        Table.TryGetValue(code, out var t) ? t.Relation : "Bu kod için hazır açıklama yok; Microsoft'un hata denetimi kodu başvurusuna bakın.";
+        Table.TryGetValue(code, out var t) ? t.Relation : L.T("Bu kod için hazır açıklama yok; Microsoft'un hata denetimi kodu başvurusuna bakın.", "No ready description for this code; see Microsoft's bug check code reference.");
 }

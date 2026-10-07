@@ -17,7 +17,7 @@ public sealed class DriversViewModel : ToolViewModel
     private readonly DriverService _service;
     private string _filter = "important";
     private string _search = string.Empty;
-    private string _updateStatus = "Windows Update sürücü kataloğunda arama yapılmadı.";
+    private string _updateStatus = L.T("Windows Update sürücü kataloğunda arama yapılmadı.", "The Windows Update driver catalog has not been searched.");
     private DriverScan? _scan;
 
     public DriversViewModel(IToolHost host) : base(host)
@@ -38,7 +38,7 @@ public sealed class DriversViewModel : ToolViewModel
     public ICommand OpenNvidiaCommand { get; }
     public string UpdateStatus { get => _updateStatus; private set => Set(ref _updateStatus, value); }
     public bool HasUpdates => Updates.Count > 0;
-    public string CountsText => _scan is null ? "—" : $"{_scan.Drivers.Count} sürücü · {_scan.Drivers.Count(d => d.Important)} önemli aygıt · {_scan.ProblemCount} sorunlu";
+    public string CountsText => _scan is null ? "—" : L.T($"{_scan.Drivers.Count} sürücü · {_scan.Drivers.Count(d => d.Important)} önemli aygıt · {_scan.ProblemCount} sorunlu", $"{_scan.Drivers.Count} drivers · {_scan.Drivers.Count(d => d.Important)} key devices · {_scan.ProblemCount} with problems");
 
     /// <summary>important / problems / all.</summary>
     public string Filter { get => _filter; set { if (Set(ref _filter, value)) DriversView.Refresh(); } }
@@ -51,35 +51,35 @@ public sealed class DriversViewModel : ToolViewModel
 
     protected override async Task LoadAsync(CancellationToken ct)
     {
-        StatusText = "Sürücüler okunuyor…";
+        StatusText = L.T("Sürücüler okunuyor…", "Reading drivers…");
         var scan = await Task.Run(() => _service.ScanAsync(ct), ct);
         _scan = scan;
         Drivers.Clear();
         foreach (var d in scan.Drivers.OrderByDescending(d => d.State is CheckState.Error or CheckState.Warning).ThenBy(d => d.Category).ThenBy(d => d.DeviceName))
             Drivers.Add(d);
-        if (scan.Error is not null) ErrorText = "Sürücü bilgisi alınamadı. " + scan.Error;
+        if (scan.Error is not null) ErrorText = L.T("Sürücü bilgisi alınamadı. ", "Driver information unavailable. ") + scan.Error;
         OnPropertyChanged(nameof(CountsText));
         StatusText = CountsText;
         var problems = scan.Drivers.Where(d => d.State is CheckState.Error or CheckState.Warning).ToList();
-        Host.ReportDiagnostic("drivers", new CheckResult("Sürücüler",
+        Host.ReportDiagnostic("drivers", new CheckResult(L.T("Sürücüler", "Drivers"),
             scan.Error is not null && scan.Drivers.Count == 0 ? CheckState.Unknown : problems.Any(p => p.State == CheckState.Error) ? CheckState.Error : problems.Count > 0 ? CheckState.Warning : CheckState.Healthy,
-            scan.Error ?? (problems.Count == 0 ? "Sorunlu aygıt yok" : $"{problems.Count} aygıtta sorun"), null, Nav.Update, Nav.Drivers));
+            scan.Error ?? (problems.Count == 0 ? L.T("Sorunlu aygıt yok", "No devices with problems") : L.T($"{problems.Count} aygıtta sorun", $"Problems on {problems.Count} device(s)")), null, Nav.Update, Nav.Drivers));
     }
 
     /// <summary>Yalnızca ARAMA: Windows Update'in resmî sürücü kataloğu. Kurulum Windows Ayarlar → İsteğe bağlı güncellemeler'den yapılır.</summary>
     private async Task SearchUpdatesAsync(CancellationToken ct)
     {
         var sw = Start();
-        UpdateStatus = "Windows Update sürücü kataloğu aranıyor (birkaç dakika sürebilir)…";
+        UpdateStatus = L.T("Windows Update sürücü kataloğu aranıyor (birkaç dakika sürebilir)…", "Searching the Windows Update driver catalog (this can take a few minutes)…");
         var r = await Task.Run(() => _service.SearchWindowsUpdateAsync(ct), ct);
         Updates.Clear();
         foreach (var u in r.Updates) Updates.Add(u);
         OnPropertyChanged(nameof(HasUpdates));
-        UpdateStatus = r.Error is not null ? "Arama başarısız: " + r.Error
-            : r.Updates.Count == 0 ? $"Windows Update bu cihaz için yeni sürücü bildirmedi ({DateTime.Now:HH:mm})."
-            : $"Windows Update {r.Updates.Count} sürücü güncellemesi bildirdi. Kurmak için Windows'un İsteğe bağlı güncellemeler sayfasını kullanın.";
-        Host.RecordToolOperation("Sürücü güncelleme denetimi (Windows Update)", r.Error is not null ? CheckState.Error : r.Updates.Count > 0 ? CheckState.Warning : CheckState.Healthy,
-            r.Error is not null ? "Arama başarısız" : r.Updates.Count == 0 ? "Yeni sürücü bulunmadı" : $"{r.Updates.Count} sürücü güncellemesi bulundu", sw.Elapsed, r.Error);
+        UpdateStatus = r.Error is not null ? L.T("Arama başarısız: ", "Search failed: ") + r.Error
+            : r.Updates.Count == 0 ? L.T($"Windows Update bu cihaz için yeni sürücü bildirmedi ({DateTime.Now:HH:mm}).", $"Windows Update reported no new drivers for this device ({DateTime.Now:HH:mm}).")
+            : L.T($"Windows Update {r.Updates.Count} sürücü güncellemesi bildirdi. Kurmak için Windows'un İsteğe bağlı güncellemeler sayfasını kullanın.", $"Windows Update reported {r.Updates.Count} driver update(s). Use Windows' Optional updates page to install them.");
+        Host.RecordToolOperation(L.T("Sürücü güncelleme denetimi (Windows Update)", "Driver update check (Windows Update)"), r.Error is not null ? CheckState.Error : r.Updates.Count > 0 ? CheckState.Warning : CheckState.Healthy,
+            r.Error is not null ? L.T("Arama başarısız", "Search failed") : r.Updates.Count == 0 ? L.T("Yeni sürücü bulunmadı", "No new drivers found") : L.T($"{r.Updates.Count} sürücü güncellemesi bulundu", $"{r.Updates.Count} driver update(s) found"), sw.Elapsed, r.Error);
     }
 }
 
@@ -106,7 +106,7 @@ public sealed class AppsViewModel : ToolViewModel
     private readonly ICardResultSource _cards;
     private string _search = string.Empty;
     private string _source = "all";
-    private string _wingetStatus = "Winget güncelleme denetimi bu ekranda henüz çalıştırılmadı.";
+    private string _wingetStatus = L.T("Winget güncelleme denetimi bu ekranda henüz çalıştırılmadı.", "The winget update check has not been run on this screen yet.");
 
     public AppsViewModel(IToolHost host, ICardResultSource cards) : base(host)
     {
@@ -129,30 +129,30 @@ public sealed class AppsViewModel : ToolViewModel
     public ICommand OpenLocationCommand { get; }
     public ICommand OpenUpdatesCommand { get; }
     public string WingetStatus { get => _wingetStatus; private set => Set(ref _wingetStatus, value); }
-    public string WingetHint => Host.IsAdmin ? "Denetim mevcut Winget kartıyla yapılır (yalnızca kontrol; güncelleme Güncelleme ekranından, onayınızla)."
-        : "Winget denetimi yönetici yetkisi gerektirir (Genel Ayarlar → Yönetici Yetkisi).";
+    public string WingetHint => Host.IsAdmin ? L.T("Denetim mevcut Winget kartıyla yapılır (yalnızca kontrol; güncelleme Güncelleme ekranından, onayınızla).", "The check is done with the existing Winget card (check only; updates from the Updates screen, with your approval).")
+        : L.T("Winget denetimi yönetici yetkisi gerektirir (Genel Ayarlar → Yönetici Yetkisi).", "The winget check requires administrator rights (General Settings → Administrator Rights).");
     public string SearchText { get => _search; set { if (Set(ref _search, (value ?? "").Trim())) AppsView.Refresh(); } }
     /// <summary>all / desktop / store / updates.</summary>
     public string SourceFilter { get => _source; set { if (Set(ref _source, value)) AppsView.Refresh(); } }
 
     protected override async Task LoadAsync(CancellationToken ct)
     {
-        StatusText = "Kurulu uygulamalar okunuyor…";
+        StatusText = L.T("Kurulu uygulamalar okunuyor…", "Reading installed apps…");
         var scan = await Task.Run(() => _service.ListAsync(true, ct), ct);
         Apps.Clear();
         foreach (var a in scan.Apps) Apps.Add(new AppRowViewModel(a));
         if (scan.StoreError is not null) ErrorText = scan.StoreError;
         ApplyWinget(_cards.LastCardResult(ComponentKeys.Winget));
-        StatusText = $"{scan.Apps.Count} uygulama ({scan.Apps.Count(a => a.Source != "Microsoft Store")} masaüstü, {scan.Apps.Count(a => a.Source == "Microsoft Store")} Microsoft Store)";
+        StatusText = L.T($"{scan.Apps.Count} uygulama ({scan.Apps.Count(a => a.Source != "Microsoft Store")} masaüstü, {scan.Apps.Count(a => a.Source == "Microsoft Store")} Microsoft Store)", $"{scan.Apps.Count} apps ({scan.Apps.Count(a => a.Source != "Microsoft Store")} desktop, {scan.Apps.Count(a => a.Source == "Microsoft Store")} Microsoft Store)");
     }
 
     private async Task CheckWingetAsync()
     {
-        WingetStatus = "Winget ile güncellemeler kontrol ediliyor…";
+        WingetStatus = L.T("Winget ile güncellemeler kontrol ediliyor…", "Checking for updates with winget…");
         var r = await _cards.CheckCardForToolAsync(ComponentKeys.Winget);
         if (r is null)
         {
-            WingetStatus = "Winget denetimi başlatılamadı (başka bir işlem sürüyor veya yönetici yetkisi yok).";
+            WingetStatus = L.T("Winget denetimi başlatılamadı (başka bir işlem sürüyor veya yönetici yetkisi yok).", "The winget check could not start (another operation is running or there are no administrator rights).");
             return;
         }
         ApplyWinget(r);
@@ -165,7 +165,7 @@ public sealed class AppsViewModel : ToolViewModel
         if (r is null) return;
         if (r.Status is ComponentStatus.CheckFailed or ComponentStatus.Failed)
         {
-            WingetStatus = "Winget denetimi başarısız: " + (r.Reason ?? r.Summary);
+            WingetStatus = L.T("Winget denetimi başarısız: ", "Winget check failed: ") + (r.Reason ?? r.Summary);
             return;
         }
         var items = r.Items.Where(i => i.UpdateAvailable).ToList();
@@ -178,17 +178,17 @@ public sealed class AppsViewModel : ToolViewModel
             row.UpdateText = $"{i.CurrentVersion} → {i.NewVersion}";
             matched++;
         }
-        WingetStatus = items.Count == 0 ? $"Winget güncelleme bildirmedi ({r.CompletedAt:HH:mm})."
-            : $"Winget {items.Count} güncelleme bildirdi ({matched} tanesi listede eşleşti). Uygulamak için Güncelleme → Winget kartını kullanın.";
+        WingetStatus = items.Count == 0 ? L.T($"Winget güncelleme bildirmedi ({r.CompletedAt:HH:mm}).", $"Winget reported no updates ({r.CompletedAt:HH:mm}).")
+            : L.T($"Winget {items.Count} güncelleme bildirdi ({matched} tanesi listede eşleşti). Uygulamak için Güncelleme → Winget kartını kullanın.", $"Winget reported {items.Count} update(s) ({matched} matched in the list). Use the Updates → Winget card to apply them.");
         AppsView.Refresh();
     }
 
     /// <summary>Sessiz kaldırma YOK: Windows'un kendi Uygulamalar sayfası açılır, kaldırmayı kullanıcı orada yapar.</summary>
     private async Task UninstallAsync()
     {
-        var ok = await ConfirmAsync("Uygulama kaldırma",
-            "Bu uygulama hiçbir programı kendiliğinden kaldırmaz. Windows Ayarlar → Uygulamalar → Yüklü uygulamalar sayfası açılacak; " +
-            "kaldırmak istediğiniz uygulamayı orada seçip Windows'un kendi kaldırıcısıyla kaldırabilirsiniz.", "Ayarlar'ı aç", warning: false);
+        var ok = await ConfirmAsync(L.T("Uygulama kaldırma", "Uninstall app"),
+            L.T("Bu uygulama hiçbir programı kendiliğinden kaldırmaz. Windows Ayarlar → Uygulamalar → Yüklü uygulamalar sayfası açılacak; ", "This app never uninstalls a program by itself. The Windows Settings → Apps → Installed apps page will open; ") +
+            L.T("kaldırmak istediğiniz uygulamayı orada seçip Windows'un kendi kaldırıcısıyla kaldırabilirsiniz.", "there you can select the app you want to remove and uninstall it with Windows' own uninstaller."), L.T("Ayarlar'ı aç", "Open Settings"), warning: false);
         if (ok) OpenWindowsUri("ms-settings:appsfeatures");
     }
 }
@@ -222,7 +222,7 @@ public sealed class StorageAnalysisViewModel : ToolViewModel
     public StorageAnalysisViewModel(IToolHost host) : base(host)
     {
         _analyzer = new LargeFileAnalyzer(host.Logger);
-        StatusText = "Taranacak sürücüyü veya klasörü seçin.";
+        StatusText = L.T("Taranacak sürücüyü veya klasörü seçin.", "Select the drive or folder to scan.");
         ScanCommand = new AsyncCommand(() => RunAsync(ScanAsync), () => !IsBusy && _root is not null);
         PickFolderCommand = new RelayCommand(PickFolder, () => !IsBusy);
         RecycleCommand = new AsyncCommand(RecycleAsync, () => !IsBusy && _selectedFile is not null);
@@ -246,10 +246,10 @@ public sealed class StorageAnalysisViewModel : ToolViewModel
     public string ProgressText { get => _progressText; private set => Set(ref _progressText, value); }
     public bool HasResult => _result is not null;
     public string SummaryText => _result is null ? string.Empty
-        : $"{_result.Root}: {Formats.Bytes(_result.TotalSize)} · {_result.FileCount:N0} dosya · {_result.FolderCount:N0} klasör" +
-          (_result.Skipped > 0 ? $" · erişilemeyen {_result.Skipped:N0} öğe atlandı" : "") + (_result.Cancelled ? " · İPTAL EDİLDİ (kısmi sonuç)" : "") +
+        : L.T($"{_result.Root}: {Formats.Bytes(_result.TotalSize)} · {_result.FileCount:N0} dosya · {_result.FolderCount:N0} klasör", $"{_result.Root}: {Formats.Bytes(_result.TotalSize)} · {_result.FileCount:N0} files · {_result.FolderCount:N0} folders") +
+          (_result.Skipped > 0 ? L.T($" · erişilemeyen {_result.Skipped:N0} öğe atlandı", $" · {_result.Skipped:N0} inaccessible item(s) skipped") : "") + (_result.Cancelled ? L.T(" · İPTAL EDİLDİ (kısmi sonuç)", " · CANCELLED (partial result)") : "") +
           $" · {_result.Duration.TotalSeconds:0.0} sn";
-    public string VolumeText => _result?.Volume is { } v ? $"{v.Letter} bölümü: {v.UsageText}" : string.Empty;
+    public string VolumeText => _result?.Volume is { } v ? L.T($"{v.Letter} bölümü: {v.UsageText}", $"{v.Letter} partition: {v.UsageText}") : string.Empty;
     public FileEntry? SelectedFile { get => _selectedFile; set { Set(ref _selectedFile, value); CommandManager.InvalidateRequerySuggested(); } }
 
     private RootOption AddRoot(string path)
@@ -268,7 +268,7 @@ public sealed class StorageAnalysisViewModel : ToolViewModel
 
     private void PickFolder()
     {
-        var dialog = new Microsoft.Win32.OpenFolderDialog { Title = "Taranacak klasörü seçin", Multiselect = false };
+        var dialog = new Microsoft.Win32.OpenFolderDialog { Title = L.T("Taranacak klasörü seçin", "Select the folder to scan"), Multiselect = false };
         if (dialog.ShowDialog(Application.Current?.MainWindow) != true) return;
         var option = Roots.FirstOrDefault(r => string.Equals(r.Path, dialog.FolderName, StringComparison.OrdinalIgnoreCase)) ?? AddRoot(dialog.FolderName);
         option.IsSelected = true;
@@ -278,8 +278,8 @@ public sealed class StorageAnalysisViewModel : ToolViewModel
     {
         if (_root is null) return;
         var sw = Start();
-        StatusText = "Taranıyor: " + _root;
-        var progress = new Progress<ScanProgress>(p => ProgressText = $"{p.Files:N0} dosya · {Formats.Bytes(p.Bytes)} · {p.Folder}");
+        StatusText = L.T("Taranıyor: ", "Scanning: ") + _root;
+        var progress = new Progress<ScanProgress>(p => ProgressText = L.T($"{p.Files:N0} dosya · {Formats.Bytes(p.Bytes)} · {p.Folder}", $"{p.Files:N0} files · {Formats.Bytes(p.Bytes)} · {p.Folder}"));
         var r = await _analyzer.AnalyzeAsync(_root, progress, ct);
         _result = r;
         Files.Clear();
@@ -292,9 +292,9 @@ public sealed class StorageAnalysisViewModel : ToolViewModel
         OnPropertyChanged(nameof(HasResult));
         OnPropertyChanged(nameof(SummaryText));
         OnPropertyChanged(nameof(VolumeText));
-        StatusText = r.Cancelled ? "Tarama iptal edildi; o ana kadarki gerçek sonuç gösteriliyor." : "Tarama tamamlandı.";
-        Host.RecordToolOperation("Depolama analizi", r.Cancelled ? CheckState.Skipped : CheckState.Info,
-            $"{r.Root}: {Formats.Bytes(r.TotalSize)}, {r.FileCount:N0} dosya", sw.Elapsed, null, r.Cancelled);
+        StatusText = r.Cancelled ? L.T("Tarama iptal edildi; o ana kadarki gerçek sonuç gösteriliyor.", "Scan cancelled; showing the real result up to that point.") : L.T("Tarama tamamlandı.", "Scan completed.");
+        Host.RecordToolOperation(L.T("Depolama analizi", "Storage analysis"), r.Cancelled ? CheckState.Skipped : CheckState.Info,
+            L.T($"{r.Root}: {Formats.Bytes(r.TotalSize)}, {r.FileCount:N0} dosya", $"{r.Root}: {Formats.Bytes(r.TotalSize)}, {r.FileCount:N0} files"), sw.Elapsed, null, r.Cancelled);
     }
 
     /// <summary>
@@ -306,13 +306,13 @@ public sealed class StorageAnalysisViewModel : ToolViewModel
         if (_selectedFile is not { } f) return;
         if (LargeFileAnalyzer.ProtectedReason(f.Path) is { } reason)
         {
-            await InformAsync("Dosya korunuyor", reason);
+            await InformAsync(L.T("Dosya korunuyor", "File is protected"), reason);
             return;
         }
-        var ok = await ConfirmAsync("Dosya Geri Dönüşüm Kutusu'na gönderilsin mi?",
-            "Seçtiğiniz dosya Geri Dönüşüm Kutusu'na taşınacak. Oradan geri yüklenebilir; ancak dosya Geri Dönüşüm Kutusu'nun kapasitesinden " +
-            "büyükse Windows kalıcı olarak silineceğini ayrıca bildirir ve sizden yeniden onay ister.", "Geri Dönüşüm Kutusu'na gönder",
-            [$"Dosya: {f.Name}", $"Boyut: {f.SizeText}", $"Konum: {f.Folder}", $"Son değişiklik: {f.ModifiedText}"]);
+        var ok = await ConfirmAsync(L.T("Dosya Geri Dönüşüm Kutusu'na gönderilsin mi?", "Send the file to the Recycle Bin?"),
+            L.T("Seçtiğiniz dosya Geri Dönüşüm Kutusu'na taşınacak. Oradan geri yüklenebilir; ancak dosya Geri Dönüşüm Kutusu'nun kapasitesinden ", "The selected file will be moved to the Recycle Bin. It can be restored from there; however, if the file is larger than the Recycle Bin's capacity, ") +
+            L.T("büyükse Windows kalıcı olarak silineceğini ayrıca bildirir ve sizden yeniden onay ister.", "Windows warns separately that it will be deleted permanently and asks you to confirm again."), L.T("Geri Dönüşüm Kutusu'na gönder", "Send to Recycle Bin"),
+            [L.T($"Dosya: {f.Name}", $"File: {f.Name}"), L.T($"Boyut: {f.SizeText}", $"Size: {f.SizeText}"), L.T($"Konum: {f.Folder}", $"Location: {f.Folder}"), L.T($"Son değişiklik: {f.ModifiedText}", $"Last modified: {f.ModifiedText}")]);
         if (!ok) return;
         var sw = Start();
         var hwnd = Application.Current?.MainWindow is { } w ? new WindowInteropHelper(w).Handle : IntPtr.Zero;
@@ -322,9 +322,9 @@ public sealed class StorageAnalysisViewModel : ToolViewModel
             Files.Remove(f);
             SelectedFile = null;
         }
-        Host.RecordToolOperation("Dosyayı Geri Dönüşüm Kutusu'na gönderme", success ? CheckState.Healthy : CheckState.Error,
+        Host.RecordToolOperation(L.T("Dosyayı Geri Dönüşüm Kutusu'na gönderme", "Send file to Recycle Bin"), success ? CheckState.Healthy : CheckState.Error,
             $"{f.Name} ({f.SizeText}): {message}", sw.Elapsed, success ? null : message);
-        await InformAsync(success ? "Dosya taşındı" : "Dosya taşınamadı", message, !success);
+        await InformAsync(success ? L.T("Dosya taşındı", "File moved") : L.T("Dosya taşınamadı", "File could not be moved"), message, !success);
     }
 }
 
@@ -349,7 +349,7 @@ public sealed class PrivacyViewModel : ToolViewModel
 
     protected override async Task LoadAsync(CancellationToken ct)
     {
-        StatusText = "Gizlilik ayarları okunuyor…";
+        StatusText = L.T("Gizlilik ayarları okunuyor…", "Reading privacy settings…");
         var r = await Task.Run(() => _service.ReadAsync(ct), ct);
         Settings.Clear();
         foreach (var s in r.Settings) Settings.Add(s);
@@ -357,7 +357,7 @@ public sealed class PrivacyViewModel : ToolViewModel
         foreach (var u in r.RecentUses) RecentUses.Add(u);
         OnPropertyChanged(nameof(HasUses));
         if (r.Error is not null) ErrorText = r.Error;
-        StatusText = $"{r.Settings.Count} ayar okundu · değiştirmek için ilgili Windows Ayarlar sayfası açılır";
+        StatusText = L.T($"{r.Settings.Count} ayar okundu · değiştirmek için ilgili Windows Ayarlar sayfası açılır", $"{r.Settings.Count} settings read · the related Windows Settings page opens to change them");
     }
 }
 
@@ -372,13 +372,13 @@ public sealed class BatteryViewModel(IToolHost host) : ToolViewModel(host)
     public bool HasBattery => _report?.HasBattery == true;
     public bool NoBattery => _report is { HasBattery: false, Error: null };
     public string NoBatteryText => BatteryService.NoBatteryText;
-    public string PowerText => _report is null ? "—" : $"Güç kaynağı: {_report.AcText ?? "—"}" + (_report.RemainingTimeText is { } t ? $" · Kalan süre: {t}" : "");
+    public string PowerText => _report is null ? "—" : L.T($"Güç kaynağı: {_report.AcText ?? "—"}", $"Power source: {_report.AcText ?? "—"}") + (_report.RemainingTimeText is { } t ? L.T($" · Kalan süre: {t}", $" · Time remaining: {t}") : "");
     public string? Note => _report?.Note;
     public bool HasNote => !string.IsNullOrEmpty(Note);
 
     protected override async Task LoadAsync(CancellationToken ct)
     {
-        StatusText = "Batarya bilgisi okunuyor…";
+        StatusText = L.T("Batarya bilgisi okunuyor…", "Reading battery information…");
         var r = await Task.Run(() => _service.ReadAsync(ct), ct);
         _report = r;
         Batteries.Clear();
@@ -389,6 +389,6 @@ public sealed class BatteryViewModel(IToolHost host) : ToolViewModel(host)
         OnPropertyChanged(nameof(PowerText));
         OnPropertyChanged(nameof(Note));
         OnPropertyChanged(nameof(HasNote));
-        StatusText = r.HasBattery ? $"{r.Batteries.Count} batarya" : r.Error ?? BatteryService.NoBatteryText;
+        StatusText = r.HasBattery ? L.T($"{r.Batteries.Count} batarya", $"{r.Batteries.Count} battery(ies)") : r.Error ?? BatteryService.NoBatteryText;
     }
 }

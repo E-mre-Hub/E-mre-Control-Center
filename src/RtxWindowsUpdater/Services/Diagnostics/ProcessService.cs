@@ -78,7 +78,7 @@ public sealed class ProcessService(Logger logger)
         }
         catch (Exception ex) when (ex is Win32Exception or OutOfMemoryException or ExternalException)
         {
-            return new ProcessSnapshot([], 0, null, "İşlem listesi okunamadı: " + ex.Message);
+            return new ProcessSnapshot([], 0, null, L.T("İşlem listesi okunamadı: ", "Could not read the process list: ") + ex.Message);
         }
 
         var gpu = includeGpu ? ReadGpu() : null;
@@ -121,15 +121,15 @@ public sealed class ProcessService(Logger logger)
     /// <summary>Sonlandırılamayacak işlemin nedeni (null = kullanıcı onayıyla sonlandırılabilir).</summary>
     internal static string? ProtectedReason(RawProcess p, string? path, int mySession)
     {
-        if (p.Pid is 0 or 4) return "Windows çekirdeği – korunur";
-        if (p.Pid == Environment.ProcessId) return "Bu uygulama";
-        if (ProtectedNames.Contains(p.Name)) return "Windows sistem işlemi – korunur";
-        if (p.SessionId == 0) return "Hizmet / sistem oturumu işlemi – korunur (Servisler ekranından yönetin)";
-        if (p.SessionId != mySession) return "Başka bir kullanıcı oturumunda – korunur";
-        if (IsCritical(p.Pid)) return "Windows kritik işlem olarak işaretlemiş – sonlandırılırsa sistem durur";
-        if (path is null) return "İşlem bilgisi okunamadı – korunur";
+        if (p.Pid is 0 or 4) return L.T("Windows çekirdeği – korunur", "Windows kernel – protected");
+        if (p.Pid == Environment.ProcessId) return L.T("Bu uygulama", "This app");
+        if (ProtectedNames.Contains(p.Name)) return L.T("Windows sistem işlemi – korunur", "Windows system process – protected");
+        if (p.SessionId == 0) return L.T("Hizmet / sistem oturumu işlemi – korunur (Servisler ekranından yönetin)", "Service / system session process – protected (manage it from the Services screen)");
+        if (p.SessionId != mySession) return L.T("Başka bir kullanıcı oturumunda – korunur", "In another user's session – protected");
+        if (IsCritical(p.Pid)) return L.T("Windows kritik işlem olarak işaretlemiş – sonlandırılırsa sistem durur", "Marked as critical by Windows – the system stops if it is ended");
+        if (path is null) return L.T("İşlem bilgisi okunamadı – korunur", "Process information unreadable – protected");
         var windows = Environment.GetFolderPath(Environment.SpecialFolder.Windows).TrimEnd('\\') + "\\";
-        if (path.StartsWith(windows, StringComparison.OrdinalIgnoreCase)) return "Windows bileşeni – korunur";
+        if (path.StartsWith(windows, StringComparison.OrdinalIgnoreCase)) return L.T("Windows bileşeni – korunur", "Windows component – protected");
         return null;
     }
 
@@ -141,13 +141,13 @@ public sealed class ProcessService(Logger logger)
     {
         // Sonlanmış ama açık tutamacı kalan işlem listede iş parçacığı 0 olarak görünür: çalışıyor sayılmaz.
         var current = ReadRaw().FirstOrDefault(p => p.Pid == entry.Pid && p.CreateTime == entry.CreateTime && p.Threads > 0);
-        if (current is null) return (true, $"{entry.Name} (PID {entry.Pid}) zaten kapanmış.");
+        if (current is null) return (true, L.T($"{entry.Name} (PID {entry.Pid}) zaten kapanmış.", $"{entry.Name} (PID {entry.Pid}) has already exited."));
         var path = RunningAppManager.QueryImagePath(current.Pid);
         var reason = ProtectedReason(current, path, Process.GetCurrentProcess().SessionId);
-        if (reason is not null) return (false, $"{entry.Name} sonlandırılmadı: {reason}.");
-        var info = new RunningProcessInfo(current.Pid, current.CreateTime, current.Name, path, "Uygulama", true, null);
+        if (reason is not null) return (false, L.T($"{entry.Name} sonlandırılmadı: {reason}.", $"{entry.Name} was not ended: {reason}."));
+        var info = new RunningProcessInfo(current.Pid, current.CreateTime, current.Name, path, L.T("Uygulama", "App"), true, null);
         var report = await RunningAppManager.CloseAsync([info], logger);
-        var text = report.FirstOrDefault() ?? "sonuç alınamadı";
+        var text = report.FirstOrDefault() ?? L.T("sonuç alınamadı", "no result");
         // Doğrulama: işlem listesinden gerçekten çıkmalı (Windows listeyi kısa bir gecikmeyle günceller; en fazla 3 sn beklenir).
         var gone = false;
         for (var i = 0; i < 15 && !gone; i++)
@@ -155,8 +155,8 @@ public sealed class ProcessService(Logger logger)
             gone = !ReadRaw().Any(p => p.Pid == entry.Pid && p.CreateTime == entry.CreateTime && p.Threads > 0);
             if (!gone) await Task.Delay(200);
         }
-        logger.Info($"İşlem sonlandırma: {text} (doğrulama: {(gone ? "işlem yok" : "işlem hâlâ çalışıyor")})");
-        return (gone, gone ? text : text + " – işlem hâlâ çalışıyor.");
+        logger.Info(L.T($"İşlem sonlandırma: {text} (doğrulama: {(gone ? "işlem yok" : "işlem hâlâ çalışıyor")})", $"End process: {text} (verification: {(gone ? "process gone" : "process still running")})"));
+        return (gone, gone ? text : text + L.T(" – işlem hâlâ çalışıyor.", " – the process is still running."));
     }
 
     private string? Publisher(string? path)
@@ -182,7 +182,7 @@ public sealed class ProcessService(Logger logger)
         try
         {
             var data = new PerformanceCounterCategory("GPU Engine").ReadCategory();
-            if (!data.Contains("Utilization Percentage")) throw new InvalidOperationException("sayaç yok");
+            if (!data.Contains("Utilization Percentage")) throw new InvalidOperationException(L.T("sayaç yok", "no counter"));
             var util = data["Utilization Percentage"];
             var result = new Dictionary<int, double>();
             var seen = new HashSet<string>(StringComparer.Ordinal);
@@ -215,7 +215,7 @@ public sealed class ProcessService(Logger logger)
         catch (Exception ex) when (ex is InvalidOperationException or Win32Exception or UnauthorizedAccessException or FormatException)
         {
             _gpuUnavailable = true;
-            _gpuNote = "İşlem başına GPU kullanımı okunamadı (Windows \"GPU Engine\" performans sayaçları): " + ex.Message;
+            _gpuNote = L.T("İşlem başına GPU kullanımı okunamadı (Windows \"GPU Engine\" performans sayaçları): ", "Could not read per-process GPU usage (Windows \"GPU Engine\" performance counters): ") + ex.Message;
             logger.Warning(_gpuNote);
             return null;
         }
@@ -278,7 +278,7 @@ public sealed class ProcessService(Logger logger)
                 Marshal.FreeHGlobal(buffer);
             }
         }
-        throw new Win32Exception("İşlem listesi arabelleği yetersiz kaldı.");
+        throw new Win32Exception(L.T("İşlem listesi arabelleği yetersiz kaldı.", "The process list buffer was too small."));
     }
 
     private static bool IsCritical(int pid)

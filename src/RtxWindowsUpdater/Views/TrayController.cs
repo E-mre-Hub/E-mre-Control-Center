@@ -35,18 +35,18 @@ public sealed class TrayController : IDisposable
         _icon.OpenRequested += () => _window.ShowFromTray();
         _icon.ShowSignal += () =>
         {
-            _logger.Info("Uygulama yeniden başlatıldı: çalışan pencere öne getirildi.");
+            _logger.Info(L.T("Uygulama yeniden başlatıldı: çalışan pencere öne getirildi.", "The app was launched again: the running window was brought to the front."));
             _window.ShowFromTray();
         };
         _icon.ExitSignal += () =>
         {
-            _logger.Info("Kurulum / kaldırma uygulamanın kapanmasını istedi.");
+            _logger.Info(L.T("Kurulum / kaldırma uygulamanın kapanmasını istedi.", "Setup / uninstall asked the app to close."));
             _window.RequestExit();
         };
         _icon.MenuRequested += p => ShowMenu(p);
         IsAvailable = _icon.Show();
-        if (IsAvailable) _logger.Info("Bildirim alanı simgesi eklendi.");
-        else _logger.Warning("Bildirim alanı simgesi eklenemedi; pencere kapatılınca uygulama kapanır.");
+        if (IsAvailable) _logger.Info(L.T("Bildirim alanı simgesi eklendi.", "Notification area icon added."));
+        else _logger.Warning(L.T("Bildirim alanı simgesi eklenemedi; pencere kapatılınca uygulama kapanır.", "The notification area icon could not be added; closing the window closes the app."));
 
         _tooltipTimer = new DispatcherTimer(DispatcherPriority.Background) { Interval = TimeSpan.FromMilliseconds(700) };
         _tooltipTimer.Tick += (_, _) =>
@@ -74,8 +74,8 @@ public sealed class TrayController : IDisposable
 
     private string TooltipText() =>
         _vm.IsBusy ? $"{AppInfo.Name}\n{_vm.StepText}"
-        : _vm.Update.IsRequired ? $"{AppInfo.Name}\nYeni sürüm yayınlandı: {_vm.Update.NewVersionText} · güncellemek için açın"
-        : $"{AppInfo.Name}\nArka planda çalışıyor · açmak için çift tıklayın";
+        : _vm.Update.IsRequired ? L.T($"{AppInfo.Name}\nYeni sürüm yayınlandı: {_vm.Update.NewVersionText} · güncellemek için açın", $"{AppInfo.Name}\nNew version released: {_vm.Update.NewVersionText} · open to update")
+        : L.T($"{AppInfo.Name}\nArka planda çalışıyor · açmak için çift tıklayın", $"{AppInfo.Name}\nRunning in the background · double-click to open");
 
     /// <summary>Pencere ilk kez bildirim alanına gizlendiğinde bir kez bilgi verir (bildirimler kapalıysa gösterilmez).</summary>
     public void NotifyHidden()
@@ -83,8 +83,8 @@ public sealed class TrayController : IDisposable
         if (_vm.TrayHintShown) return;
         _vm.MarkTrayHintShown();
         if (!_vm.NotificationsEnabled) return;
-        _icon.ShowBalloon($"{AppInfo.Name} arka planda çalışıyor",
-            "Yeniden açmak için bildirim alanındaki simgeye çift tıklayın; kısayollar ve Çıkış için sağ tıklayın.");
+        _icon.ShowBalloon(L.T($"{AppInfo.Name} arka planda çalışıyor", $"{AppInfo.Name} is running in the background"),
+            L.T("Yeniden açmak için bildirim alanındaki simgeye çift tıklayın; kısayollar ve Çıkış için sağ tıklayın.", "Double-click the icon in the notification area to reopen it; right-click for shortcuts and Exit."));
     }
 
     // ------------------------------------------------------------------ menü
@@ -96,40 +96,40 @@ public sealed class TrayController : IDisposable
         if (_vm.Update.IsRequired)
         {
             // Zorunlu güncelleme: güncellemeden uygulamayı kullanmaya devam etmek için kısayol sunulmaz (yalnızca Güncelle / Çıkış).
-            menu.Items.Add(Item("", $"Güncelleme var: {_vm.Update.NewVersionText}", "Zorunlu", true, () => _window.ShowFromTray(), bold: true));
+            menu.Items.Add(Item("", L.T($"Güncelleme var: {_vm.Update.NewVersionText}", $"Update available: {_vm.Update.NewVersionText}"), L.T("Zorunlu", "Required"), true, () => _window.ShowFromTray(), bold: true));
             menu.Items.Add(Separator());
-            menu.Items.Add(Item("", "Çıkış", null, true, () => _window.RequestExit()));
+            menu.Items.Add(Item("", L.T("Çıkış", "Exit"), null, true, () => _window.RequestExit()));
             return menu;
         }
         if (_vm.InternetChecked && !_vm.HasInternet)
         {
             // İnternet yok: uygulama kullanılamaz; kısayol sunulmaz (yalnızca pencereyi aç / Çıkış).
-            menu.Items.Add(Item("", $"{AppInfo.Name}'ı aç", "İnternet yok", true, () => _window.ShowFromTray(), bold: true));
+            menu.Items.Add(Item("", L.T($"{AppInfo.Name}'ı aç", $"Open {AppInfo.Name}"), L.T("İnternet yok", "No internet"), true, () => _window.ShowFromTray(), bold: true));
             menu.Items.Add(Separator());
-            menu.Items.Add(Item("", "Çıkış", null, true, () => _window.RequestExit()));
+            menu.Items.Add(Item("", L.T("Çıkış", "Exit"), null, true, () => _window.RequestExit()));
             return menu;
         }
         var busy = _vm.IsBusy;
-        menu.Items.Add(Item("", $"{AppInfo.Name}'ı aç", busy ? "İşlem sürüyor" : null, true, () => _window.ShowFromTray(), bold: true));
+        menu.Items.Add(Item("", L.T($"{AppInfo.Name}'ı aç", $"Open {AppInfo.Name}"), busy ? L.T("İşlem sürüyor", "Operation running") : null, true, () => _window.ShowFromTray(), bold: true));
         menu.Items.Add(Separator());
-        menu.Items.Add(Item("", "Ana Sayfa", null, true, () => Open(() => _vm.GoHomeCommand.Execute(null))));
+        menu.Items.Add(Item("", L.T("Ana Sayfa", "Home"), null, true, () => Open(() => _vm.GoHomeCommand.Execute(null))));
         var canCheck = _vm.StartCheckCommand.CanExecute(null);
-        menu.Items.Add(Item("", "Tümünü Kontrol Et", busy ? "Sürüyor" : !_vm.IsAdmin ? "Yönetici gerekli" : null, canCheck,
+        menu.Items.Add(Item("", L.T("Tümünü Kontrol Et", "Check All"), busy ? L.T("Sürüyor", "Running") : !_vm.IsAdmin ? L.T("Yönetici gerekli", "Administrator required") : null, canCheck,
             () => Open(() => { if (_vm.StartCheckCommand.CanExecute(null)) _vm.StartCheckCommand.Execute(null); })));
-        menu.Items.Add(Item("", "Tek Tıkla Tanıla", null, true, () => Open(() =>
+        menu.Items.Add(Item("", L.T("Tek Tıkla Tanıla", "One-Click Diagnosis"), null, true, () => Open(() =>
         {
             _vm.OpenSection(CategoryKeys.SystemTools, SectionKeys.Diagnose);
             if (_vm.Tools.Diagnose.StartCommand.CanExecute(null)) _vm.Tools.Diagnose.StartCommand.Execute(null);
         })));
-        menu.Items.Add(Item("", "Hız Testi", _vm.SpeedTest.IsRunning ? "Sürüyor" : null, true,
+        menu.Items.Add(Item("", L.T("Hız Testi", "Speed Test"), _vm.SpeedTest.IsRunning ? L.T("Sürüyor", "Running") : null, true,
             () => Open(() => _vm.OpenSection(CategoryKeys.SpeedTest, SectionKeys.SpeedTest))));
-        menu.Items.Add(Item("", "Performans", null, true, () => Open(() => _vm.OpenSection(CategoryKeys.Device, SectionKeys.DeviceStatus))));
-        menu.Items.Add(Item("", "İşlem Geçmişi", null, true, () => Open(() => _vm.OpenSection(CategoryKeys.Summary, SectionKeys.Recent))));
+        menu.Items.Add(Item("", L.T("Performans", "Performance"), null, true, () => Open(() => _vm.OpenSection(CategoryKeys.Device, SectionKeys.DeviceStatus))));
+        menu.Items.Add(Item("", L.T("İşlem Geçmişi", "Operation History"), null, true, () => Open(() => _vm.OpenSection(CategoryKeys.Summary, SectionKeys.Recent))));
         menu.Items.Add(Separator());
-        menu.Items.Add(Item("", "Bildirimler", _vm.NotificationsEnabled ? "Açık" : "Kapalı", true,
+        menu.Items.Add(Item("", L.T("Bildirimler", "Notifications"), _vm.NotificationsEnabled ? L.T("Açık", "On") : L.T("Kapalı", "Off"), true,
             () => _vm.NotificationsEnabled = !_vm.NotificationsEnabled));
         menu.Items.Add(Separator());
-        menu.Items.Add(Item("", "Çıkış", null, true, () => _window.RequestExit()));
+        menu.Items.Add(Item("", L.T("Çıkış", "Exit"), null, true, () => _window.RequestExit()));
         return menu;
     }
 

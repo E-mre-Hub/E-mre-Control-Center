@@ -18,7 +18,7 @@ public sealed record DriverInfo(
     CheckState State)
 {
     public string DateText => Date is { } d ? d.ToString("dd.MM.yyyy") : "—";
-    public string SignedText => Signed switch { true => "İmzalı", false => "İmzasız", _ => "—" };
+    public string SignedText => Signed switch { true => L.T("İmzalı", "Signed"), false => L.T("İmzasız", "Unsigned"), _ => "—" };
 }
 
 public sealed record DriverScan(IReadOnlyList<DriverInfo> Drivers, string? Error)
@@ -43,54 +43,54 @@ public sealed class DriverService(Logger logger)
     /// <summary>Aygıt sınıfı → Türkçe kategori ve "önemli" (varsayılan listede gösterilir) bilgisi.</summary>
     private static (string Category, bool Important) Classify(string cls) => cls.ToUpperInvariant() switch
     {
-        "DISPLAY" => ("Ekran kartı", true),
-        "NET" => ("Ağ", true),
-        "MEDIA" => ("Ses", true),
+        "DISPLAY" => (L.T("Ekran kartı", "Graphics card"), true),
+        "NET" => (L.T("Ağ", "Network"), true),
+        "MEDIA" => (L.T("Ses", "Audio"), true),
         "BLUETOOTH" => ("Bluetooth", true),
-        "HDC" or "SCSIADAPTER" => ("Depolama denetleyicisi", true),
+        "HDC" or "SCSIADAPTER" => (L.T("Depolama denetleyicisi", "Storage controller"), true),
         "DISKDRIVE" => ("Disk", true),
         "USB" => ("USB", true),
-        "SYSTEM" => ("Yonga seti / sistem", true),
-        "CAMERA" or "IMAGE" => ("Kamera", true),
-        "BIOMETRIC" => ("Biyometrik", true),
-        "SECURITYDEVICES" => ("Güvenlik aygıtı (TPM)", true),
-        "FIRMWARE" => ("Ürün yazılımı", true),
-        "MONITOR" => ("Monitör", false),
-        "HIDCLASS" or "KEYBOARD" or "MOUSE" => ("Giriş aygıtı", false),
-        "AUDIOENDPOINT" => ("Ses uç noktası", false),
-        "PROCESSOR" => ("İşlemci", false),
-        "BATTERY" => ("Pil", false),
-        "PRINTER" or "PRINTQUEUE" => ("Yazıcı", false),
-        "SOFTWARECOMPONENT" or "SOFTWAREDEVICE" => ("Yazılım bileşeni", false),
-        _ => (string.IsNullOrEmpty(cls) ? "Diğer" : cls, false)
+        "SYSTEM" => (L.T("Yonga seti / sistem", "Chipset / system"), true),
+        "CAMERA" or "IMAGE" => (L.T("Kamera", "Camera"), true),
+        "BIOMETRIC" => (L.T("Biyometrik", "Biometric"), true),
+        "SECURITYDEVICES" => (L.T("Güvenlik aygıtı (TPM)", "Security device (TPM)"), true),
+        "FIRMWARE" => (L.T("Ürün yazılımı", "Firmware"), true),
+        "MONITOR" => (L.T("Monitör", "Monitor"), false),
+        "HIDCLASS" or "KEYBOARD" or "MOUSE" => (L.T("Giriş aygıtı", "Input device"), false),
+        "AUDIOENDPOINT" => (L.T("Ses uç noktası", "Audio endpoint"), false),
+        "PROCESSOR" => (L.T("İşlemci", "Processor"), false),
+        "BATTERY" => (L.T("Pil", "Battery"), false),
+        "PRINTER" or "PRINTQUEUE" => (L.T("Yazıcı", "Printer"), false),
+        "SOFTWARECOMPONENT" or "SOFTWAREDEVICE" => (L.T("Yazılım bileşeni", "Software component"), false),
+        _ => (string.IsNullOrEmpty(cls) ? L.T("Diğer", "Other") : cls, false)
     };
 
     /// <summary>Aygıt Yöneticisi hata kodları (Microsoft belgelerindeki anlamları).</summary>
     public static string DescribeProblem(int code) => code switch
     {
-        0 => "Çalışıyor",
-        1 => "Kod 1: aygıt doğru yapılandırılmamış",
-        3 => "Kod 3: sürücü bozuk olabilir veya bellek yetersiz",
-        10 => "Kod 10: aygıt başlatılamıyor",
-        12 => "Kod 12: yeterli boş kaynak bulunamadı",
-        14 => "Kod 14: bilgisayar yeniden başlatılmalı",
-        18 => "Kod 18: sürücüler yeniden yüklenmeli",
-        19 => "Kod 19: kayıt defteri yapılandırma bilgisi bozuk",
-        21 => "Kod 21: Windows aygıtı kaldırıyor",
-        22 => "Kod 22: aygıt devre dışı bırakılmış",
-        24 => "Kod 24: aygıt yok veya düzgün çalışmıyor",
-        28 => "Kod 28: sürücü yüklü değil",
-        29 => "Kod 29: aygıt ürün yazılımınca devre dışı",
-        31 => "Kod 31: sürücü yüklenemedi",
-        32 => "Kod 32: sürücü hizmeti devre dışı",
-        37 => "Kod 37: sürücü başlatılamadı",
-        38 => "Kod 38: sürücünün önceki örneği hâlâ bellekte",
-        39 => "Kod 39: sürücü bozuk veya eksik",
-        43 => "Kod 43: aygıt sorun bildirdi, Windows durdurdu",
-        45 => "Kod 45: aygıt şu anda bağlı değil",
-        48 => "Kod 48: sürücü uyumsuzluk nedeniyle engellendi",
-        52 => "Kod 52: sürücünün dijital imzası doğrulanamadı",
-        _ => $"Kod {code}: aygıt sorunu (Aygıt Yöneticisi'nde ayrıntı)"
+        0 => L.T("Çalışıyor", "Working"),
+        1 => L.T("Kod 1: aygıt doğru yapılandırılmamış", "Code 1: the device is not configured correctly"),
+        3 => L.T("Kod 3: sürücü bozuk olabilir veya bellek yetersiz", "Code 3: the driver may be corrupted or memory is low"),
+        10 => L.T("Kod 10: aygıt başlatılamıyor", "Code 10: the device cannot start"),
+        12 => L.T("Kod 12: yeterli boş kaynak bulunamadı", "Code 12: not enough free resources"),
+        14 => L.T("Kod 14: bilgisayar yeniden başlatılmalı", "Code 14: the computer must be restarted"),
+        18 => L.T("Kod 18: sürücüler yeniden yüklenmeli", "Code 18: the drivers must be reinstalled"),
+        19 => L.T("Kod 19: kayıt defteri yapılandırma bilgisi bozuk", "Code 19: registry configuration information is corrupted"),
+        21 => L.T("Kod 21: Windows aygıtı kaldırıyor", "Code 21: Windows is removing the device"),
+        22 => L.T("Kod 22: aygıt devre dışı bırakılmış", "Code 22: the device is disabled"),
+        24 => L.T("Kod 24: aygıt yok veya düzgün çalışmıyor", "Code 24: the device is not present or not working properly"),
+        28 => L.T("Kod 28: sürücü yüklü değil", "Code 28: the driver is not installed"),
+        29 => L.T("Kod 29: aygıt ürün yazılımınca devre dışı", "Code 29: the device is disabled by its firmware"),
+        31 => L.T("Kod 31: sürücü yüklenemedi", "Code 31: the driver could not be loaded"),
+        32 => L.T("Kod 32: sürücü hizmeti devre dışı", "Code 32: the driver service is disabled"),
+        37 => L.T("Kod 37: sürücü başlatılamadı", "Code 37: the driver could not be initialized"),
+        38 => L.T("Kod 38: sürücünün önceki örneği hâlâ bellekte", "Code 38: a previous instance of the driver is still in memory"),
+        39 => L.T("Kod 39: sürücü bozuk veya eksik", "Code 39: the driver is corrupted or missing"),
+        43 => L.T("Kod 43: aygıt sorun bildirdi, Windows durdurdu", "Code 43: the device reported a problem and Windows stopped it"),
+        45 => L.T("Kod 45: aygıt şu anda bağlı değil", "Code 45: the device is not connected right now"),
+        48 => L.T("Kod 48: sürücü uyumsuzluk nedeniyle engellendi", "Code 48: the driver was blocked due to incompatibility"),
+        52 => L.T("Kod 52: sürücünün dijital imzası doğrulanamadı", "Code 52: the driver's digital signature could not be verified"),
+        _ => L.T($"Kod {code}: aygıt sorunu (Aygıt Yöneticisi'nde ayrıntı)", $"Code {code}: device problem (details in Device Manager)")
     };
 
     public async Task<DriverScan> ScanAsync(CancellationToken ct = default)
@@ -98,7 +98,7 @@ public sealed class DriverService(Logger logger)
         var drivers = await Wmi.QueryAsync(@"root\cimv2",
             "SELECT DeviceID, DeviceName, Manufacturer, DriverProviderName, DriverVersion, DriverDate, DeviceClass, IsSigned FROM Win32_PnPSignedDriver",
             ct, TimeSpan.FromSeconds(60));
-        if (!drivers.Ok) return new DriverScan([], "Sürücü listesi okunamadı: " + drivers.Error);
+        if (!drivers.Ok) return new DriverScan([], L.T("Sürücü listesi okunamadı: ", "Could not read the driver list: ") + drivers.Error);
 
         var problems = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
         var entities = await Wmi.QueryAsync(@"root\cimv2", "SELECT DeviceID, ConfigManagerErrorCode FROM Win32_PnPEntity", ct,
@@ -117,8 +117,8 @@ public sealed class DriverService(Logger logger)
             var (state, text) = problem switch
             {
                 null => (entities.Ok ? CheckState.Info : CheckState.Unknown,
-                         entities.Ok ? "Aygıt şu an listede yok (bağlı değil olabilir)" : "Durum okunamadı: " + entities.Error),
-                0 => (CheckState.Healthy, "Çalışıyor"),
+                         entities.Ok ? L.T("Aygıt şu an listede yok (bağlı değil olabilir)", "The device is not in the list right now (it may be disconnected)") : L.T("Durum okunamadı: ", "Could not read the status: ") + entities.Error),
+                0 => (CheckState.Healthy, L.T("Çalışıyor", "Working")),
                 22 or 45 => (CheckState.Info, DescribeProblem(problem.Value)),
                 14 => (CheckState.Warning, DescribeProblem(14)),
                 _ => (CheckState.Error, DescribeProblem(problem.Value))
@@ -126,8 +126,8 @@ public sealed class DriverService(Logger logger)
             list.Add(new DriverInfo(name, d.Str("Manufacturer") ?? "—", d.Str("DriverProviderName") ?? "—", d.Str("DriverVersion") ?? "—",
                 d.Date("DriverDate"), cls, category, important, d.Bool("IsSigned"), problem, text, state));
         }
-        logger.Info($"Sürücüler okundu: {list.Count} aygıt, {list.Count(x => x.State == CheckState.Error)} sorunlu" +
-                    (entities.Ok ? "." : $" (aygıt durumu okunamadı: {entities.Error})"));
+        logger.Info(L.T($"Sürücüler okundu: {list.Count} aygıt, {list.Count(x => x.State == CheckState.Error)} sorunlu", $"Drivers read: {list.Count} devices, {list.Count(x => x.State == CheckState.Error)} with problems") +
+                    (entities.Ok ? "." : L.T($" (aygıt durumu okunamadı: {entities.Error})", $" (could not read device status: {entities.Error})")));
         return new DriverScan(list.OrderBy(x => x.Important ? 0 : 1).ThenBy(x => x.Category).ThenBy(x => x.DeviceName).ToList(), null);
     }
 
@@ -136,7 +136,7 @@ public sealed class DriverService(Logger logger)
         $session.ClientApplicationID = 'E-mre Control Center'
         $searcher = $session.CreateUpdateSearcher()
         $searcher.Online = $true
-        Write-Log 'Windows Update sürücü kataloğunda arama yapılıyor...'
+        Write-Log '«Windows Update sürücü kataloğunda arama yapılıyor...|Searching the Windows Update driver catalog...»'
         $res = $searcher.Search("IsInstalled=0 and Type='Driver'")
         $list = New-Object System.Collections.ArrayList
         foreach ($u in $res.Updates) {
@@ -155,13 +155,13 @@ public sealed class DriverService(Logger logger)
     {
         var ps = await PowerShellRunner.RunAsync(DriverSearchScript, UpdateSearchTimeout, ct, m => logger.Info("  " + m),
             traceName: "Windows Update Agent – IUpdateSearcher.Search(\"IsInstalled=0 and Type='Driver'\")");
-        if (!ps.Ok) return new DriverUpdateScan([], "Windows Update sürücü araması yapılamadı: " + ps.DescribeFailure("Windows Update araması"));
+        if (!ps.Ok) return new DriverUpdateScan([], L.T("Windows Update sürücü araması yapılamadı: ", "Windows Update driver search failed: ") + ps.DescribeFailure(L.T("Windows Update araması", "Windows Update search")));
         var list = new List<DriverUpdate>();
         foreach (var u in ps.Data!.Value.Arr("updates"))
             list.Add(new DriverUpdate(u.Str("title") ?? "—", u.Str("model") ?? "—", u.Str("manufacturer") ?? "—", u.Str("driverClass") ?? "—",
                 DateTime.TryParse(u.Str("date"), System.Globalization.CultureInfo.InvariantCulture,
                     System.Globalization.DateTimeStyles.None, out var d) ? d : null));
-        logger.Info($"Windows Update sürücü araması: {list.Count} kurulmamış sürücü güncellemesi.");
+        logger.Info(L.T($"Windows Update sürücü araması: {list.Count} kurulmamış sürücü güncellemesi.", $"Windows Update driver search: {list.Count} driver update(s) not installed."));
         return new DriverUpdateScan(list, null);
     }
 }

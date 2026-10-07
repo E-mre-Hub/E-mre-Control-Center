@@ -78,7 +78,7 @@ public partial class MainWindow : Window
         }
         catch (Exception ex)
         {
-            MessageBox.Show(this, "Başlatma sırasında hata: " + ex.Message, AppInfo.Name,
+            MessageBox.Show(this, L.T("Başlatma sırasında hata: ", "Error during startup: ") + ex.Message, AppInfo.Name,
                 MessageBoxButton.OK, MessageBoxImage.Warning);
         }
     }
@@ -275,7 +275,7 @@ public partial class MainWindow : Window
         {
             ShowFromTray();
             var exit = await _vm.Dialog.ShowAsync(prompt.Title, prompt.Message, MainViewModel.Icons.Warning, DialogKind.Warning,
-                prompt.Primary, "Devam et");
+                prompt.Primary, L.T("Devam et", "Continue"));
             if (!exit || _exitPending) return;
             _exitPending = true;
             await _vm.StopForExitAsync();
@@ -315,6 +315,6 @@ public partial class MainWindow : Window
         // WindowChrome ile büyütülmüş pencere ekran kenarından taşar; kenar boşluğu ile telafi et.
         RootGrid.Margin = WindowState == WindowState.Maximized ? new Thickness(7) : new Thickness(0);
         MaxButton.Content = WindowState == WindowState.Maximized ? "" : "";
-        MaxButton.ToolTip = WindowState == WindowState.Maximized ? "Önceki boyut" : "Büyüt";
+        MaxButton.ToolTip = WindowState == WindowState.Maximized ? L.T("Önceki boyut", "Restore down") : L.T("Büyüt", "Maximize");
     }
 }

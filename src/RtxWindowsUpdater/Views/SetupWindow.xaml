@@ -1,16 +1,17 @@
 <Window x:Class="RtxWindowsUpdater.Views.SetupWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:l="clr-namespace:RtxWindowsUpdater.Views"
         xmlns:views="clr-namespace:RtxWindowsUpdater.Views"
         xmlns:core="clr-namespace:RtxWindowsUpdater.Core"
-        Title="E-mre Control Center Kurulum"
+        Title="{l:T 'E-mre Control Center Kurulum', 'E-mre Control Center Setup'}"
         Icon="pack://application:,,,/Assets/E-mreLogo.ico"
         Width="780" Height="580"
         WindowStartupLocation="CenterScreen"
         ResizeMode="CanMinimize"
-        Background="{StaticResource B.Bg0}"
+        Background="{DynamicResource B.Bg0}"
         FontFamily="{StaticResource F.Text}"
-        Foreground="{StaticResource B.Text}"
+        Foreground="{DynamicResource B.Text}"
         TextOptions.TextFormattingMode="Display"
         UseLayoutRounding="True">
 
@@ -26,14 +27,14 @@
         </ResourceDictionary>
     </Window.Resources>
 
-    <Grid x:Name="RootGrid" Background="{StaticResource B.WindowBg}">
+    <Grid x:Name="RootGrid" Background="{DynamicResource B.WindowBg}">
         <Grid.RowDefinitions>
             <RowDefinition Height="40" />
             <RowDefinition Height="*" />
         </Grid.RowDefinitions>
 
         <!-- Statik dalga zemini (animasyon yok, önbellekli) -->
-        <views:WaveBackdrop Grid.RowSpan="2" LineBrush="#FF2E4468" LineCount="30" IsHitTestVisible="False">
+        <views:WaveBackdrop Grid.RowSpan="2" LineBrush="{DynamicResource B.WaveLine}" LineCount="30" IsHitTestVisible="False">
             <views:WaveBackdrop.CacheMode>
                 <BitmapCache />
             </views:WaveBackdrop.CacheMode>
@@ -42,13 +43,14 @@
         <!-- Başlık çubuğu -->
         <DockPanel>
             <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" VerticalAlignment="Top">
-                <Button Style="{StaticResource Btn.Caption}" Content="&#xE921;" Click="Minimize_Click" ToolTip="Simge durumuna küçült" />
-                <Button Style="{StaticResource Btn.CaptionClose}" Content="&#xE8BB;" Command="{Binding CloseCommand}" ToolTip="Kapat"
-                        AutomationProperties.Name="Kurulumu kapat" />
+                <Button x:Name="ThemeButton" Style="{StaticResource Btn.Caption}" FontSize="13" Click="Theme_Click" />
+                <Button Style="{StaticResource Btn.Caption}" Content="&#xE921;" Click="Minimize_Click" ToolTip="{l:T 'Simge durumuna küçült', 'Minimize'}" />
+                <Button Style="{StaticResource Btn.CaptionClose}" Content="&#xE8BB;" Command="{Binding CloseCommand}" ToolTip="{l:T 'Kapat', 'Close'}"
+                        AutomationProperties.Name="{l:T 'Kurulumu kapat', 'Close setup'}" />
             </StackPanel>
             <StackPanel Orientation="Horizontal" Margin="14,0,0,0" VerticalAlignment="Center">
                 <Rectangle Width="18" Height="18" RadiusX="4" RadiusY="4" Fill="{StaticResource LogoBrush}" />
-                <TextBlock Text="E-mre Control Center Kurulum" FontSize="12.5" Foreground="{StaticResource B.Text2}" Margin="10,0,0,0"
+                <TextBlock Text="{l:T 'E-mre Control Center Kurulum', 'E-mre Control Center Setup'}" FontSize="12.5" Foreground="{DynamicResource B.Text2}" Margin="10,0,0,0"
                            VerticalAlignment="Center" />
             </StackPanel>
         </DockPanel>
@@ -57,33 +59,33 @@
         <Grid x:Name="WelcomePage" Grid.Row="1" Visibility="{Binding IsWelcome, Converter={StaticResource Visible}}">
             <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center" Width="560" Margin="0,0,0,24">
                 <ContentControl Template="{StaticResource LogoGlow}" Focusable="False" />
-                <TextBlock Text="E-mre Control Center" FontFamily="{StaticResource F.Display}" FontSize="30" Foreground="White"
+                <TextBlock Text="E-mre Control Center" FontFamily="{StaticResource F.Display}" FontSize="30" Foreground="{DynamicResource B.Text}"
                            HorizontalAlignment="Center" Margin="0,4,0,4" />
-                <TextBlock Style="{StaticResource T.Label}" FontSize="11.5" Foreground="{StaticResource B.NeonBright}" HorizontalAlignment="Center">
-                    <Run Text="KONTROL MERKEZİ · SÜRÜM" />
+                <TextBlock Style="{StaticResource T.Label}" FontSize="11.5" Foreground="{DynamicResource B.NeonBright}" HorizontalAlignment="Center">
+                    <Run Text="{l:T 'KONTROL MERKEZİ · SÜRÜM', 'CONTROL CENTER · VERSION'}" />
                     <Run Text="{Binding Version, Mode=OneWay}" />
                 </TextBlock>
-                <TextBlock Text="Windows 11 için güncelleme, temizlik, sistem sağlığı ve hız testi merkezi." FontSize="13.5"
-                           Foreground="{StaticResource B.Text2}" HorizontalAlignment="Center" TextAlignment="Center" TextWrapping="Wrap" Margin="0,14,0,0" />
+                <TextBlock Text="{l:T 'Windows 11 için güncelleme, temizlik, sistem sağlığı ve hız testi merkezi.', 'Update, cleanup, system health and speed test center for Windows 11.'}" FontSize="13.5"
+                           Foreground="{DynamicResource B.Text2}" HorizontalAlignment="Center" TextAlignment="Center" TextWrapping="Wrap" Margin="0,14,0,0" />
 
-                <Border Margin="0,22,0,0" Padding="16,12" CornerRadius="12" Background="#B30A1426" BorderBrush="#FF1E3050" BorderThickness="1">
+                <Border Margin="0,22,0,0" Padding="16,12" CornerRadius="12" Background="{DynamicResource B.InfoBoxBg}" BorderBrush="{DynamicResource B.InfoBoxBorder}" BorderThickness="1">
                     <Grid>
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="Auto" />
                             <ColumnDefinition Width="*" />
                         </Grid.ColumnDefinitions>
-                        <TextBlock Text="&#xE8B7;" Style="{StaticResource T.Icon}" FontSize="16" Foreground="{StaticResource B.NeonBright}"
+                        <TextBlock Text="&#xE8B7;" Style="{StaticResource T.Icon}" FontSize="16" Foreground="{DynamicResource B.NeonBright}"
                                    VerticalAlignment="Top" Margin="0,1,12,0" />
                         <TextBlock x:Name="InstallStateText" Grid.Column="1" Text="{Binding InstallStateText}" FontSize="12.5" LineHeight="18"
-                                   Foreground="{StaticResource B.Text}" TextWrapping="Wrap" />
+                                   Foreground="{DynamicResource B.Text}" TextWrapping="Wrap" />
                     </Grid>
                 </Border>
 
-                <CheckBox x:Name="DesktopCheck" Content="Masaüstüne kısayol ekle" IsChecked="{Binding DesktopShortcut}" HorizontalAlignment="Center"
+                <CheckBox x:Name="DesktopCheck" Content="{l:T 'Masaüstüne kısayol ekle', 'Add a desktop shortcut'}" IsChecked="{Binding DesktopShortcut}" HorizontalAlignment="Center"
                           Margin="0,16,0,0" />
 
                 <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,22,0,0">
-                    <Button Style="{StaticResource Btn.Secondary}" Content="İptal" Width="130" Height="48" Command="{Binding CloseCommand}" Margin="0,0,12,0" />
+                    <Button Style="{StaticResource Btn.Secondary}" Content="{l:T 'İptal', 'Cancel'}" Width="130" Height="48" Command="{Binding CloseCommand}" Margin="0,0,12,0" />
                     <Button x:Name="InstallButton" Style="{StaticResource Btn.Primary}" Width="230" Height="48" Command="{Binding InstallCommand}"
                             AutomationProperties.Name="{Binding ActionText}">
                         <StackPanel Orientation="Horizontal">
@@ -93,17 +95,17 @@
                     </Button>
                 </StackPanel>
 
-                <TextBlock Text="{Binding ElevationError}" FontSize="12.5" Foreground="{StaticResource B.Orange}" TextWrapping="Wrap"
+                <TextBlock Text="{Binding ElevationError}" FontSize="12.5" Foreground="{DynamicResource B.Orange}" TextWrapping="Wrap"
                            TextAlignment="Center" Margin="0,14,0,0" Visibility="{Binding ElevationError, Converter={StaticResource Visible}}" />
-                <TextBlock FontSize="11.5" Foreground="{StaticResource B.Text3}" TextWrapping="Wrap" TextAlignment="Center" Margin="0,14,0,0"
-                           Text="Kurulum Windows'tan yönetici izni ister. Uygulama dijital olarak imzalanmadığı için izin penceresinde yayıncı &quot;Bilinmeyen&quot; görünür." />
+                <TextBlock FontSize="11.5" Foreground="{DynamicResource B.Text3}" TextWrapping="Wrap" TextAlignment="Center" Margin="0,14,0,0"
+                           Text="{l:T 'Kurulum Windows\'tan yönetici izni ister. Uygulama dijital olarak imzalanmadığı için izin penceresinde yayıncı &quot;Bilinmeyen&quot; görünür.', 'Setup asks Windows for administrator permission. Because the app is not digitally signed, the publisher appears as &quot;Unknown&quot; in the permission window.'}" />
                 <!-- v1.9.0: yasal belgeler (bağlantılar yalnızca izin listesindeki adresler; tarayıcı yönetici yetkisi olmadan açılır) -->
-                <TextBlock x:Name="SetupLegalNote" FontSize="11.5" Foreground="{StaticResource B.Text3}" TextWrapping="Wrap" TextAlignment="Center" Margin="0,6,0,0">
-                    <Run Text="Devam ederek" />
-                    <Hyperlink Command="{Binding OpenLegalLinkCommand}" CommandParameter="{x:Static core:AppInfo.TermsUrl}"
-                               Foreground="{StaticResource B.NeonBright}" ToolTip="{x:Static core:AppInfo.TermsUrl}">Kullanım Koşulları</Hyperlink><Run Text="'nı ve" />
-                    <Hyperlink Command="{Binding OpenLegalLinkCommand}" CommandParameter="{x:Static core:AppInfo.PrivacyPolicyUrl}"
-                               Foreground="{StaticResource B.NeonBright}" ToolTip="{x:Static core:AppInfo.PrivacyPolicyUrl}">Gizlilik Politikası</Hyperlink><Run Text="'nı kabul etmiş olursunuz." />
+                <TextBlock x:Name="SetupLegalNote" FontSize="11.5" Foreground="{DynamicResource B.Text3}" TextWrapping="Wrap" TextAlignment="Center" Margin="0,6,0,0">
+                    <Run Text="{l:T 'Devam ederek', 'By continuing, you accept the'}" />
+                    <Hyperlink Command="{Binding OpenLegalLinkCommand}" CommandParameter="{x:Static core:AppInfo.TermsUrlLocal}"
+                               Foreground="{DynamicResource B.NeonBright}" ToolTip="{x:Static core:AppInfo.TermsUrlLocal}"><Run Text="{l:T 'Kullanım Koşulları', 'Terms of Use'}" /></Hyperlink><Run Text="{l:T '\'nı ve', ' and the'}" />
+                    <Hyperlink Command="{Binding OpenLegalLinkCommand}" CommandParameter="{x:Static core:AppInfo.PrivacyPolicyUrlLocal}"
+                               Foreground="{DynamicResource B.NeonBright}" ToolTip="{x:Static core:AppInfo.PrivacyPolicyUrlLocal}"><Run Text="{l:T 'Gizlilik Politikası', 'Privacy Policy'}" /></Hyperlink><Run Text="{l:T '\'nı kabul etmiş olursunuz.', '.'}" />
                 </TextBlock>
             </StackPanel>
         </Grid>
@@ -112,7 +114,7 @@
         <ScrollViewer x:Name="WorkingPage" Grid.Row="1" VerticalScrollBarVisibility="Auto" Focusable="False"
                       Visibility="{Binding IsWorking, Converter={StaticResource Visible}}">
             <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center" Width="540" Margin="0,8,0,24">
-                <TextBlock Text="{Binding StatusText}" FontFamily="{StaticResource F.Display}" FontSize="23" Foreground="White" />
+                <TextBlock Text="{Binding StatusText}" FontFamily="{StaticResource F.Display}" FontSize="23" Foreground="{DynamicResource B.Text}" />
                 <ProgressBar Style="{StaticResource Progress.Neon}" Minimum="0" Maximum="1" Value="{Binding Progress, Mode=OneWay}" Margin="0,14,0,22" />
                 <ItemsControl ItemsSource="{Binding Steps}" ItemTemplate="{StaticResource SetupStepTemplate}" Focusable="False" />
             </StackPanel>
@@ -123,18 +125,18 @@
             <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center" Width="600" Margin="0,0,0,24">
                 <ContentControl Template="{StaticResource LogoGlow}" Focusable="False" />
                 <TextBlock Text="{Binding DoneTitle}" FontFamily="{StaticResource F.Display}" FontSize="28" FontWeight="SemiBold"
-                           Foreground="White" HorizontalAlignment="Center" TextAlignment="Center" TextWrapping="Wrap" Margin="0,6,0,0" />
-                <TextBlock Text="{Binding DoneSubtitle}" FontSize="19" FontWeight="SemiBold" Foreground="{StaticResource B.NeonBright}"
+                           Foreground="{DynamicResource B.Text}" HorizontalAlignment="Center" TextAlignment="Center" TextWrapping="Wrap" Margin="0,6,0,0" />
+                <TextBlock Text="{Binding DoneSubtitle}" FontSize="19" FontWeight="SemiBold" Foreground="{DynamicResource B.NeonBright}"
                            HorizontalAlignment="Center" Margin="0,8,0,0" />
-                <TextBlock Text="{Binding DoneDetail}" FontSize="12.5" Foreground="{StaticResource B.Text2}" HorizontalAlignment="Center"
+                <TextBlock Text="{Binding DoneDetail}" FontSize="12.5" Foreground="{DynamicResource B.Text2}" HorizontalAlignment="Center"
                            TextAlignment="Center" TextWrapping="Wrap" Margin="0,20,0,0" />
-                <TextBlock Text="{Binding DoneShortcutText}" FontSize="12" Foreground="{StaticResource B.Text3}" HorizontalAlignment="Center"
+                <TextBlock Text="{Binding DoneShortcutText}" FontSize="12" Foreground="{DynamicResource B.Text3}" HorizontalAlignment="Center"
                            TextAlignment="Center" TextWrapping="Wrap" Margin="0,4,0,0" />
-                <CheckBox x:Name="LaunchCheck" Content="E-mre Control Center'ı şimdi başlat" IsChecked="{Binding LaunchAfter}" HorizontalAlignment="Center"
+                <CheckBox x:Name="LaunchCheck" Content="{l:T 'E-mre Control Center\'ı şimdi başlat', 'Start E-mre Control Center now'}" IsChecked="{Binding LaunchAfter}" HorizontalAlignment="Center"
                           Margin="0,22,0,0" />
-                <TextBlock Text="{Binding LaunchError}" FontSize="12.5" Foreground="{StaticResource B.Orange}" TextWrapping="Wrap" TextAlignment="Center"
+                <TextBlock Text="{Binding LaunchError}" FontSize="12.5" Foreground="{DynamicResource B.Orange}" TextWrapping="Wrap" TextAlignment="Center"
                            Margin="0,10,0,0" Visibility="{Binding LaunchError, Converter={StaticResource Visible}}" />
-                <Button x:Name="FinishButton" Style="{StaticResource Btn.Primary}" Content="Bitir" Width="210" Height="48" Command="{Binding FinishCommand}"
+                <Button x:Name="FinishButton" Style="{StaticResource Btn.Primary}" Content="{l:T 'Bitir', 'Finish'}" Width="210" Height="48" Command="{Binding FinishCommand}"
                         HorizontalAlignment="Center" Margin="0,20,0,0" />
             </StackPanel>
         </Grid>
@@ -148,23 +150,23 @@
             <ScrollViewer VerticalScrollBarVisibility="Auto" Focusable="False">
                 <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center" Width="560" Margin="0,8,0,8">
                     <StackPanel Orientation="Horizontal">
-                        <TextBlock Text="&#xE783;" Style="{StaticResource T.Icon}" FontSize="24" Foreground="{StaticResource B.Red}" Margin="0,0,12,0"
+                        <TextBlock Text="&#xE783;" Style="{StaticResource T.Icon}" FontSize="24" Foreground="{DynamicResource B.Red}" Margin="0,0,12,0"
                                    VerticalAlignment="Center" />
-                        <TextBlock Text="Kurulum tamamlanamadı" FontFamily="{StaticResource F.Display}" FontSize="23" Foreground="White" VerticalAlignment="Center" />
+                        <TextBlock Text="{l:T 'Kurulum tamamlanamadı', 'Setup could not be completed'}" FontFamily="{StaticResource F.Display}" FontSize="23" Foreground="{DynamicResource B.Text}" VerticalAlignment="Center" />
                     </StackPanel>
-                    <TextBlock Text="{Binding FailText}" FontSize="13" LineHeight="19" Foreground="{StaticResource B.Text}" TextWrapping="Wrap" Margin="0,14,0,0" />
-                    <TextBlock Text="{Binding RollbackText}" FontSize="12.5" Foreground="{StaticResource B.Text2}" TextWrapping="Wrap" Margin="0,8,0,0"
+                    <TextBlock Text="{Binding FailText}" FontSize="13" LineHeight="19" Foreground="{DynamicResource B.Text}" TextWrapping="Wrap" Margin="0,14,0,0" />
+                    <TextBlock Text="{Binding RollbackText}" FontSize="12.5" Foreground="{DynamicResource B.Text2}" TextWrapping="Wrap" Margin="0,8,0,0"
                                Visibility="{Binding RollbackText, Converter={StaticResource Visible}}" />
                     <ItemsControl ItemsSource="{Binding Steps}" ItemTemplate="{StaticResource SetupStepTemplate}" Focusable="False" Margin="0,18,0,0" />
-                    <TextBlock FontSize="11.5" Foreground="{StaticResource B.Text3}" TextWrapping="Wrap" Margin="0,4,0,0">
-                        <Run Text="Kurulum günlüğü:" />
+                    <TextBlock FontSize="11.5" Foreground="{DynamicResource B.Text3}" TextWrapping="Wrap" Margin="0,4,0,0">
+                        <Run Text="{l:T 'Kurulum günlüğü:', 'Setup log:'}" />
                         <Run Text="{Binding LogPath, Mode=OneWay}" />
                     </TextBlock>
                 </StackPanel>
             </ScrollViewer>
             <StackPanel Grid.Row="1" Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,14,0,0">
-                <Button Style="{StaticResource Btn.Secondary}" Content="Kapat" Width="130" Height="46" Command="{Binding CloseCommand}" Margin="0,0,12,0" />
-                <Button x:Name="RetryButton" Style="{StaticResource Btn.Primary}" Content="Tekrar dene" Width="190" Height="46" Command="{Binding RetryCommand}" />
+                <Button Style="{StaticResource Btn.Secondary}" Content="{l:T 'Kapat', 'Close'}" Width="130" Height="46" Command="{Binding CloseCommand}" Margin="0,0,12,0" />
+                <Button x:Name="RetryButton" Style="{StaticResource Btn.Primary}" Content="{l:T 'Tekrar dene', 'Try again'}" Width="190" Height="46" Command="{Binding RetryCommand}" />
             </StackPanel>
         </Grid>
 

@@ -48,19 +48,19 @@ public sealed class DefenderManager(Logger logger, HttpClient http) : IUpdateMod
     /// </summary>
     private const string UpdateScript = """
         $before = [string](Get-MpComputerStatus).AntivirusSignatureVersion
-        Write-Log ('Mevcut tanım sürümü: ' + $before)
+        Write-Log ('«Mevcut tanım sürümü: |Current definition version:»' + $before)
         $ok = $false; $defaultOk = $false; $lastErr = $null; $source = $null
         foreach ($src in @($null, 'MicrosoftUpdateServer', 'MMPC')) {
             if ($src -eq 'MicrosoftUpdateServer' -and $defaultOk) { continue }
             try {
-                if ($src -eq 'MMPC') { Write-Log 'Microsoft tanım sunucusundan (MMPC) doğrudan deneniyor...'; Update-MpSignature -UpdateSource MMPC -ErrorAction Stop }
-                elseif ($src) { Write-Log ('Kaynak deneniyor: ' + $src); Update-MpSignature -UpdateSource $src -ErrorAction Stop }
-                else { Write-Log 'Update-MpSignature çalıştırılıyor (Windows varsayılan kaynak sırası)...'; Update-MpSignature -ErrorAction Stop; $defaultOk = $true }
+                if ($src -eq 'MMPC') { Write-Log '«Microsoft tanım sunucusundan (MMPC) doğrudan deneniyor...|Trying directly from Microsoft's definition server (MMPC)...»'; Update-MpSignature -UpdateSource MMPC -ErrorAction Stop }
+                elseif ($src) { Write-Log ('«Kaynak deneniyor: |Trying source:»' + $src); Update-MpSignature -UpdateSource $src -ErrorAction Stop }
+                else { Write-Log '«Update-MpSignature çalıştırılıyor (Windows varsayılan kaynak sırası)...|Running Update-MpSignature (Windows default source order)...»'; Update-MpSignature -ErrorAction Stop; $defaultOk = $true }
                 $ok = $true
-            } catch { $lastErr = $_.Exception.Message; Write-Log ('Hata: ' + $lastErr); continue }
+            } catch { $lastErr = $_.Exception.Message; «Write-Log ('Hata: ' + $lastErr)|Write-Log ('Error: ' + $lastErr)»; continue }
             $now = [string](Get-MpComputerStatus).AntivirusSignatureVersion
             if ($now -ne $before) { if ($src) { $source = $src } else { $source = 'default' }; break }
-            Write-Log ('Tanım sürümü değişmedi (' + $now + ').')
+            Write-Log ('«Tanım sürümü değişmedi (|Definition version did not change (»' + $now + ').')
         }
         $after = [string](Get-MpComputerStatus).AntivirusSignatureVersion
         Write-Result @{ ok = $ok; before = $before; after = $after; source = $source; lastError = $lastErr }
@@ -75,20 +75,20 @@ public sealed class DefenderManager(Logger logger, HttpClient http) : IUpdateMod
 
     public async Task<ModuleResult> CheckAsync(CancellationToken ct)
     {
-        logger.Info("Defender kontrol ediliyor...");
+        logger.Info(L.T("Defender kontrol ediliyor...", "Checking Defender..."));
         var (local, error) = await ReadLocalAsync(ct);
         if (local is null)
         {
-            var reason = "Microsoft Defender durumuna erişilemedi: " + error +
-                         " (Başka bir antivirüs yazılımı Defender'ı devre dışı bırakmış olabilir.)";
+            var reason = L.T("Microsoft Defender durumuna erişilemedi: ", "Could not access the Microsoft Defender status: ") + error +
+                         L.T(" (Başka bir antivirüs yazılımı Defender'ı devre dışı bırakmış olabilir.)", " (Another antivirus program may have disabled Defender.)");
             logger.Error(reason);
             return ModuleResult.CheckFailed(Key, reason);
         }
 
         var active = local.ServiceEnabled && local.AntivirusEnabled && local.RealTime;
-        var protection = active ? "Aktif" :
-            !local.AntivirusEnabled ? $"Pasif ({local.RunningMode})" : "Gerçek zamanlı koruma kapalı";
-        logger.Info($"Koruma durumu: {protection}; tanım sürümü {local.SignatureVersion} ({local.SignatureUpdated})");
+        var protection = active ? L.T("Aktif", "Active") :
+            !local.AntivirusEnabled ? L.T($"Pasif ({local.RunningMode})", $"Passive ({local.RunningMode})") : L.T("Gerçek zamanlı koruma kapalı", "Real-time protection off");
+        logger.Info(L.T($"Koruma durumu: {protection}; tanım sürümü {local.SignatureVersion} ({local.SignatureUpdated})", $"Protection status: {protection}; definition version {local.SignatureVersion} ({local.SignatureUpdated})"));
 
         var latest = await FetchLatestAsync(ct);
         bool outOfDate;
@@ -98,43 +98,43 @@ public sealed class DefenderManager(Logger logger, HttpClient http) : IUpdateMod
             Version.TryParse(local.SignatureVersion, out var cv))
         {
             outOfDate = cv < lv;
-            comparison = $"Microsoft'un yayımladığı son sürüm: {latest.Signatures}";
+            comparison = L.T($"Microsoft'un yayımladığı son sürüm: {latest.Signatures}", $"Latest version published by Microsoft: {latest.Signatures}");
             logger.Info(comparison);
         }
         else if (local.OutOfDate is not null)
         {
             outOfDate = local.OutOfDate.Value;
-            comparison = "Microsoft sunucusuyla karşılaştırılamadı; Defender'ın kendi 'güncel değil' bayrağı kullanıldı.";
-            fallbackNote = comparison + " (İnternet bağlantısını kontrol edip yeniden kontrol edebilirsiniz.)";
+            comparison = L.T("Microsoft sunucusuyla karşılaştırılamadı; Defender'ın kendi 'güncel değil' bayrağı kullanıldı.", "Could not compare with the Microsoft server; Defender's own 'out of date' flag was used.");
+            fallbackNote = comparison + L.T(" (İnternet bağlantısını kontrol edip yeniden kontrol edebilirsiniz.)", " (You can check the internet connection and check again.)");
             logger.Warning(comparison);
         }
         else
         {
-            var reason = "Tanımların güncel olup olmadığı belirlenemedi (Microsoft sunucusuna ulaşılamadı ve Defender güncellik bilgisi vermedi).";
+            var reason = L.T("Tanımların güncel olup olmadığı belirlenemedi (Microsoft sunucusuna ulaşılamadı ve Defender güncellik bilgisi vermedi).", "Could not determine whether the definitions are up to date (the Microsoft server could not be reached and Defender gave no up-to-date information).");
             logger.Error(reason);
-            return ModuleResult.CheckFailed(Key, reason, $"Koruma durumu: {protection}\nTanım sürümü: {local.SignatureVersion}");
+            return ModuleResult.CheckFailed(Key, reason, L.T($"Koruma durumu: {protection}\nTanım sürümü: {local.SignatureVersion}", $"Protection status: {protection}\nDefinition version: {local.SignatureVersion}"));
         }
 
         var details =
-            $"Koruma durumu: {protection}\n" +
-            $"Virüs ve tehdit tanımları: {(outOfDate ? "Güncel değil" : "Güncel")}\n" +
-            $"Tanım sürümü: {local.SignatureVersion}\n" +
-            $"Son güncelleme: {local.SignatureUpdated ?? "bilinmiyor"}";
+            L.T($"Koruma durumu: {protection}\n", $"Protection status: {protection}\n") +
+            L.T($"Virüs ve tehdit tanımları: {(outOfDate ? "Güncel değil" : "Güncel")}\n", $"Virus and threat definitions: {(outOfDate ? "Out of date" : "Up to date")}\n") +
+            L.T($"Tanım sürümü: {local.SignatureVersion}\n", $"Definition version: {local.SignatureVersion}\n") +
+            L.T($"Son güncelleme: {local.SignatureUpdated ?? "bilinmiyor"}", $"Last update: {local.SignatureUpdated ?? "unknown"}");
 
         var items = new List<UpdateItem>
         {
             new()
             {
-                Name = "Güvenlik zekası (virüs ve tehdit tanımları)",
+                Name = L.T("Güvenlik zekası (virüs ve tehdit tanımları)", "Security intelligence (virus and threat definitions)"),
                 Id = "signatures",
                 CurrentVersion = local.SignatureVersion,
                 NewVersion = latest?.Signatures ?? "?",
                 UpdateAvailable = outOfDate,
-                StatusText = outOfDate ? "Güncelleme mevcut" : "Güncel"
+                StatusText = outOfDate ? L.T("Güncelleme mevcut", "Update available") : L.T("Güncel", "Up to date")
             },
             new()
             {
-                Name = "Kötü amaçlı yazılım koruma altyapısı (engine)",
+                Name = L.T("Kötü amaçlı yazılım koruma altyapısı (engine)", "Antimalware engine"),
                 Id = "engine",
                 CurrentVersion = local.EngineVersion,
                 NewVersion = latest?.Engine ?? "?",
@@ -144,30 +144,30 @@ public sealed class DefenderManager(Logger logger, HttpClient http) : IUpdateMod
             },
             new()
             {
-                Name = "Defender platformu",
+                Name = L.T("Defender platformu", "Defender platform"),
                 Id = "platform",
                 CurrentVersion = local.PlatformVersion,
                 NewVersion = latest?.Platform ?? "?",
                 UpdateAvailable = false,
                 AutoUpdatable = false,
-                StatusText = CompareText(local.PlatformVersion, latest?.Platform) + " (Windows Update ile güncellenir)"
+                StatusText = CompareText(local.PlatformVersion, latest?.Platform) + L.T(" (Windows Update ile güncellenir)", " (updated with Windows Update)")
             }
         };
 
         if (!active)
-            logger.Warning("Defender koruması aktif değil. Uygulama güvenlik ayarlarını değiştirmez.");
+            logger.Warning(L.T("Defender koruması aktif değil. Uygulama güvenlik ayarlarını değiştirmez.", "Defender protection is not active. The app does not change security settings."));
 
-        if (outOfDate) logger.Warning("Defender tanımları güncel değil.");
-        else logger.Success("Defender güncel.");
+        if (outOfDate) logger.Warning(L.T("Defender tanımları güncel değil.", "Defender definitions are out of date."));
+        else logger.Success(L.T("Defender güncel.", "Defender is up to date."));
 
         return new ModuleResult
         {
             Key = Key,
             Status = outOfDate ? ComponentStatus.UpdateAvailable : ComponentStatus.UpToDate,
             // Microsoft sunucusuyla karşılaştırılamadıysa sonuç Defender'ın kendi bilgisidir: kartta bu açıkça yazılır.
-            Summary = (outOfDate ? "Tanım güncellemesi mevcut" : "Güncel") + (fallbackNote is null ? "" : " (Defender'ın kendi bilgisine göre)"),
+            Summary = (outOfDate ? L.T("Tanım güncellemesi mevcut", "Definition update available") : L.T("Güncel", "Up to date")) + (fallbackNote is null ? "" : L.T(" (Defender'ın kendi bilgisine göre)", " (according to Defender's own information)")),
             Details = details,
-            Reason = string.Join("\n", new[] { active ? null : $"Koruma durumu: {protection}", fallbackNote }.Where(l => l is not null)) is { Length: > 0 } why
+            Reason = string.Join("\n", new[] { active ? null : L.T($"Koruma durumu: {protection}", $"Protection status: {protection}"), fallbackNote }.Where(l => l is not null)) is { Length: > 0 } why
                 ? why
                 : null,
             Items = items,
@@ -177,13 +177,13 @@ public sealed class DefenderManager(Logger logger, HttpClient http) : IUpdateMod
 
     public async Task<ModuleResult> UpdateAsync(ModuleResult check, CancellationToken ct)
     {
-        logger.Info("Microsoft Defender tanımları güncelleniyor...");
+        logger.Info(L.T("Microsoft Defender tanımları güncelleniyor...", "Updating Microsoft Defender definitions..."));
         var ps = await PowerShellRunner.RunAsync(UpdateScript, TimeSpan.FromMinutes(15), CancellationToken.None,
             m => logger.Info("  " + m), traceName: "Update-MpSignature");
         if (!ps.Ok)
         {
             var reason = ps.DescribeFailure("Update-MpSignature");
-            logger.Error("Defender güncellemesi başarısız: " + reason);
+            logger.Error(L.T("Defender güncellemesi başarısız: ", "Defender update failed: ") + reason);
             return ModuleResult.Failed(Key, reason, check.Details);
         }
 
@@ -192,7 +192,7 @@ public sealed class DefenderManager(Logger logger, HttpClient http) : IUpdateMod
         var after = d.Str("after") ?? "?";
         if (d.Bool("ok") != true)
         {
-            var reason = "Update-MpSignature başarısız: " + (d.Str("lastError") ?? "bilinmeyen hata");
+            var reason = L.T("Update-MpSignature başarısız: ", "Update-MpSignature failed: ") + (d.Str("lastError") ?? L.T("bilinmeyen hata", "unknown error"));
             logger.Error(reason);
             return ModuleResult.Failed(Key, reason, check.Details);
         }
@@ -207,24 +207,24 @@ public sealed class DefenderManager(Logger logger, HttpClient http) : IUpdateMod
         {
             var via = d.Str("source") switch
             {
-                "MMPC" => " (Microsoft tanım sunucusu – MMPC)",
+                "MMPC" => L.T(" (Microsoft tanım sunucusu – MMPC)", " (Microsoft definition server – MMPC)"),
                 "MicrosoftUpdateServer" => " (Microsoft Update)",
                 _ => string.Empty
             };
-            logger.Success($"Defender tanımları güncellendi: {before} → {after}{via}");
+            logger.Success(L.T($"Defender tanımları güncellendi: {before} → {after}{via}", $"Defender definitions updated: {before} → {after}{via}"));
             return new ModuleResult
             {
                 Key = Key,
                 Status = ComponentStatus.Updated,
-                Summary = "Güncellendi",
-                Details = $"Virüs ve tehdit tanımları: Güncel\nTanım sürümü: {after}",
+                Summary = L.T("Güncellendi", "Updated"),
+                Details = L.T($"Virüs ve tehdit tanımları: Güncel\nTanım sürümü: {after}", $"Virus and threat definitions: Up to date\nDefinition version: {after}"),
                 Items = check.Items
             };
         }
 
-        var msg = $"Update-MpSignature tamamlandı ancak tanım sürümü değişmedi ({after}" + (target is null ? ")" : $"; Microsoft'un yayımladığı son sürüm {target})") +
-                  ". Windows'un varsayılan kaynağı ve Microsoft tanım sunucusu (MMPC) yeni paket vermedi; paket henüz dağıtılıyor olabilir. " +
-                  "Bir süre sonra yeniden deneyin veya Windows Güvenliği → Virüs ve tehdit koruması → Koruma güncelleştirmeleri'nden denetleyin.";
+        var msg = L.T($"Update-MpSignature tamamlandı ancak tanım sürümü değişmedi ({after}", $"Update-MpSignature finished but the definition version did not change ({after}") + (target is null ? ")" : L.T($"; Microsoft'un yayımladığı son sürüm {target})", $"; latest version published by Microsoft {target})")) +
+                  L.T(". Windows'un varsayılan kaynağı ve Microsoft tanım sunucusu (MMPC) yeni paket vermedi; paket henüz dağıtılıyor olabilir. ", ". Windows' default source and the Microsoft definition server (MMPC) provided no new package; the package may still be rolling out. ") +
+                  L.T("Bir süre sonra yeniden deneyin veya Windows Güvenliği → Virüs ve tehdit koruması → Koruma güncelleştirmeleri'nden denetleyin.", "Try again after a while or check in Windows Security → Virus & threat protection → Protection updates.");
         logger.Warning(msg);
         return ModuleResult.Failed(Key, msg, check.Details);
     }
@@ -258,10 +258,10 @@ public sealed class DefenderManager(Logger logger, HttpClient http) : IUpdateMod
             var sig = root?.Element("signatures");
             if (sig is null)
             {
-                ExecutionTrace.Note("Microsoft Defender sürüm servisi beklenen veriyi döndürmedi.");
+                ExecutionTrace.Note(L.T("Microsoft Defender sürüm servisi beklenen veriyi döndürmedi.", "The Microsoft Defender version service did not return the expected data."));
                 return null;
             }
-            ExecutionTrace.Note($"Microsoft Defender sürüm servisi: tanım {sig.Value.Trim()}, motor {root!.Element("engine")?.Value.Trim() ?? "?"}, platform {root.Element("platform")?.Value.Trim() ?? "?"}");
+            ExecutionTrace.Note(L.T($"Microsoft Defender sürüm servisi: tanım {sig.Value.Trim()}, motor {root!.Element("engine")?.Value.Trim() ?? "?"}, platform {root.Element("platform")?.Value.Trim() ?? "?"}", $"Microsoft Defender version service: definitions {sig.Value.Trim()}, engine {root!.Element("engine")?.Value.Trim() ?? "?"}, platform {root.Element("platform")?.Value.Trim() ?? "?"}"));
             return new LatestInfo(
                 sig.Value.Trim(),
                 root!.Element("engine")?.Value.Trim() ?? "?",
@@ -270,8 +270,8 @@ public sealed class DefenderManager(Logger logger, HttpClient http) : IUpdateMod
         }
         catch (Exception ex) when (ex is not OperationCanceledException || !ct.IsCancellationRequested)
         {
-            logger.Warning($"Microsoft Defender sürüm servisine ulaşılamadı: {ex.Message}");
-            ExecutionTrace.Note($"Microsoft Defender sürüm servisine ulaşılamadı: {ex.Message}");
+            logger.Warning(L.T($"Microsoft Defender sürüm servisine ulaşılamadı: {ex.Message}", $"Could not reach the Microsoft Defender version service: {ex.Message}"));
+            ExecutionTrace.Note(L.T($"Microsoft Defender sürüm servisine ulaşılamadı: {ex.Message}", $"Could not reach the Microsoft Defender version service: {ex.Message}"));
             return null;
         }
     }
@@ -279,7 +279,7 @@ public sealed class DefenderManager(Logger logger, HttpClient http) : IUpdateMod
     private static string CompareText(string local, string? latest)
     {
         if (latest is null || !Version.TryParse(local, out var l) || !Version.TryParse(latest, out var r))
-            return "Karşılaştırılamadı";
-        return l >= r ? "Güncel" : "Daha yeni sürüm yayımlandı";
+            return L.T("Karşılaştırılamadı", "Could not compare");
+        return l >= r ? L.T("Güncel", "Up to date") : L.T("Daha yeni sürüm yayımlandı", "Newer version published");
     }
 }

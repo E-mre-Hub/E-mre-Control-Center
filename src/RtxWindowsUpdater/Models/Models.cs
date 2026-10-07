@@ -181,7 +181,7 @@ public sealed class ModuleResult
     {
         Key = key,
         Status = ComponentStatus.CheckFailed,
-        Summary = "Kontrol edilemedi",
+        Summary = L.T("Kontrol edilemedi", "Could not be checked"),
         Reason = reason,
         Details = details
     };
@@ -190,7 +190,7 @@ public sealed class ModuleResult
     {
         Key = key,
         Status = ComponentStatus.Failed,
-        Summary = "Güncelleme başarısız",
+        Summary = L.T("Güncelleme başarısız", "Update failed"),
         Reason = reason,
         Details = details
     };

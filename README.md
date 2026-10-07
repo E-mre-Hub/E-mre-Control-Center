@@ -33,6 +33,7 @@ güncellenebileceğini, neyin temizlenebileceğini ve sistemde bir sorun olup ol
   nedeniyle birlikte.
 - **Güvenlidir.** Windows'un güvenlik sorusunu (UAC) atlatmaz; kişisel dosyalarınıza ve kritik Windows bileşenlerine dokunmaz.
 - **Kendini günceller.** Yeni sürüm çıkınca uygulamanın içinde bildirim gelir; tek tıkla güncellenir.
+- **Türkçe ve English, koyu ve açık tema.** Dil ve görünüm ilk açılışta seçilir, Genel Ayarlar'dan değiştirilebilir.
 
 ## Neler yapar?
 
@@ -58,10 +59,17 @@ güncellenebileceğini, neyin temizlenebileceğini ve sistemde bir sorun olup ol
 
 ## Kurulum
 
-1. **[Son sürüm sayfasından](https://github.com/E-mre-Hub/E-mre-Control-Center/releases/latest)**
-   `E-mre-Control-Center-Setup-vX.Y.Z.exe` dosyasını indirin. GitHub hesabı gerekmez.
-2. Dosyayı çalıştırın ve **Yükle**'ye basın. Windows izin isterse **Evet** deyin.
-3. İlk açılışta gereksinim ekranındaki kutuyu işaretleyip **Devam Et**'e basın.
+1. **[Son sürüm sayfasından](https://github.com/E-mre-Hub/E-mre-Control-Center/releases/latest)** kurulum dosyasını indirin.
+   GitHub hesabı gerekmez.
+   - Türkçe kurulum: `E-mre-Control-Center-Setup-TR-vX.Y.Z.exe`
+   - English setup: `E-mre-Control-Center-Setup-EN-vX.Y.Z.exe`
+
+   İkisi aynı programdır; yalnızca kurulum ekranının dili farklıdır. Uygulamanın dili sonradan da değiştirilebilir. Sayfadaki
+   adında dil işareti olmayan `E-mre-Control-Center-Setup-vX.Y.Z.exe` aynı dosyanın kopyasıdır; eski sürümlerin (v1.9.3 ve öncesi)
+   kendini güncelleyebilmesi için tutulur, elle indirmeniz gerekmez.
+2. Dosyayı çalıştırın ve **Yükle**'ye basın. Windows izin isterse **Evet** deyin. Başlık çubuğundaki düğmeyle koyu / açık tema
+   seçebilirsiniz.
+3. İlk açılışta dili ve görünümü seçin, ardından gereksinim ekranındaki kutuyu işaretleyip **Devam Et**'e basın.
 
 Hepsi bu. Uygulama Başlat menüsünde (ve isterseniz masaüstünde) yer alır; yeni sürümler uygulamanın içinden gelir.
 
@@ -91,7 +99,8 @@ Hepsi bu. Uygulama Başlat menüsünde (ve isterseniz masaüstünde) yer alır; 
 | **Yönetici izni** | Kontrol, güncelleme ve onarım işlemleri için gerekli. İzin vermezseniz hız testi, cihaz bilgileri ve arama yine kullanılabilir. |
 | **NVIDIA RTX ekran kartı** | İsteğe bağlı. Yoksa **Kartsız Devam Et** ile girilir; yalnızca NVIDIA sürücüsü kartı kapanır. |
 | **.NET** | Gerekmez; uygulamanın içinde gelir. |
-| **Arayüz dili** | Türkçe |
+| **Arayüz dili** | Türkçe veya English (Genel Ayarlar → Kolay Ayar'dan değiştirilebilir) |
+| **Görünüm** | Koyu (varsayılan) veya açık tema |
 
 ## Güvenlik
 
@@ -159,6 +168,13 @@ geçmişiniz ve günlükleriniz korunur. Güncelleme zorunludur: eski sürümle 
 </details>
 
 <details>
+<summary><b>Dili veya temayı nasıl değiştiririm?</b></summary>
+
+**Genel Ayarlar → Kolay Ayar**'dan. Tema anında değişir. Dil değişince uygulama onayınızla yeniden başlatılır; ayarlarınız, geçmişiniz
+ve günlükleriniz korunur. Kontrol, güncelleme veya hız testi sürerken dil değiştirilemez.
+</details>
+
+<details>
 <summary><b>Pencereyi kapattım ama uygulama kapanmadı.</b></summary>
 
 Uygulama, saatin yanındaki gizli simgeler (^) alanında çalışmaya devam eder; simgeye çift tıklayınca kaldığı yerden açılır. Tamamen
@@ -184,10 +200,10 @@ powershell -ExecutionPolicy Bypass -File .\tools\Build-Exe.ps1
 ```
 
 - **Teknik belge:** [docs/TEKNIK.md](docs/TEKNIK.md): mimari, klasör yapısı, güvenlik tasarımı, araçların sonuçlarının nasıl okunduğu,
-  bilinen sınırlamalar.
+  dil ve tema altyapısı, bilinen sınırlamalar.
 - **Sürüm geçmişi:** [CHANGELOG.md](CHANGELOG.md).
 - **Yeni sürüm:** `RtxWindowsUpdater.csproj` içindeki `<Version>` artırılır, [CHANGELOG.md](CHANGELOG.md)'ye `### vX.Y.Z` bölümü
-  yazılır ve `vX.Y.Z` etiketi gönderilir. GitHub Actions kurulum dosyasını ve ZIP'i derleyip
+  yazılır ve `vX.Y.Z` etiketi gönderilir. GitHub Actions iki kurulum dosyasını (Türkçe ve EN) ve ZIP'i derleyip
   [Releases](https://github.com/E-mre-Hub/E-mre-Control-Center/releases) sayfasına ekler.
 
 ## Lisans
@@ -204,7 +220,10 @@ Kaynak kodu herkese açık olarak incelenebilir; ayrı bir açık kaynak lisans�
 speed testing into one place. It never installs, deletes or changes anything without your approval, and every result comes from
 Windows' own tools.
 
-> **Note:** the user interface is currently available in **Turkish only**.
+The app is available in **English and Turkish**, with a **dark and a light theme**. Choose them on first start; you can change them
+later in General Settings → Quick Settings.
+
+<p align="center"><img src="docs/images/home-en.png" width="760" alt="E-mre Control Center home screen in English with the light theme"></p>
 
 **What it does**
 
@@ -216,12 +235,16 @@ Windows' own tools.
 - **Device & internet:** hardware info, live performance, disk and battery health, speed test (Cloudflare or Speedtest by Ookla),
   network and DNS diagnostics
 
-**Install:** download `E-mre-Control-Center-Setup-vX.Y.Z.exe` from the
-[latest release](https://github.com/E-mre-Hub/E-mre-Control-Center/releases/latest), run it and click **Yükle** (Install).
+**Install:** download `E-mre-Control-Center-Setup-EN-vX.Y.Z.exe` (English setup) from the
+[latest release](https://github.com/E-mre-Hub/E-mre-Control-Center/releases/latest), run it and click **Install**. On first start,
+choose English and your preferred theme.
 Windows may show a SmartScreen warning because the app is not yet code-signed: choose **More info → Run anyway**.
 
 **Requirements:** Windows 11 (build 22000+), an internet connection, administrator permission for update and repair tasks.
 An NVIDIA RTX graphics card is optional.
+
+**Updates:** new versions appear inside the app ("A new version is available"); click **Update**. Your settings, history and logs are
+kept. To uninstall: Windows Settings → Apps → Installed apps → E-mre Control Center → Uninstall.
 
 **Safety & privacy:** no account, no telemetry, no analytics, no ads, no cookies. The app does not bypass UAC, does not touch your
 personal folders and does not stop critical Windows services or processes. Settings, history and logs stay on your computer.

@@ -4,7 +4,10 @@ using System.Windows.Interop;
 
 namespace RtxWindowsUpdater.Views;
 
-/// <summary>Windows 11 penceresi: koyu çerçeve, yuvarlak köşe ve lacivert kenarlık (DWM). Ana pencere, kurulum ve kaldırma ortak kullanır.</summary>
+/// <summary>
+/// Windows 11 penceresi: temaya uygun çerçeve (koyu / açık), yuvarlak köşe ve kenarlık rengi (DWM). Ana pencere, kurulum ve kaldırma
+/// ortak kullanır; tema değişince <see cref="ThemeManager"/> açık pencereler için yeniden uygular.
+/// </summary>
 internal static class WindowFrame
 {
     [DllImport("dwmapi.dll")]
@@ -19,11 +22,13 @@ internal static class WindowFrame
         try
         {
             var hwnd = new WindowInteropHelper(window).Handle;
-            var dark = 1;
+            if (hwnd == IntPtr.Zero) return; // pencere henüz oluşmadı (SourceInitialized'da yeniden çağrılır)
+            var dark = ThemeManager.IsLight ? 0 : 1;
             DwmSetWindowAttribute(hwnd, DwmwaUseImmersiveDarkMode, ref dark, sizeof(int));
             var round = 2; // DWMWCP_ROUND
             DwmSetWindowAttribute(hwnd, DwmwaWindowCornerPreference, ref round, sizeof(int));
-            var border = 0x00422A1A; // COLORREF (0x00BBGGRR) → #1A2A42
+            // COLORREF (0x00BBGGRR): koyu #1A2A42, açık #C9D4E3
+            var border = ThemeManager.IsLight ? 0x00E3D4C9 : 0x00422A1A;
             DwmSetWindowAttribute(hwnd, DwmwaBorderColor, ref border, sizeof(int));
         }
         catch

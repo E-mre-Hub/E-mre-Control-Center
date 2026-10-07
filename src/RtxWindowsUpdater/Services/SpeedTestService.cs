@@ -67,15 +67,15 @@ public sealed record SpeedTestServer
 
     /// <summary>"Cloudflare · Amsterdam, NL (AMS)" / "Turkcell · Beyoglu, Turkey"</summary>
     public string ServerName =>
-        $"{Sponsor} · " + (ServerCity.Length > 0 ? $"{ServerCity}{(ServerCountry.Length > 0 ? ", " + ServerCountry : "")}" : "bilinmeyen konum") +
+        $"{Sponsor} · " + (ServerCity.Length > 0 ? $"{ServerCity}{(ServerCountry.Length > 0 ? ", " + ServerCountry : "")}" : L.T("bilinmeyen konum", "unknown location")) +
         (ServerCode.Length > 0 ? $" ({ServerCode})" : "");
 
     /// <summary>"Cloudflare (anycast)" / "Speedtest by Ookla · sunucu 73840"</summary>
     public string ProviderText => Provider == SpeedTestProviders.Ookla
-        ? $"{SpeedTestProviders.Ookla}{(ServerId is { } id ? $" · sunucu {id}" : "")}"
+        ? L.T($"{SpeedTestProviders.Ookla}{(ServerId is { } id ? $" · sunucu {id}" : "")}", $"{SpeedTestProviders.Ookla}{(ServerId is { } id2 ? $" · server {id2}" : "")}")
         : "Cloudflare (anycast)";
 
-    public string IspName => Isp.Length == 0 ? "Bilgi alınamadı" : Asn is { } a ? $"{Isp} (AS{a})" : Isp;
+    public string IspName => Isp.Length == 0 ? L.T("Bilgi alınamadı", "Information unavailable") : Asn is { } a ? $"{Isp} (AS{a})" : Isp;
 
     public string ClientLocation =>
         ClientCity.Length > 0 ? $"{ClientCity}{(ClientCountry.Length > 0 ? ", " + ClientCountry : "")}" : ClientCountry;
@@ -142,7 +142,7 @@ public static class SpeedTestMath
 {
     public static double Median(IReadOnlyList<double> values)
     {
-        if (values.Count == 0) throw new ArgumentException("Ölçüm yok.", nameof(values));
+        if (values.Count == 0) throw new ArgumentException(L.T("Ölçüm yok.", "No measurement."), nameof(values));
         var s = values.OrderBy(v => v).ToArray();
         return s.Length % 2 == 1 ? s[s.Length / 2] : (s[s.Length / 2 - 1] + s[s.Length / 2]) / 2;
     }
@@ -213,8 +213,8 @@ public sealed class SpeedTestService(Logger logger, SpeedTestOptions? options = 
         var streams = multipleConnections ? Math.Max(1, _options.Streams) : 1;
         var result = new SpeedTestResult { MultipleConnections = multipleConnections };
         var total = Stopwatch.StartNew();
-        logger.Info($"Hız testi başladı: {_options.BaseUri.Host}, {(multipleConnections ? $"çoklu bağlantı ({streams})" : "tek bağlantı")}, " +
-                    $"aşama süresi {_options.TransferDuration.TotalSeconds:0} sn (ilk {_options.WarmUp.TotalSeconds:0} sn hesaba katılmaz).");
+        logger.Info(L.T($"Hız testi başladı: {_options.BaseUri.Host}, {(multipleConnections ? $"çoklu bağlantı ({streams})" : "tek bağlantı")}, ", $"Speed test started: {_options.BaseUri.Host}, {(multipleConnections ? $"multiple connections ({streams})" : "single connection")}, ") +
+                    L.T($"aşama süresi {_options.TransferDuration.TotalSeconds:0} sn (ilk {_options.WarmUp.TotalSeconds:0} sn hesaba katılmaz).", $"phase duration {_options.TransferDuration.TotalSeconds:0} sec (the first {_options.WarmUp.TotalSeconds:0} sec are not counted)."));
 
         try
         {
@@ -224,8 +224,8 @@ public sealed class SpeedTestService(Logger logger, SpeedTestOptions? options = 
             var address = await ResolveAsync(ct);
             using var http = CreateClient(address);
             result.Server = await ReadServerAsync(http, address, ct);
-            logger.Info($"Hız testi sunucusu: {result.Server.ServerName} · adres {address} · ISS {result.Server.IspName} · " +
-                        $"konum {result.Server.ClientLocation} · {result.Server.HttpProtocol}");
+            logger.Info(L.T($"Hız testi sunucusu: {result.Server.ServerName} · adres {address} · ISS {result.Server.IspName} · ", $"Speed test server: {result.Server.ServerName} · address {address} · ISP {result.Server.IspName} · ") +
+                        L.T($"konum {result.Server.ClientLocation} · {result.Server.HttpProtocol}", $"location {result.Server.ClientLocation} · {result.Server.HttpProtocol}"));
             progress?.Report(new SpeedTestProgress(SpeedTestPhase.Connecting, 1, null, null, result.Server));
 
             // ---- 2) Boşta gecikme (TCP) + paket kaybı (ICMP), eş zamanlı
@@ -245,14 +245,14 @@ public sealed class SpeedTestService(Logger logger, SpeedTestOptions? options = 
                 await Task.Delay(100, ct);
             }
             result.IdleLatency = SpeedTestMath.Latency(idle, idleFailed);
-            if (result.IdleLatency is null) result.Notes.Add("Gecikme ölçülemedi: " + (latencyError ?? "yanıt yok"));
+            if (result.IdleLatency is null) result.Notes.Add(L.T("Gecikme ölçülemedi: ", "Latency could not be measured: ") + (latencyError ?? L.T("yanıt yok", "no reply")));
             (result.PacketLoss, result.PacketLossNote) = await lossTask;
             logger.Info(result.IdleLatency is { } il
-                ? $"Hız testi gecikme (TCP, boşta): medyan {il.MedianMs:0.0} ms, en düşük {il.MinMs:0.0} ms, titreşim {il.JitterMs:0.0} ms ({il.Samples} ölçüm, {il.Failed} başarısız)"
-                : "Hız testi gecikme ölçülemedi: " + (latencyError ?? "yanıt yok"));
+                ? L.T($"Hız testi gecikme (TCP, boşta): medyan {il.MedianMs:0.0} ms, en düşük {il.MinMs:0.0} ms, titreşim {il.JitterMs:0.0} ms ({il.Samples} ölçüm, {il.Failed} başarısız)", $"Speed test latency (TCP, idle): median {il.MedianMs:0.0} ms, min {il.MinMs:0.0} ms, jitter {il.JitterMs:0.0} ms ({il.Samples} measurements, {il.Failed} failed)")
+                : L.T("Hız testi gecikme ölçülemedi: ", "Speed test latency could not be measured: ") + (latencyError ?? L.T("yanıt yok", "no reply")));
             logger.Info(result.PacketLoss is { } pl && pl.LossPercent is { } lp
-                ? $"Hız testi paket kaybı (ICMP): %{lp:0.#} ({pl.Sent} gönderildi, {pl.Received} yanıt)"
-                : "Hız testi paket kaybı ölçülemedi: " + result.PacketLossNote);
+                ? L.T($"Hız testi paket kaybı (ICMP): %{lp:0.#} ({pl.Sent} gönderildi, {pl.Received} yanıt)", $"Speed test packet loss (ICMP): {lp:0.#}% ({pl.Sent} sent, {pl.Received} replies)")
+                : L.T("Hız testi paket kaybı ölçülemedi: ", "Speed test packet loss could not be measured: ") + result.PacketLossNote);
 
             // ---- 3) İndirme, 4) Yükleme (her biri sırasında yük altında gecikme)
             result.Phase = SpeedTestPhase.Download;
@@ -262,7 +262,7 @@ public sealed class SpeedTestService(Logger logger, SpeedTestOptions? options = 
             });
             (result.Download, result.DownloadLatency, var downloadError) =
                 await MeasureTransferAsync(http, address, SpeedTestPhase.Download, streams, result.Server, progress, ct);
-            if (downloadError is not null) result.Notes.Add("İndirme: " + downloadError);
+            if (downloadError is not null) result.Notes.Add(L.T("İndirme: ", "Download: ") + downloadError);
 
             result.Phase = SpeedTestPhase.Upload;
             progress?.Report(new SpeedTestProgress(SpeedTestPhase.Upload, 0, null, null, result.Server)
@@ -272,16 +272,16 @@ public sealed class SpeedTestService(Logger logger, SpeedTestOptions? options = 
             });
             (result.Upload, result.UploadLatency, var uploadError) =
                 await MeasureTransferAsync(http, address, SpeedTestPhase.Upload, streams, result.Server, progress, ct);
-            if (uploadError is not null) result.Notes.Add("Yükleme: " + uploadError);
+            if (uploadError is not null) result.Notes.Add(L.T("Yükleme: ", "Upload: ") + uploadError);
 
             result.Phase = result.Download is null && result.Upload is null ? SpeedTestPhase.Failed : SpeedTestPhase.Completed;
             if (result.Phase == SpeedTestPhase.Failed)
-                result.Error = downloadError ?? uploadError ?? "Veri aktarılamadı.";
+                result.Error = downloadError ?? uploadError ?? L.T("Veri aktarılamadı.", "No data could be transferred.");
         }
         catch (OperationCanceledException) when (ct.IsCancellationRequested)
         {
             result.Phase = SpeedTestPhase.Cancelled;
-            result.Error = "Test iptal edildi.";
+            result.Error = L.T("Test iptal edildi.", "Test cancelled.");
         }
         catch (Exception ex)
         {
@@ -296,11 +296,11 @@ public sealed class SpeedTestService(Logger logger, SpeedTestOptions? options = 
         var summary = result.Phase switch
         {
             SpeedTestPhase.Completed =>
-                $"Hız testi tamamlandı ({result.Duration.TotalSeconds:0} sn): indirme {Mbps(result.Download)}, yükleme {Mbps(result.Upload)}, " +
-                $"ping {(result.IdleLatency is { } l ? $"{l.MedianMs:0} ms" : "ölçülemedi")}, kullanılan veri {result.DataUsedBytes / 1_000_000.0:0.0} MB" +
+                L.T($"Hız testi tamamlandı ({result.Duration.TotalSeconds:0} sn): indirme {Mbps(result.Download)}, yükleme {Mbps(result.Upload)}, ", $"Speed test completed ({result.Duration.TotalSeconds:0} sec): download {Mbps(result.Download)}, upload {Mbps(result.Upload)}, ") +
+                L.T($"ping {(result.IdleLatency is { } l ? $"{l.MedianMs:0} ms" : "ölçülemedi")}, kullanılan veri {result.DataUsedBytes / 1_000_000.0:0.0} MB", $"ping {(result.IdleLatency is { } l2 ? $"{l2.MedianMs:0} ms" : "not measured")}, data used {result.DataUsedBytes / 1_000_000.0:0.0} MB") +
                 (result.Notes.Count > 0 ? " · " + string.Join(" · ", result.Notes) : ""),
-            SpeedTestPhase.Cancelled => $"Hız testi iptal edildi ({result.Duration.TotalSeconds:0} sn).",
-            _ => "Hız testi başarısız: " + result.Error
+            SpeedTestPhase.Cancelled => L.T($"Hız testi iptal edildi ({result.Duration.TotalSeconds:0} sn).", $"Speed test cancelled ({result.Duration.TotalSeconds:0} sec)."),
+            _ => L.T("Hız testi başarısız: ", "Speed test failed: ") + result.Error
         };
         if (result.Phase == SpeedTestPhase.Completed && result.IsComplete) logger.Success(summary);
         else if (result.Phase == SpeedTestPhase.Completed) logger.Warning(summary);
@@ -309,7 +309,7 @@ public sealed class SpeedTestService(Logger logger, SpeedTestOptions? options = 
         return result;
     }
 
-    private static string Mbps(TransferStats? t) => t is null ? "ölçülemedi" : $"{t.Mbps:0.00} Mbps";
+    private static string Mbps(TransferStats? t) => t is null ? L.T("ölçülemedi", "not measured") : $"{t.Mbps:0.00} Mbps";
 
     /// <summary>
     /// HTTP/1.1 istemcisi: her paralel istek kendi TCP bağlantısını kullanır ("çoklu bağlantı" gerçekten çoklu bağlantıdır).
@@ -362,10 +362,10 @@ public sealed class SpeedTestService(Logger logger, SpeedTestOptions? options = 
         }
         catch (SocketException ex)
         {
-            throw new InvalidOperationException($"Sunucu adresi çözümlenemedi ({_options.BaseUri.Host}): {ex.Message}", ex);
+            throw new InvalidOperationException(L.T($"Sunucu adresi çözümlenemedi ({_options.BaseUri.Host}): {ex.Message}", $"Could not resolve the server address ({_options.BaseUri.Host}): {ex.Message}"), ex);
         }
         if (addresses.Length == 0)
-            throw new InvalidOperationException($"Sunucu adresi çözümlenemedi ({_options.BaseUri.Host}): adres dönmedi");
+            throw new InvalidOperationException(L.T($"Sunucu adresi çözümlenemedi ({_options.BaseUri.Host}): adres dönmedi", $"Could not resolve the server address ({_options.BaseUri.Host}): no address returned"));
         // IPv4 tercih edilir (TCP gecikmesi ve ICMP aynı adrese ölçülür); yoksa IPv6.
         return addresses.FirstOrDefault(a => a.AddressFamily == AddressFamily.InterNetwork) ?? addresses[0];
     }
@@ -374,7 +374,7 @@ public sealed class SpeedTestService(Logger logger, SpeedTestOptions? options = 
     {
         using var response = await http.GetAsync("meta", ct);
         if (!response.IsSuccessStatusCode)
-            throw new HttpRequestException($"Sunucu bilgisi alınamadı: HTTP {(int)response.StatusCode} {response.ReasonPhrase}");
+            throw new HttpRequestException(L.T($"Sunucu bilgisi alınamadı: HTTP {(int)response.StatusCode} {response.ReasonPhrase}", $"Could not get server information: HTTP {(int)response.StatusCode} {response.ReasonPhrase}"));
         var json = await response.Content.ReadAsStringAsync(ct);
         using var doc = JsonDocument.Parse(json);
         var root = doc.RootElement;
@@ -397,7 +397,7 @@ public sealed class SpeedTestService(Logger logger, SpeedTestOptions? options = 
             ServerAddress = address.ToString()
         };
         if (server.ClientIp.Length == 0 && server.ServerCode.Length == 0)
-            logger.Warning("Hız testi: sunucu bilgi yanıtı boş geldi (ISS / konum gösterilemeyecek).");
+            logger.Warning(L.T("Hız testi: sunucu bilgi yanıtı boş geldi (ISS / konum gösterilemeyecek).", "Speed test: the server information response was empty (ISP / location cannot be shown)."));
         return server;
     }
 
@@ -415,7 +415,7 @@ public sealed class SpeedTestService(Logger logger, SpeedTestOptions? options = 
         }
         catch (OperationCanceledException) when (!ct.IsCancellationRequested)
         {
-            return (null, $"bağlantı {ConnectTimeout.TotalSeconds:0} sn içinde kurulamadı");
+            return (null, L.T($"bağlantı {ConnectTimeout.TotalSeconds:0} sn içinde kurulamadı", $"could not connect within {ConnectTimeout.TotalSeconds:0} sec"));
         }
         catch (SocketException ex)
         {
@@ -426,12 +426,12 @@ public sealed class SpeedTestService(Logger logger, SpeedTestOptions? options = 
     private async Task<(PacketLossStats?, string?)> MeasurePacketLossAsync(IPAddress address, CancellationToken ct)
     {
         var count = _options.PacketLossProbes;
-        if (count <= 0) return (null, "ölçülmedi");
+        if (count <= 0) return (null, L.T("ölçülmedi", "not measured"));
         var probe = await IcmpProbe.RunAsync(address, count, TimeSpan.FromMilliseconds(60), 1000, ct);
-        if (probe.Error is not null) return (null, "ICMP gönderilemedi: " + probe.Error);
+        if (probe.Error is not null) return (null, L.T("ICMP gönderilemedi: ", "Could not send ICMP: ") + probe.Error);
         if (probe.Received == 0)
             return (new PacketLossStats(count, 0, null),
-                "sunucu ICMP yankı isteklerine yanıt vermedi (ağ veya sunucu ICMP'yi engelliyor olabilir); kayıp oranı hesaplanmadı");
+                L.T("sunucu ICMP yankı isteklerine yanıt vermedi (ağ veya sunucu ICMP'yi engelliyor olabilir); kayıp oranı hesaplanmadı", "the server did not respond to ICMP echo requests (the network or server may block ICMP); no loss rate was calculated"));
         return (new PacketLossStats(count, probe.Received, SpeedTestMath.Median(probe.RttsMs)), null);
     }
 
@@ -443,7 +443,7 @@ public sealed class SpeedTestService(Logger logger, SpeedTestOptions? options = 
         HttpClient http, IPAddress address, SpeedTestPhase phase, int streams, SpeedTestServer? server,
         IProgress<SpeedTestProgress>? progress, CancellationToken ct)
     {
-        var name = phase == SpeedTestPhase.Download ? "indirme" : "yükleme";
+        var name = phase == SpeedTestPhase.Download ? L.T("indirme", "download") : L.T("yükleme", "upload");
         long bytes = 0;
         var errors = new List<string>();
         var failedStreams = 0;
@@ -537,17 +537,17 @@ public sealed class SpeedTestService(Logger logger, SpeedTestOptions? options = 
         var rate = SpeedTestMath.SteadyRate(samples, _options.WarmUp.TotalSeconds);
         LatencyStats? latency;
         lock (loaded) latency = SpeedTestMath.Latency(loaded, loadedFailed);
-        string? error = errors.Count > 0 ? $"{errors.Count} bağlantı hata verdi: {errors[0]}" : null;
+        string? error = errors.Count > 0 ? L.T($"{errors.Count} bağlantı hata verdi: {errors[0]}", $"{errors.Count} connection(s) failed: {errors[0]}") : null;
         if (rate is null)
         {
-            logger.Warning($"Hız testi {name} ölçülemedi: " + (error ?? "veri aktarılmadı"));
-            return (null, latency, error ?? "veri aktarılmadı");
+            logger.Warning(L.T($"Hız testi {name} ölçülemedi: ", $"Speed test {name} could not be measured: ") + (error ?? L.T("veri aktarılmadı", "no data transferred")));
+            return (null, latency, error ?? L.T("veri aktarılmadı", "no data transferred"));
         }
 
         var stats = new TransferStats(rate.Value.Mbps, rate.Value.Bytes, rate.Value.Seconds, total, streams, failedStreams);
-        logger.Info($"Hız testi {name}: {stats.Mbps:0.00} Mbps (ölçüm penceresi {stats.MeasuredSeconds:0.0} sn, {stats.MeasuredBytes / 1_000_000.0:0.0} MB; " +
-                    $"toplam {total / 1_000_000.0:0.0} MB, {streams} bağlantı)" +
-                    (latency is { } l ? $", yük altında gecikme {l.MedianMs:0.0} ms" : "") + (error is null ? "" : " · " + error));
+        logger.Info(L.T($"Hız testi {name}: {stats.Mbps:0.00} Mbps (ölçüm penceresi {stats.MeasuredSeconds:0.0} sn, {stats.MeasuredBytes / 1_000_000.0:0.0} MB; ", $"Speed test {name}: {stats.Mbps:0.00} Mbps (measurement window {stats.MeasuredSeconds:0.0} sec, {stats.MeasuredBytes / 1_000_000.0:0.0} MB; ") +
+                    L.T($"toplam {total / 1_000_000.0:0.0} MB, {streams} bağlantı)", $"total {total / 1_000_000.0:0.0} MB, {streams} connection(s))") +
+                    (latency is { } l ? L.T($", yük altında gecikme {l.MedianMs:0.0} ms", $", latency under load {l.MedianMs:0.0} ms") : "") + (error is null ? "" : " · " + error));
         return (stats, latency, error);
     }
 
@@ -566,7 +566,7 @@ public sealed class SpeedTestService(Logger logger, SpeedTestOptions? options = 
         var text = ex is HttpRequestException && inner != ex ? $"{ex.Message} ({inner.Message})" : ex.Message;
         return ex switch
         {
-            HttpRequestException when inner is SocketException se => $"Sunucuya bağlanılamadı: {se.Message}",
+            HttpRequestException when inner is SocketException se => L.T($"Sunucuya bağlanılamadı: {se.Message}", $"Could not connect to the server: {se.Message}"),
             _ => text
         };
     }

@@ -17,7 +17,7 @@ public sealed class SystemRequirementsChecker(Logger logger)
 
     private RequirementsResult Check()
     {
-        logger.Info("Sistem kontrol ediliyor...");
+        logger.Info(L.T("Sistem kontrol ediliyor...", "Checking the system..."));
 
         // --- Windows 11 ---
         // .NET 5+ Environment.OSVersion gerçek sürümü döndürür (uyumluluk katmanı yok).
@@ -26,10 +26,10 @@ public sealed class SystemRequirementsChecker(Logger logger)
         var ubr = ReadUbr();
         var isWin11 = OperatingSystem.IsWindows() && ver.Major == 10 && build >= Windows11MinBuild;
         var caption = ReadOsCaption() ?? "Windows";
-        var osText = $"{caption} (Derleme {build}{(ubr is null ? "" : "." + ubr)})";
+        var osText = L.T($"{caption} (Derleme {build}{(ubr is null ? "" : "." + ubr)})", $"{caption} (Build {build}{(ubr is null ? "" : "." + ubr)})");
 
-        if (isWin11) logger.Success($"Windows 11 tespit edildi: {osText}");
-        else logger.Error($"Windows 11 değil: {osText}");
+        if (isWin11) logger.Success(L.T($"Windows 11 tespit edildi: {osText}", $"Windows 11 detected: {osText}"));
+        else logger.Error(L.T($"Windows 11 değil: {osText}", $"Not Windows 11: {osText}"));
 
         // --- GPU ---
         string? gpuError = null;
@@ -41,12 +41,12 @@ public sealed class SystemRequirementsChecker(Logger logger)
         catch (Exception ex)
         {
             gpus = [];
-            gpuError = $"Ekran kartı bilgisi okunamadı (WMI): {ex.Message}";
+            gpuError = L.T($"Ekran kartı bilgisi okunamadı (WMI): {ex.Message}", $"Could not read graphics card information (WMI): {ex.Message}");
             logger.Error(gpuError);
         }
 
         foreach (var g in gpus)
-            logger.Info($"Ekran kartı bulundu: {g.Name}");
+            logger.Info(L.T($"Ekran kartı bulundu: {g.Name}", $"Graphics card found: {g.Name}"));
 
         var rtx = gpus.FirstOrDefault(g => g.IsRtx);
         var nvidiaNonRtx = gpus.FirstOrDefault(g => g.IsNvidia && !g.IsRtx);
@@ -54,25 +54,25 @@ public sealed class SystemRequirementsChecker(Logger logger)
         if (rtx is not null)
         {
             gpuText = rtx.Name;
-            logger.Success($"NVIDIA RTX GPU tespit edildi: {rtx.Name}");
+            logger.Success(L.T($"NVIDIA RTX GPU tespit edildi: {rtx.Name}", $"NVIDIA RTX GPU detected: {rtx.Name}"));
         }
         else if (nvidiaNonRtx is not null)
         {
-            gpuText = $"{nvidiaNonRtx.Name} (RTX serisi değil)";
-            logger.Warning($"NVIDIA GPU bulundu ancak RTX serisi değil: {nvidiaNonRtx.Name}. NVIDIA Driver kartı kullanım dışı olacak.");
+            gpuText = L.T($"{nvidiaNonRtx.Name} (RTX serisi değil)", $"{nvidiaNonRtx.Name} (not RTX series)");
+            logger.Warning(L.T($"NVIDIA GPU bulundu ancak RTX serisi değil: {nvidiaNonRtx.Name}. NVIDIA Driver kartı kullanım dışı olacak.", $"NVIDIA GPU found but it is not RTX series: {nvidiaNonRtx.Name}. The NVIDIA Driver card will be unavailable."));
         }
         else
         {
             gpuText = gpuError ?? (gpus.Count == 0
-                ? "Ekran kartı bulunamadı"
-                : "NVIDIA ekran kartı yok (" + string.Join(", ", gpus.Select(g => g.Name)) + ")");
-            if (gpuError is null) logger.Warning("NVIDIA RTX GPU bulunamadı. NVIDIA Driver kartı kullanım dışı olacak.");
+                ? L.T("Ekran kartı bulunamadı", "No graphics card found")
+                : L.T("NVIDIA ekran kartı yok (", "No NVIDIA graphics card (") + string.Join(", ", gpus.Select(g => g.Name)) + ")");
+            if (gpuError is null) logger.Warning(L.T("NVIDIA RTX GPU bulunamadı. NVIDIA Driver kartı kullanım dışı olacak.", "No NVIDIA RTX GPU found. The NVIDIA Driver card will be unavailable."));
         }
 
         // --- Yönetici ---
         var isAdmin = AdminPrivilegeManager.IsElevated;
-        if (isAdmin) logger.Success("Yönetici yetkisi doğrulandı.");
-        else logger.Warning("Uygulama şu anda yönetici yetkisiyle çalışmıyor.");
+        if (isAdmin) logger.Success(L.T("Yönetici yetkisi doğrulandı.", "Administrator rights verified."));
+        else logger.Warning(L.T("Uygulama şu anda yönetici yetkisiyle çalışmıyor.", "The app is currently not running with administrator rights."));
 
         return new RequirementsResult
         {

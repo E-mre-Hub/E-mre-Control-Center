@@ -72,16 +72,16 @@ internal sealed class UnelevatedLauncher : IDisposable
         {
             // 1) Normal kullanıcı belirteci (yönetici ayrıcalıkları yok) + Orta bütünlük düzeyi
             if (!SaferCreateLevel(SaferScopeIdUser, SaferLevelIdNormalUser, SaferLevelOpen, out level, IntPtr.Zero))
-                throw new Win32Exception(Marshal.GetLastWin32Error(), "SaferCreateLevel başarısız");
+                throw new Win32Exception(Marshal.GetLastWin32Error(), L.T("SaferCreateLevel başarısız", "SaferCreateLevel failed"));
             if (!SaferComputeTokenFromLevel(level, IntPtr.Zero, out token, 0, IntPtr.Zero))
-                throw new Win32Exception(Marshal.GetLastWin32Error(), "SaferComputeTokenFromLevel başarısız");
+                throw new Win32Exception(Marshal.GetLastWin32Error(), L.T("SaferComputeTokenFromLevel başarısız", "SaferComputeTokenFromLevel failed"));
             if (!ConvertStringSidToSidW("S-1-16-8192", out sid)) // Orta bütünlük düzeyi
-                throw new Win32Exception(Marshal.GetLastWin32Error(), "ConvertStringSidToSid başarısız");
+                throw new Win32Exception(Marshal.GetLastWin32Error(), L.T("ConvertStringSidToSid başarısız", "ConvertStringSidToSid failed"));
             var labelSize = Marshal.SizeOf<TokenMandatoryLabel>() + GetLengthSid(sid);
             label = Marshal.AllocHGlobal(labelSize);
             Marshal.StructureToPtr(new TokenMandatoryLabel { Sid = sid, Attributes = SeGroupIntegrity }, label, false);
             if (!SetTokenInformation(token, TokenIntegrityLevel, label, (uint)labelSize))
-                throw new Win32Exception(Marshal.GetLastWin32Error(), "SetTokenInformation (bütünlük düzeyi) başarısız");
+                throw new Win32Exception(Marshal.GetLastWin32Error(), L.T("SetTokenInformation (bütünlük düzeyi) başarısız", "SetTokenInformation (integrity level) failed"));
 
             // 2) Borular: alt sürecin uçları devralınabilir, bu sürecin uçları devralınamaz
             CreateInheritablePipe(out outRead, out outWrite, childEndIsWrite: true);
@@ -94,13 +94,13 @@ internal sealed class UnelevatedLauncher : IDisposable
             InitializeProcThreadAttributeList(IntPtr.Zero, 1, 0, ref size);
             attributes = Marshal.AllocHGlobal(size);
             if (!InitializeProcThreadAttributeList(attributes, 1, 0, ref size))
-                throw new Win32Exception(Marshal.GetLastWin32Error(), "InitializeProcThreadAttributeList başarısız");
+                throw new Win32Exception(Marshal.GetLastWin32Error(), L.T("InitializeProcThreadAttributeList başarısız", "InitializeProcThreadAttributeList failed"));
             var handles = new[] { inRead.DangerousGetHandle(), outWrite.DangerousGetHandle(), errWrite.DangerousGetHandle() };
             handleList = Marshal.AllocHGlobal(IntPtr.Size * handles.Length);
             Marshal.Copy(handles, 0, handleList, handles.Length);
             if (!UpdateProcThreadAttribute(attributes, 0, (IntPtr)ProcThreadAttributeHandleList, handleList,
                     (IntPtr)(IntPtr.Size * handles.Length), IntPtr.Zero, IntPtr.Zero))
-                throw new Win32Exception(Marshal.GetLastWin32Error(), "UpdateProcThreadAttribute başarısız");
+                throw new Win32Exception(Marshal.GetLastWin32Error(), L.T("UpdateProcThreadAttribute başarısız", "UpdateProcThreadAttribute failed"));
 
             var si = new StartupInfoEx
             {
@@ -160,11 +160,11 @@ internal sealed class UnelevatedLauncher : IDisposable
     {
         var sa = new SecurityAttributes { nLength = Marshal.SizeOf<SecurityAttributes>(), bInheritHandle = 1 };
         if (!CreatePipe(out read, out write, ref sa, 0))
-            throw new Win32Exception(Marshal.GetLastWin32Error(), "CreatePipe başarısız");
+            throw new Win32Exception(Marshal.GetLastWin32Error(), L.T("CreatePipe başarısız", "CreatePipe failed"));
         // Bu sürecin ucu alt sürece devredilmez
         var parentEnd = childEndIsWrite ? read : write;
         if (!SetHandleInformation(parentEnd, HandleFlagInherit, 0))
-            throw new Win32Exception(Marshal.GetLastWin32Error(), "SetHandleInformation başarısız");
+            throw new Win32Exception(Marshal.GetLastWin32Error(), L.T("SetHandleInformation başarısız", "SetHandleInformation failed"));
     }
 
     // ------------------------------------------------------------------ Win32

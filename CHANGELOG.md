@@ -4,6 +4,52 @@ E-mre Control Center'ın tüm sürümleri ve değişiklikleri. İndirmek için: 
 
 > Bir sürüm etiketi (`vX.Y.Z`) gönderildiğinde GitHub Actions bu dosyadaki `### vX.Y.Z` bölümünü yayın notu olarak kullanır;
 > uygulama içi güncelleme penceresi de aynı metni gösterir. Bölüm etiketten önce yazılmalıdır.
+> v2.0.0'dan itibaren bölüm iki dillidir: `**English**` satırından öncesi Türkçe, sonrası İngilizce; güncelleme penceresi seçili
+> dildekini gösterir.
+
+### v2.0.0
+
+**Yeni: Türkçe ve İngilizce (English)**
+- Uygulamanın tamamı iki dilde: tüm ekranlar, kartlar, onay pencereleri, işlem günlüğü, Detaylı Sonuç, Sistem Raporu, Destek
+  Paketi, bildirim alanı menüsü, kurulum ve kaldırma ekranları.
+- İlk açılışta "Dil ve görünüm" ekranı gelir: Türkçe veya English seçilir (Windows dili önerilir). Önceki sürümden güncelleyenler de
+  bu ekranı bir kez görür.
+- Dil sonradan Genel Ayarlar → Kolay Ayar'dan değiştirilebilir; uygulama onayınızla yeniden başlatılır, ayarlar, geçmiş ve günlükler
+  korunur. Kontrol, güncelleme veya hız testi sürerken dil değiştirilmez.
+- İki kurulum dosyası: `E-mre-Control-Center-Setup-TR-vX.Y.Z.exe` (Türkçe) ve `E-mre-Control-Center-Setup-EN-vX.Y.Z.exe` (English).
+  İkisi aynı programdır; yalnızca kurulum ekranının dili farklıdır ve seçilen dil kurulan uygulamaya iletilir. Adında dil işareti
+  olmayan `E-mre-Control-Center-Setup-vX.Y.Z.exe` aynı dosyadır; yalnızca eski sürümlerin otomatik güncellemesi için tutulur.
+
+**Yeni: Koyu ve açık tema**
+- Koyu tema (varsayılan, alışılmış görünüm) ve yeni açık tema (beyaz ve açık gri). İlk açılış ekranından veya Genel Ayarlar →
+  Kolay Ayar → Görünüm'den seçilir; değişiklik anında uygulanır.
+- Kurulum ve kaldırma pencerelerinin başlık çubuğunda tema düğmesi vardır; kurulumda seçilen tema uygulamaya iletilir.
+
+**Diğer**
+- Uygulama içi güncelleme penceresi sürüm notunu seçili dilde gösterir.
+- İngilizcede tarih, sayı ve yüzde biçimleri İngilizceye uygundur (ör. 2026-10-07, 45%).
+
+**English**
+
+**New: English and Turkish**
+- The whole app is available in two languages: every screen, card, confirmation dialog, the operation log, Detailed Result, System
+  Report, Support Package, the notification area menu and the setup and uninstall screens.
+- On first start a "Language and appearance" screen appears: choose English or Türkçe (the Windows language is suggested). Users
+  updating from an earlier version also see this screen once.
+- You can change the language later in General Settings → Quick Settings; the app restarts with your approval and your settings,
+  history and logs are kept. The language cannot be changed while a check, update or speed test is running.
+- Two setup files: `E-mre-Control-Center-Setup-EN-vX.Y.Z.exe` (English) and `E-mre-Control-Center-Setup-TR-vX.Y.Z.exe` (Turkish).
+  Both are the same program; only the language of the setup screens differs, and the chosen language is passed to the installed app.
+  `E-mre-Control-Center-Setup-vX.Y.Z.exe` (no language mark) is the same file, kept only for the automatic update of older versions.
+
+**New: Dark and light theme**
+- Dark theme (default, the familiar look) and a new light theme (white and light gray). Choose it on the first-start screen or in
+  General Settings → Quick Settings → Appearance; the change applies immediately.
+- The setup and uninstall windows have a theme button in the title bar; the theme chosen during setup is passed to the app.
+
+**Other**
+- The in-app update window shows the release notes in the selected language.
+- In English, dates, numbers and percentages use English formats (e.g. 2026-10-07, 45%).
 
 ### v1.9.3
 

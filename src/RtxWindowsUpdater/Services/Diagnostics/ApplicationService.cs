@@ -43,11 +43,11 @@ public sealed class ApplicationService(Logger logger)
             }
             catch (Exception ex) when (ex is System.Runtime.InteropServices.COMException or UnauthorizedAccessException or InvalidOperationException)
             {
-                storeError = "Microsoft Store uygulamaları okunamadı: " + ex.Message;
+                storeError = L.T("Microsoft Store uygulamaları okunamadı: ", "Could not read Microsoft Store apps: ") + ex.Message;
             }
         }
         var ordered = apps.OrderBy(a => a.Name, StringComparer.CurrentCultureIgnoreCase).ToList();
-        logger.Info($"Kurulu uygulamalar okundu: {ordered.Count} ({ordered.Count(a => a.Source == "Microsoft Store")} Store)" +
+        logger.Info(L.T($"Kurulu uygulamalar okundu: {ordered.Count} ({ordered.Count(a => a.Source == "Microsoft Store")} Store)", $"Installed apps read: {ordered.Count} ({ordered.Count(a => a.Source == "Microsoft Store")} Store)") +
                     (storeError is null ? "." : $"; {storeError}"));
         return new AppScan(ordered, storeError);
     }
@@ -58,9 +58,9 @@ public sealed class ApplicationService(Logger logger)
         var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         (RegistryHive Hive, RegistryView View, string Source)[] roots =
         [
-            (RegistryHive.LocalMachine, RegistryView.Registry64, "Masaüstü (tüm kullanıcılar)"),
-            (RegistryHive.LocalMachine, RegistryView.Registry32, "Masaüstü (32 bit)"),
-            (RegistryHive.CurrentUser, RegistryView.Registry64, "Masaüstü (bu kullanıcı)")
+            (RegistryHive.LocalMachine, RegistryView.Registry64, L.T("Masaüstü (tüm kullanıcılar)", "Desktop (all users)")),
+            (RegistryHive.LocalMachine, RegistryView.Registry32, L.T("Masaüstü (32 bit)", "Desktop (32-bit)")),
+            (RegistryHive.CurrentUser, RegistryView.Registry64, L.T("Masaüstü (bu kullanıcı)", "Desktop (this user)"))
         ];
         foreach (var (hive, view, source) in roots)
         {

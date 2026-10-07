@@ -20,27 +20,27 @@ public sealed record BatteryInfo(
 {
     /// <summary>Sağlık = tam şarj kapasitesi / tasarım kapasitesi (ikisi de bildirildiyse).</summary>
     public double? HealthPercent => FullChargeMWh is > 0 && DesignMWh is > 0 ? FullChargeMWh.Value * 100.0 / DesignMWh.Value : null;
-    public string ChargeText => ChargePercent is { } c ? $"%{c}" : "Bildirilmedi";
+    public string ChargeText => ChargePercent is { } c ? $"%{c}" : L.T("Bildirilmedi", "Not reported");
     public string StatusText => StatusCode switch
     {
-        1 => "Pilden çalışıyor (boşalıyor)",
-        2 => "Prize takılı",
-        3 => "Tam dolu",
-        4 => "Düşük",
-        5 => "Kritik",
-        6 or 7 or 8 or 9 => "Şarj oluyor",
-        11 => "Kısmen dolu",
-        null => Charging == true ? "Şarj oluyor" : Discharging == true ? "Pilden çalışıyor (boşalıyor)" : "Bildirilmedi",
-        _ => $"Bilinmiyor ({StatusCode})"
+        1 => L.T("Pilden çalışıyor (boşalıyor)", "On battery (discharging)"),
+        2 => L.T("Prize takılı", "Plugged in"),
+        3 => L.T("Tam dolu", "Fully charged"),
+        4 => L.T("Düşük", "Low"),
+        5 => L.T("Kritik", "Critical"),
+        6 or 7 or 8 or 9 => L.T("Şarj oluyor", "Charging"),
+        11 => L.T("Kısmen dolu", "Partially charged"),
+        null => Charging == true ? L.T("Şarj oluyor", "Charging") : Discharging == true ? L.T("Pilden çalışıyor (boşalıyor)", "On battery (discharging)") : L.T("Bildirilmedi", "Not reported"),
+        _ => L.T($"Bilinmiyor ({StatusCode})", $"Unknown ({StatusCode})")
     };
-    public string RemainingText => RemainingMWh is > 0 ? Formats.Number(RemainingMWh.Value / 1000.0) + " Wh" : "Bildirilmedi";
-    public string FullText => FullChargeMWh is > 0 ? Formats.Number(FullChargeMWh.Value / 1000.0) + " Wh" : "Bildirilmedi";
-    public string DesignText => DesignMWh is > 0 ? Formats.Number(DesignMWh.Value / 1000.0) + " Wh" : "Bildirilmedi";
+    public string RemainingText => RemainingMWh is > 0 ? Formats.Number(RemainingMWh.Value / 1000.0) + " Wh" : L.T("Bildirilmedi", "Not reported");
+    public string FullText => FullChargeMWh is > 0 ? Formats.Number(FullChargeMWh.Value / 1000.0) + " Wh" : L.T("Bildirilmedi", "Not reported");
+    public string DesignText => DesignMWh is > 0 ? Formats.Number(DesignMWh.Value / 1000.0) + " Wh" : L.T("Bildirilmedi", "Not reported");
     public string HealthText => HealthPercent is { } h
-        ? $"%{Formats.Number(Math.Min(h, 100), "0")} (tasarım kapasitesinin; aşınma %{Formats.Number(Math.Max(0, 100 - h), "0")})" + (h > 100 ? " – sürücü tasarımdan yüksek kapasite bildiriyor" : "")
-        : "Hesaplanamadı (kapasite bildirilmedi)";
-    public string CycleText => CycleCount is > 0 ? CycleCount.Value.ToString("N0") : "Bildirilmedi";
-    public string RateText => RateMW is { } r && r != 0 ? Formats.Number(Math.Abs(r) / 1000.0) + " W" + (r > 0 ? " (şarj)" : " (deşarj)") : "—";
+        ? L.T($"%{Formats.Number(Math.Min(h, 100), "0")} (tasarım kapasitesinin; aşınma %{Formats.Number(Math.Max(0, 100 - h), "0")})", $"{Formats.Number(Math.Min(h, 100), "0")}% (of design capacity; wear {Formats.Number(Math.Max(0, 100 - h), "0")}%)") + (h > 100 ? L.T(" – sürücü tasarımdan yüksek kapasite bildiriyor", " – the driver reports a capacity higher than the design capacity") : "")
+        : L.T("Hesaplanamadı (kapasite bildirilmedi)", "Could not be calculated (capacity not reported)");
+    public string CycleText => CycleCount is > 0 ? CycleCount.Value.ToString("N0") : L.T("Bildirilmedi", "Not reported");
+    public string RateText => RateMW is { } r && r != 0 ? Formats.Number(Math.Abs(r) / 1000.0) + " W" + (r > 0 ? L.T(" (şarj)", " (charging)") : L.T(" (deşarj)", " (discharging)")) : "—";
     public CheckState State => HealthPercent is { } h ? h < 60 ? CheckState.Warning : CheckState.Healthy : CheckState.Unknown;
 }
 
@@ -53,7 +53,7 @@ public sealed record BatteryReport(bool HasBattery, IReadOnlyList<BatteryInfo> B
 /// </summary>
 public sealed class BatteryService(Logger logger)
 {
-    public const string NoBatteryText = "Bu sistemde batarya bulunamadı.";
+    public static string NoBatteryText => L.T("Bu sistemde batarya bulunamadı.", "No battery was found on this system.");
 
     public Task<BatteryReport> ReadAsync(CancellationToken ct = default) => Task.Run(Read, ct);
 
@@ -63,20 +63,20 @@ public sealed class BatteryService(Logger logger)
         var systemSaysNoBattery = false;
         if (GetSystemPowerStatus(out var ps))
         {
-            ac = ps.ACLineStatus switch { 0 => "Pilden çalışıyor", 1 => "Prize takılı (AC)", _ => "Bilinmiyor" };
+            ac = ps.ACLineStatus switch { 0 => L.T("Pilden çalışıyor", "On battery"), 1 => L.T("Prize takılı (AC)", "Plugged in (AC)"), _ => L.T("Bilinmiyor", "Unknown") };
             systemSaysNoBattery = (ps.BatteryFlag & 128) != 0;
             if (ps.BatteryLifeTime is > 0 and not uint.MaxValue)
-                remaining = $"{ps.BatteryLifeTime / 3600} sa {ps.BatteryLifeTime % 3600 / 60} dk (Windows tahmini)";
+                remaining = L.T($"{ps.BatteryLifeTime / 3600} sa {ps.BatteryLifeTime % 3600 / 60} dk (Windows tahmini)", $"{ps.BatteryLifeTime / 3600} h {ps.BatteryLifeTime % 3600 / 60} min (Windows estimate)");
         }
 
         var win = Wmi.Query(@"\\.\root\cimv2", "SELECT Name, DeviceID, EstimatedChargeRemaining, BatteryStatus, Chemistry FROM Win32_Battery", Wmi.DefaultTimeout);
         if (systemSaysNoBattery && win.Rows.Count == 0)
         {
-            logger.Info("Batarya: " + NoBatteryText);
+            logger.Info(L.T("Batarya: ", "Battery: ") + NoBatteryText);
             return new BatteryReport(false, [], ac, null, null, null);
         }
         if (!win.Ok && win.Rows.Count == 0)
-            return new BatteryReport(false, [], ac, null, null, "Batarya bilgisi okunamadı: " + win.Error);
+            return new BatteryReport(false, [], ac, null, null, L.T("Batarya bilgisi okunamadı: ", "Could not read battery information: ") + win.Error);
         if (win.Rows.Count == 0)
             return new BatteryReport(false, [], ac, null, null, null);
 
@@ -86,8 +86,8 @@ public sealed class BatteryService(Logger logger)
         var status = Wmi.Query(@"\\.\root\wmi", "SELECT InstanceName, RemainingCapacity, ChargeRate, DischargeRate, Charging, Discharging FROM BatteryStatus", Wmi.DefaultTimeout);
         var cycles = Wmi.Query(@"\\.\root\wmi", "SELECT InstanceName, CycleCount FROM BatteryCycleCount", Wmi.DefaultTimeout);
         var notes = new List<string>();
-        if (!stat.Ok) notes.Add("Tasarım kapasitesi okunamadı: " + stat.Error);
-        if (!full.Ok) notes.Add("Tam şarj kapasitesi okunamadı: " + full.Error);
+        if (!stat.Ok) notes.Add(L.T("Tasarım kapasitesi okunamadı: ", "Could not read the design capacity: ") + stat.Error);
+        if (!full.Ok) notes.Add(L.T("Tam şarj kapasitesi okunamadı: ", "Could not read the full charge capacity: ") + full.Error);
 
         var list = new List<BatteryInfo>();
         for (var i = 0; i < win.Rows.Count; i++)
@@ -101,7 +101,7 @@ public sealed class BatteryService(Logger logger)
                 : st.Long("ChargeRate") is > 0 and var cr ? cr
                 : st.Long("DischargeRate") is > 0 and var dr ? -dr : null;
             list.Add(new BatteryInfo(
-                s?.Str("DeviceName") ?? w.Str("Name") ?? w.Str("DeviceID") ?? "Batarya",
+                s?.Str("DeviceName") ?? w.Str("Name") ?? w.Str("DeviceID") ?? L.T("Batarya", "Battery"),
                 s?.Str("ManufactureName"),
                 ChemistryText(w.Long("Chemistry")),
                 (int?)w.Long("EstimatedChargeRemaining") is { } pct and >= 0 and <= 100 ? pct : null,
@@ -114,7 +114,7 @@ public sealed class BatteryService(Logger logger)
                 st?.Bool("Charging"),
                 st?.Bool("Discharging")));
         }
-        logger.Info("Batarya: " + string.Join(" | ", list.Select(b => $"{b.Name}: {b.ChargeText}, {b.StatusText}, tam {b.FullText}, tasarım {b.DesignText}, sağlık {b.HealthText}, döngü {b.CycleText}")));
+        logger.Info(L.T("Batarya: ", "Battery: ") + string.Join(" | ", list.Select(b => L.T($"{b.Name}: {b.ChargeText}, {b.StatusText}, tam {b.FullText}, tasarım {b.DesignText}, sağlık {b.HealthText}, döngü {b.CycleText}", $"{b.Name}: {b.ChargeText}, {b.StatusText}, full {b.FullText}, design {b.DesignText}, health {b.HealthText}, cycles {b.CycleText}"))));
         return new BatteryReport(true, list, ac, remaining, notes.Count == 0 ? null : string.Join(" ", notes), null);
 
         static System.Management.ManagementBaseObject? Pick(WmiResult r, int index, int expected) =>
@@ -123,7 +123,7 @@ public sealed class BatteryService(Logger logger)
 
     private static string? ChemistryText(long? c) => c switch
     {
-        3 => "Kurşun asit", 4 => "Nikel kadmiyum", 5 => "Nikel metal hidrit", 6 => "Lityum iyon", 7 => "Çinko hava", 8 => "Lityum polimer",
+        3 => L.T("Kurşun asit", "Lead acid"), 4 => L.T("Nikel kadmiyum", "Nickel cadmium"), 5 => L.T("Nikel metal hidrit", "Nickel metal hydride"), 6 => L.T("Lityum iyon", "Lithium-ion"), 7 => L.T("Çinko hava", "Zinc air"), 8 => L.T("Lityum polimer", "Lithium polymer"),
         _ => null
     };
 

@@ -55,11 +55,11 @@ internal static class WlanApi
                     WlanFreeMemory(data);
                 }
             }
-            return lastError != 0 ? Fail(lastError) : new WifiInfo(null, null, null, null, null, "Bağlı Wi-Fi arabirimi bulunamadı.");
+            return lastError != 0 ? Fail(lastError) : new WifiInfo(null, null, null, null, null, L.T("Bağlı Wi-Fi arabirimi bulunamadı.", "No connected Wi-Fi interface was found."));
         }
         catch (Exception ex) when (ex is DllNotFoundException or EntryPointNotFoundException)
         {
-            return new WifiInfo(null, null, null, null, null, "Bu sistemde WLAN hizmeti yok (wlanapi.dll yüklenemedi).");
+            return new WifiInfo(null, null, null, null, null, L.T("Bu sistemde WLAN hizmeti yok (wlanapi.dll yüklenemedi).", "There is no WLAN service on this system (wlanapi.dll could not be loaded)."));
         }
         finally
         {
@@ -70,11 +70,11 @@ internal static class WlanApi
 
     private static WifiInfo Fail(uint code) => new(null, null, null, null, null, code switch
     {
-        5 => "Wi-Fi ayrıntıları okunamadı: erişim reddedildi. Windows 11, ağ adını yalnızca Ayarlar → Gizlilik ve güvenlik → Konum → " +
-             "\"Masaüstü uygulamalarının konumunuza erişmesine izin ver\" açıkken verir.",
-        1062 => "WLAN Otomatik Yapılandırma hizmeti (WlanSvc) çalışmıyor.",
-        5023 => "Wi-Fi arabirimi bağlı değil.",
-        _ => $"Wi-Fi ayrıntıları okunamadı (Windows hata kodu {code})."
+        5 => L.T("Wi-Fi ayrıntıları okunamadı: erişim reddedildi. Windows 11, ağ adını yalnızca Ayarlar → Gizlilik ve güvenlik → Konum → ", "Could not read Wi-Fi details: access denied. Windows 11 provides the network name only when Settings → Privacy & security → Location → ") +
+             L.T("\"Masaüstü uygulamalarının konumunuza erişmesine izin ver\" açıkken verir.", "\"Let desktop apps access your location\" is on."),
+        1062 => L.T("WLAN Otomatik Yapılandırma hizmeti (WlanSvc) çalışmıyor.", "The WLAN AutoConfig service (WlanSvc) is not running."),
+        5023 => L.T("Wi-Fi arabirimi bağlı değil.", "The Wi-Fi interface is not connected."),
+        _ => L.T($"Wi-Fi ayrıntıları okunamadı (Windows hata kodu {code}).", $"Could not read Wi-Fi details (Windows error code {code}).")
     });
 
     private static string? PhyText(int phy) => phy switch

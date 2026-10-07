@@ -19,14 +19,14 @@ public static class CheckStates
 {
     public static string Text(CheckState state) => state switch
     {
-        CheckState.Healthy => "Sağlıklı",
-        CheckState.Warning => "Uyarı",
-        CheckState.Error => "Hata",
-        CheckState.Unknown => "Kontrol edilemedi",
-        CheckState.Skipped => "Atlandı",
-        CheckState.Checking => "Kontrol ediliyor…",
-        CheckState.Info => "Bilgi",
-        _ => "Henüz kontrol edilmedi"
+        CheckState.Healthy => L.T("Sağlıklı", "Healthy"),
+        CheckState.Warning => L.T("Uyarı", "Warning"),
+        CheckState.Error => L.T("Hata", "Error"),
+        CheckState.Unknown => L.T("Kontrol edilemedi", "Could not be checked"),
+        CheckState.Skipped => L.T("Atlandı", "Skipped"),
+        CheckState.Checking => L.T("Kontrol ediliyor…", "Checking…"),
+        CheckState.Info => L.T("Bilgi", "Info"),
+        _ => L.T("Henüz kontrol edilmedi", "Not checked yet")
     };
 
     /// <summary>Birden çok kontrolün özeti: hata > uyarı > kontrol edilemedi > sağlıklı (hiç sonuç yoksa NotChecked).</summary>
@@ -46,14 +46,15 @@ public static class CheckStates
 public static class Formats
 {
     private static readonly System.Globalization.CultureInfo Tr = System.Globalization.CultureInfo.GetCultureInfo("tr-TR");
+    private static System.Globalization.CultureInfo Culture => L.En ? System.Globalization.CultureInfo.InvariantCulture : Tr;
 
     public static string Bytes(double bytes) => TemporaryFilesManager.FormatSize((long)Math.Max(0, bytes));
 
-    public static string Rate(double bytesPerSecond) => Bytes(bytesPerSecond) + "/sn";
+    public static string Rate(double bytesPerSecond) => Bytes(bytesPerSecond) + L.T("/sn", "/s");
 
-    public static string Date(DateTime? value) => value is { } d ? d.ToString("dd.MM.yyyy HH:mm", Tr) : "—";
+    public static string Date(DateTime? value) => value is { } d ? d.ToString(L.En ? "yyyy-MM-dd HH:mm" : "dd.MM.yyyy HH:mm", Culture) : "—";
 
-    public static string Number(double value, string format = "0.#") => value.ToString(format, Tr);
+    public static string Number(double value, string format = "0.#") => value.ToString(format, Culture);
 }
 
 /// <summary>

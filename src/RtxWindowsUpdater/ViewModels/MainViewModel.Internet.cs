@@ -23,14 +23,14 @@ public sealed partial class MainViewModel
     private bool _hasInternet;
     private bool _internetChecked;
     private bool _internetChecking;
-    private string _internetDetail = "Kontrol ediliyor...";
+    private string _internetDetail = L.T("Kontrol ediliyor...", "Checking...");
     private DateTime? _internetCheckedAt;
     private DispatcherTimer? _offlineRetryTimer;
     private DispatcherTimer? _networkDebounce;
     private bool _internetMonitoring;
     private bool _pendingAcceptedEntry;
 
-    public RequirementRowViewModel InternetRow { get; } = new("İnternet bağlantısı", "");
+    public RequirementRowViewModel InternetRow { get; } = new(L.T("İnternet bağlantısı", "Internet connection"), "");
 
     public bool HasInternet
     {
@@ -74,9 +74,9 @@ public sealed partial class MainViewModel
         }
     }
 
-    public string RetryInternetText => IsInternetChecking ? "Denetleniyor…" : "Tekrar dene";
+    public string RetryInternetText => IsInternetChecking ? L.T("Denetleniyor…", "Checking…") : L.T("Tekrar dene", "Try again");
 
-    public string OfflineDetailText => _internetCheckedAt is { } at ? $"{InternetDetail} · son deneme {at:HH:mm:ss}" : InternetDetail;
+    public string OfflineDetailText => _internetCheckedAt is { } at ? L.T($"{InternetDetail} · son deneme {at:HH:mm:ss}", $"{InternetDetail} · last attempt {at:HH:mm:ss}") : InternetDetail;
 
     /// <summary>Gereksinim sayfası: internet yok uyarısı (girilemez).</summary>
     public bool ShowNoInternet => RequirementsChecked && IsSupported && InternetChecked && !HasInternet;
@@ -105,7 +105,7 @@ public sealed partial class MainViewModel
     {
         if (IsInternetChecking) return;
         IsInternetChecking = true;
-        if (!InternetChecked) InternetRow.Detail = "Kontrol ediliyor...";
+        if (!InternetChecked) InternetRow.Detail = L.T("Kontrol ediliyor...", "Checking...");
         InternetCheckResult result;
         try
         {
@@ -113,7 +113,7 @@ public sealed partial class MainViewModel
         }
         catch (Exception ex)
         {
-            result = new InternetCheckResult(InternetState.Unreachable, "İnternet bağlantısı denetlenemedi: " + ex.Message);
+            result = new InternetCheckResult(InternetState.Unreachable, L.T("İnternet bağlantısı denetlenemedi: ", "Could not check the internet connection: ") + ex.Message);
         }
         finally
         {
@@ -131,8 +131,8 @@ public sealed partial class MainViewModel
 
         if (changed || userRequested)
         {
-            if (result.IsConnected) _logger.Success($"İnternet bağlantısı doğrulandı ({result.Detail}).");
-            else _logger.Error($"İnternet bağlantısı yok: {result.Detail} Uygulama bağlantı gelene kadar kullanılamaz.");
+            if (result.IsConnected) _logger.Success(L.T($"İnternet bağlantısı doğrulandı ({result.Detail}).", $"Internet connection verified ({result.Detail})."));
+            else _logger.Error(L.T($"İnternet bağlantısı yok: {result.Detail} Uygulama bağlantı gelene kadar kullanılamaz.", $"No internet connection: {result.Detail} The app cannot be used until the connection is back."));
         }
         UpdateOfflineRetryTimer();
 
@@ -173,7 +173,7 @@ public sealed partial class MainViewModel
         }
         catch (Exception ex)
         {
-            _logger.Warning("Windows bağlantı durumu olayına abone olunamadı: " + ex.Message);
+            _logger.Warning(L.T("Windows bağlantı durumu olayına abone olunamadı: ", "Could not subscribe to the Windows connection status event: ") + ex.Message);
         }
         UpdateOfflineRetryTimer();
     }

@@ -36,7 +36,7 @@ public sealed class NotificationService(Logger logger)
         }
         catch (Exception ex)
         {
-            logger.Warning($"Windows bildirim kaydı yapılamadı; bildirimler gösterilmeyecek: {ex.Message}");
+            logger.Warning(L.T($"Windows bildirim kaydı yapılamadı; bildirimler gösterilmeyecek: {ex.Message}", $"Could not register Windows notifications; notifications will not be shown: {ex.Message}"));
         }
     }
 
@@ -54,7 +54,7 @@ public sealed class NotificationService(Logger logger)
             try { setting = notifier.Setting; } catch { /* ayar okunamadı */ }
             if (setting is not null and not NotificationSetting.Enabled)
             {
-                logger.Warning($"Windows bildirimi gösterilmedi: Windows ayarlarında bu uygulamanın bildirimleri kapalı ({setting}).");
+                logger.Warning(L.T($"Windows bildirimi gösterilmedi: Windows ayarlarında bu uygulamanın bildirimleri kapalı ({setting}).", $"Windows notification not shown: notifications for this app are turned off in Windows settings ({setting})."));
                 return false;
             }
 
@@ -65,12 +65,12 @@ public sealed class NotificationService(Logger logger)
                 $"<text>{SecurityElement.Escape(body)}</text>" +
                 "</binding></visual></toast>");
             notifier.Show(new ToastNotification(xml) { Group = "rtx", Tag = DateTime.Now.Ticks.ToString() });
-            logger.Info($"Windows bildirimi gönderildi: {title}");
+            logger.Info(L.T($"Windows bildirimi gönderildi: {title}", $"Windows notification sent: {title}"));
             return true;
         }
         catch (Exception ex)
         {
-            logger.Warning($"Windows bildirimi gösterilemedi: {ex.Message}");
+            logger.Warning(L.T($"Windows bildirimi gösterilemedi: {ex.Message}", $"Could not show the Windows notification: {ex.Message}"));
             return false;
         }
     });

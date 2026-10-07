@@ -9,23 +9,53 @@ using RtxWindowsUpdater.ViewModels;
 
 namespace RtxWindowsUpdater.Views;
 
+/// <summary>
+/// Durum renkleri (dönüştürücüler). Fırçalar paylaşılır ve DONDURULMAZ: tema değişince (<see cref="ThemeManager.Changed"/>) renkleri
+/// yerinde güncellenir, böylece bu fırçaları kullanan tüm durum yazıları / noktaları anında yeni temaya geçer (bağlamalar yeniden
+/// hesaplanmadan). Yalnızca arayüz iş parçacığında kullanılır. Açık temada renkler beyaz zeminde okunacak kadar koyudur.
+/// </summary>
 internal static class Palette
 {
-    public static readonly SolidColorBrush Green = Make(0x2B, 0xD6, 0x7B);
-    public static readonly SolidColorBrush Orange = Make(0xFF, 0xA6, 0x3D);
-    public static readonly SolidColorBrush Red = Make(0xFF, 0x4D, 0x61);
-    public static readonly SolidColorBrush Gray = Make(0x5D, 0x6A, 0x84);
-    public static readonly SolidColorBrush Blue = Make(0x3D, 0xA5, 0xFF);
-    public static readonly SolidColorBrush Text = Make(0xE7, 0xEE, 0xF9);
-    public static readonly SolidColorBrush Text2 = Make(0x93, 0xA4, 0xC3);
-    public static readonly SolidColorBrush Output = Make(0x6F, 0x80, 0xA0);
+    public static readonly SolidColorBrush Green = new();
+    public static readonly SolidColorBrush Orange = new();
+    public static readonly SolidColorBrush Red = new();
+    public static readonly SolidColorBrush Gray = new();
+    public static readonly SolidColorBrush Blue = new();
+    public static readonly SolidColorBrush Text = new();
+    public static readonly SolidColorBrush Text2 = new();
+    public static readonly SolidColorBrush Output = new();
 
-    private static SolidColorBrush Make(byte r, byte g, byte b)
+    private static readonly Dictionary<SolidColorBrush, SolidColorBrush> Soft = new();
+
+    static Palette()
     {
-        var brush = new SolidColorBrush(Color.FromRgb(r, g, b));
-        brush.Freeze();
-        return brush;
+        Apply();
+        ThemeManager.Changed += Apply;
     }
+
+    private static void Apply()
+    {
+        var light = ThemeManager.IsLight;
+        Green.Color = light ? Rgb(0x12, 0xA1, 0x50) : Rgb(0x2B, 0xD6, 0x7B);
+        Orange.Color = light ? Rgb(0xC8, 0x6A, 0x00) : Rgb(0xFF, 0xA6, 0x3D);
+        Red.Color = light ? Rgb(0xD3, 0x2F, 0x3F) : Rgb(0xFF, 0x4D, 0x61);
+        Gray.Color = light ? Rgb(0x85, 0x92, 0xA8) : Rgb(0x5D, 0x6A, 0x84);
+        Blue.Color = light ? Rgb(0x1C, 0x7F, 0xD9) : Rgb(0x3D, 0xA5, 0xFF);
+        Text.Color = light ? Rgb(0x0D, 0x16, 0x26) : Rgb(0xE7, 0xEE, 0xF9);
+        Text2.Color = light ? Rgb(0x3A, 0x48, 0x60) : Rgb(0x93, 0xA4, 0xC3);
+        Output.Color = light ? Rgb(0x5F, 0x6E, 0x87) : Rgb(0x6F, 0x80, 0xA0);
+        foreach (var (solid, soft) in Soft) soft.Color = solid.Color;
+    }
+
+    /// <summary>Durum rozetlerinin arka planı: aynı renk, 0.13 opaklık (renk temayla birlikte değişir).</summary>
+    public static SolidColorBrush SoftOf(SolidColorBrush solid)
+    {
+        if (!Soft.TryGetValue(solid, out var soft))
+            Soft[solid] = soft = new SolidColorBrush(solid.Color) { Opacity = 0.13 };
+        return soft;
+    }
+
+    private static Color Rgb(byte r, byte g, byte b) => Color.FromRgb(r, g, b);
 }
 
 /// <summary>ComponentStatus → renk (Yeşil = güncel, Turuncu = güncelleme mevcut, Kırmızı = hata, Gri = kontrol edilmedi / kullanım dışı).</summary>
@@ -60,9 +90,7 @@ public sealed class StatusToSoftBrushConverter : IValueConverter
     public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
     {
         var solid = (SolidColorBrush)Inner.Convert(value, targetType, parameter, culture);
-        var b = new SolidColorBrush(solid.Color) { Opacity = 0.13 };
-        b.Freeze();
-        return b;
+        return Palette.SoftOf(solid);
     }
 
     public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture) => Binding.DoNothing;

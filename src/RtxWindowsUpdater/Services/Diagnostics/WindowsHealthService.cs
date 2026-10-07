@@ -6,7 +6,7 @@ namespace RtxWindowsUpdater.Services.Diagnostics;
 /// <summary>Windows sürüm bilgisi (Win32_OperatingSystem + kayıt defteri CurrentVersion).</summary>
 public sealed record WindowsVersionInfo(string Caption, string? DisplayVersion, string Build, int? BuildNumber, string? Architecture, DateTime? InstallDate)
 {
-    public string Text => $"{Caption}{(DisplayVersion is null ? "" : " " + DisplayVersion)} · Derleme {Build}";
+    public string Text => L.T($"{Caption}{(DisplayVersion is null ? "" : " " + DisplayVersion)} · Derleme {Build}", $"{Caption}{(DisplayVersion is null ? "" : " " + DisplayVersion)} · Build {Build}");
 }
 
 /// <summary>
@@ -22,29 +22,29 @@ public sealed class WindowsHealthService(Logger logger)
     /// <summary>Çalışıyor olması gereken çekirdek hizmetler (durmuşsa Windows'un temel işlevleri etkilenir).</summary>
     internal static readonly (string Name, string Title)[] MustRun =
     [
-        ("RpcSs", "Uzak Yordam Çağrısı (RPC)"),
-        ("EventLog", "Windows Olay Günlüğü"),
-        ("Winmgmt", "Windows Yönetim Araçları (WMI)"),
-        ("Schedule", "Görev Zamanlayıcı"),
-        ("CryptSvc", "Şifreleme Hizmetleri"),
-        ("Dnscache", "DNS İstemcisi"),
-        ("Dhcp", "DHCP İstemcisi"),
-        ("nsi", "Ağ Deposu Arabirimi"),
-        ("BFE", "Temel Filtreleme Altyapısı"),
-        ("mpssvc", "Windows Güvenlik Duvarı"),
-        ("ProfSvc", "Kullanıcı Profili Hizmeti"),
-        ("Power", "Güç"),
-        ("SamSs", "Güvenlik Hesapları Yöneticisi"),
-        ("wscsvc", "Güvenlik Merkezi")
+        ("RpcSs", L.T("Uzak Yordam Çağrısı (RPC)", "Remote Procedure Call (RPC)")),
+        ("EventLog", L.T("Windows Olay Günlüğü", "Windows Event Log")),
+        ("Winmgmt", L.T("Windows Yönetim Araçları (WMI)", "Windows Management Instrumentation (WMI)")),
+        ("Schedule", L.T("Görev Zamanlayıcı", "Task Scheduler")),
+        ("CryptSvc", L.T("Şifreleme Hizmetleri", "Cryptographic Services")),
+        ("Dnscache", L.T("DNS İstemcisi", "DNS Client")),
+        ("Dhcp", L.T("DHCP İstemcisi", "DHCP Client")),
+        ("nsi", L.T("Ağ Deposu Arabirimi", "Network Store Interface Service")),
+        ("BFE", L.T("Temel Filtreleme Altyapısı", "Base Filtering Engine")),
+        ("mpssvc", L.T("Windows Güvenlik Duvarı", "Windows Defender Firewall")),
+        ("ProfSvc", L.T("Kullanıcı Profili Hizmeti", "User Profile Service")),
+        ("Power", L.T("Güç", "Power")),
+        ("SamSs", L.T("Güvenlik Hesapları Yöneticisi", "Security Accounts Manager")),
+        ("wscsvc", L.T("Güvenlik Merkezi", "Security Center"))
     ];
 
     /// <summary>İsteğe bağlı başlayan ama devre dışı bırakılırsa güncelleme / kurulumu bozan hizmetler.</summary>
     internal static readonly (string Name, string Title)[] MustNotBeDisabled =
     [
         ("wuauserv", "Windows Update"),
-        ("BITS", "Arka Plan Akıllı Aktarım Hizmeti"),
-        ("UsoSvc", "Güncelleme Düzenleyici Hizmeti"),
-        ("TrustedInstaller", "Windows Modül Yükleyici"),
+        ("BITS", L.T("Arka Plan Akıllı Aktarım Hizmeti", "Background Intelligent Transfer Service")),
+        ("UsoSvc", L.T("Güncelleme Düzenleyici Hizmeti", "Update Orchestrator Service")),
+        ("TrustedInstaller", L.T("Windows Modül Yükleyici", "Windows Modules Installer")),
         ("msiserver", "Windows Installer")
     ];
 
@@ -57,9 +57,9 @@ public sealed class WindowsHealthService(Logger logger)
         var rows = new List<CheckResult>
         {
             version is null
-                ? new CheckResult("Windows sürümü", CheckState.Unknown, "Windows sürüm bilgisi okunamadı.")
-                : new CheckResult("Windows sürümü", version.BuildNumber >= SystemRequirementsChecker.Windows11MinBuild ? CheckState.Healthy : CheckState.Warning,
-                    version.Text, version.Architecture is null ? null : "Mimari: " + version.Architecture)
+                ? new CheckResult(L.T("Windows sürümü", "Windows version"), CheckState.Unknown, L.T("Windows sürüm bilgisi okunamadı.", "Could not read Windows version information."))
+                : new CheckResult(L.T("Windows sürümü", "Windows version"), version.BuildNumber >= SystemRequirementsChecker.Windows11MinBuild ? CheckState.Healthy : CheckState.Warning,
+                    version.Text, version.Architecture is null ? null : L.T("Mimari: ", "Architecture: ") + version.Architecture)
         };
         ct.ThrowIfCancellationRequested();
         rows.Add(await Task.Run(CheckActivation, ct));
@@ -67,9 +67,9 @@ public sealed class WindowsHealthService(Logger logger)
         ct.ThrowIfCancellationRequested();
         rows.AddRange(await Task.Run(CheckServices, ct));
         var up = TimeSpan.FromMilliseconds(Environment.TickCount64);
-        rows.Add(new CheckResult("Çalışma süresi", CheckState.Info,
-            $"{(int)up.TotalDays} gün {up.Hours} sa {up.Minutes} dk (son başlatma {Formats.Date(DateTime.Now - up)})"));
-        logger.Info("Windows sağlık satırları: " + string.Join(" | ", rows.Select(r => $"{r.Title}: {CheckStates.Text(r.State)}")));
+        rows.Add(new CheckResult(L.T("Çalışma süresi", "Uptime"), CheckState.Info,
+            L.T($"{(int)up.TotalDays} gün {up.Hours} sa {up.Minutes} dk (son başlatma {Formats.Date(DateTime.Now - up)})", $"{(int)up.TotalDays} d {up.Hours} h {up.Minutes} min (last start {Formats.Date(DateTime.Now - up)})")));
+        logger.Info(L.T("Windows sağlık satırları: ", "Windows health rows: ") + string.Join(" | ", rows.Select(r => $"{r.Title}: {CheckStates.Text(r.State)}")));
         return rows;
     }
 
@@ -103,39 +103,39 @@ public sealed class WindowsHealthService(Logger logger)
 
     private static CheckResult CheckActivation()
     {
-        const string title = "Windows etkinleştirme";
+        var title = L.T("Windows etkinleştirme", "Windows activation");
         // Yalnızca durum okunur; ürün anahtarı okunmaz ve gösterilmez (PartialProductKey yalnızca filtrede).
         var r = Wmi.Query(@"\\.\root\cimv2",
             $"SELECT Name, LicenseStatus FROM SoftwareLicensingProduct WHERE ApplicationID='{WindowsAppId}' AND PartialProductKey IS NOT NULL",
             TimeSpan.FromSeconds(45));
-        if (!r.Ok) return new CheckResult(title, CheckState.Unknown, "Etkinleştirme durumu okunamadı.", r.Error);
+        if (!r.Ok) return new CheckResult(title, CheckState.Unknown, L.T("Etkinleştirme durumu okunamadı.", "Could not read the activation status."), r.Error);
         var rows = r.Rows.Select(x => (Name: x.Str("Name") ?? "Windows", Status: x.Long("LicenseStatus"))).ToList();
-        if (rows.Count == 0) return new CheckResult(title, CheckState.Unknown, "Windows lisans bilgisi bildirmedi.");
+        if (rows.Count == 0) return new CheckResult(title, CheckState.Unknown, L.T("Windows lisans bilgisi bildirmedi.", "Windows reported no license information."));
         var best = rows.FirstOrDefault(x => x.Status == 1);
         if (best == default) best = rows[0];
         var (state, text) = best.Status switch
         {
-            1 => (CheckState.Healthy, "Windows etkin (lisanslı)"),
-            0 => (CheckState.Error, "Windows lisanssız"),
-            2 => (CheckState.Warning, "İlk kurulum ek süresinde (henüz etkinleştirilmedi)"),
-            3 => (CheckState.Warning, "Donanım değişikliği ek süresinde"),
-            4 => (CheckState.Warning, "Orijinal olmayan lisans ek süresinde"),
-            5 => (CheckState.Error, "Windows etkinleştirilmemiş (bildirim modu)"),
-            6 => (CheckState.Warning, "Uzatılmış ek sürede"),
-            _ => (CheckState.Unknown, $"Bilinmeyen lisans durumu ({best.Status?.ToString() ?? "—"})")
+            1 => (CheckState.Healthy, L.T("Windows etkin (lisanslı)", "Windows activated (licensed)")),
+            0 => (CheckState.Error, L.T("Windows lisanssız", "Windows unlicensed")),
+            2 => (CheckState.Warning, L.T("İlk kurulum ek süresinde (henüz etkinleştirilmedi)", "In the initial grace period (not activated yet)")),
+            3 => (CheckState.Warning, L.T("Donanım değişikliği ek süresinde", "In the hardware change grace period")),
+            4 => (CheckState.Warning, L.T("Orijinal olmayan lisans ek süresinde", "In the non-genuine grace period")),
+            5 => (CheckState.Error, L.T("Windows etkinleştirilmemiş (bildirim modu)", "Windows not activated (notification mode)")),
+            6 => (CheckState.Warning, L.T("Uzatılmış ek sürede", "In the extended grace period")),
+            _ => (CheckState.Unknown, L.T($"Bilinmeyen lisans durumu ({best.Status?.ToString() ?? "—"})", $"Unknown license status ({best.Status?.ToString() ?? "—"})"))
         };
-        return new CheckResult(title, state, text, "Lisans: " + best.Name);
+        return new CheckResult(title, state, text, L.T("Lisans: ", "License: ") + best.Name);
     }
 
     private static CheckResult CheckPendingReboot()
     {
-        const string title = "Bekleyen yeniden başlatma";
+        var title = L.T("Bekleyen yeniden başlatma", "Pending restart");
         var reasons = new List<string>();
         var fileRenames = false;
         try
         {
             using (var cbs = Registry.LocalMachine.OpenSubKey(@"SOFTWARE\Microsoft\Windows\CurrentVersion\Component Based Servicing\RebootPending"))
-                if (cbs is not null) reasons.Add("Windows bileşen güncellemesi (CBS)");
+                if (cbs is not null) reasons.Add(L.T("Windows bileşen güncellemesi (CBS)", "Windows component update (CBS)"));
             using (var wu = Registry.LocalMachine.OpenSubKey(@"SOFTWARE\Microsoft\Windows\CurrentVersion\WindowsUpdate\Auto Update\RebootRequired"))
                 if (wu is not null) reasons.Add("Windows Update");
             using (var sm = Registry.LocalMachine.OpenSubKey(@"SYSTEM\CurrentControlSet\Control\Session Manager"))
@@ -143,15 +143,15 @@ public sealed class WindowsHealthService(Logger logger)
         }
         catch (Exception ex) when (ex is System.Security.SecurityException or UnauthorizedAccessException or System.IO.IOException)
         {
-            return new CheckResult(title, CheckState.Unknown, "Yeniden başlatma kayıtları okunamadı.", ex.Message);
+            return new CheckResult(title, CheckState.Unknown, L.T("Yeniden başlatma kayıtları okunamadı.", "Could not read the restart records."), ex.Message);
         }
         if (reasons.Count > 0)
-            return new CheckResult(title, CheckState.Warning, "Yeniden başlatma bekleniyor: " + string.Join(", ", reasons),
-                fileRenames ? "Ayrıca yeniden başlatmada tamamlanacak dosya işlemleri var." : null);
+            return new CheckResult(title, CheckState.Warning, L.T("Yeniden başlatma bekleniyor: ", "Restart pending: ") + string.Join(", ", reasons),
+                fileRenames ? L.T("Ayrıca yeniden başlatmada tamamlanacak dosya işlemleri var.", "There are also file operations to complete at restart.") : null);
         return fileRenames
-            ? new CheckResult(title, CheckState.Info, "Güncelleme için yeniden başlatma gerekmiyor",
-                "Yeniden başlatmada tamamlanacak dosya işlemleri kayıtlı (kurulum / kaldırma programları bırakır).")
-            : new CheckResult(title, CheckState.Healthy, "Yeniden başlatma gerekmiyor");
+            ? new CheckResult(title, CheckState.Info, L.T("Güncelleme için yeniden başlatma gerekmiyor", "No restart needed for updates"),
+                L.T("Yeniden başlatmada tamamlanacak dosya işlemleri kayıtlı (kurulum / kaldırma programları bırakır).", "File operations to complete at restart are registered (left by setup / uninstall programs)."))
+            : new CheckResult(title, CheckState.Healthy, L.T("Yeniden başlatma gerekmiyor", "No restart needed"));
     }
 
     private static IReadOnlyList<CheckResult> CheckServices()
@@ -161,31 +161,31 @@ public sealed class WindowsHealthService(Logger logger)
         if (!r.Ok)
             return
             [
-                new CheckResult("Kritik Windows hizmetleri", CheckState.Unknown, "Hizmet durumları okunamadı.", r.Error, Nav.SystemTools, Nav.Services),
-                new CheckResult("Güncelleme hizmetleri", CheckState.Unknown, "Hizmet durumları okunamadı.", r.Error, Nav.SystemTools, Nav.Services)
+                new CheckResult(L.T("Kritik Windows hizmetleri", "Critical Windows services"), CheckState.Unknown, L.T("Hizmet durumları okunamadı.", "Could not read service states."), r.Error, Nav.SystemTools, Nav.Services),
+                new CheckResult(L.T("Güncelleme hizmetleri", "Update services"), CheckState.Unknown, L.T("Hizmet durumları okunamadı.", "Could not read service states."), r.Error, Nav.SystemTools, Nav.Services)
             ];
         var found = r.Rows.ToDictionary(x => x.Str("Name") ?? "", x => (State: x.Str("State"), Mode: x.Str("StartMode")), StringComparer.OrdinalIgnoreCase);
 
         var stopped = new List<string>();
         foreach (var (name, title) in MustRun)
         {
-            if (!found.TryGetValue(name, out var s)) stopped.Add($"{title} ({name}) bulunamadı");
+            if (!found.TryGetValue(name, out var s)) stopped.Add(L.T($"{title} ({name}) bulunamadı", $"{title} ({name}) not found"));
             else if (!string.Equals(s.State, "Running", StringComparison.OrdinalIgnoreCase)) stopped.Add($"{title} ({name}): {ServiceText.State(s.State)}");
         }
         var disabled = MustNotBeDisabled
             .Where(x => found.TryGetValue(x.Name, out var s) && string.Equals(s.Mode, "Disabled", StringComparison.OrdinalIgnoreCase))
-            .Select(x => $"{x.Title} ({x.Name}) devre dışı").ToList();
-        var missing = MustNotBeDisabled.Where(x => !found.ContainsKey(x.Name)).Select(x => $"{x.Title} ({x.Name}) bulunamadı").ToList();
+            .Select(x => L.T($"{x.Title} ({x.Name}) devre dışı", $"{x.Title} ({x.Name}) disabled")).ToList();
+        var missing = MustNotBeDisabled.Where(x => !found.ContainsKey(x.Name)).Select(x => L.T($"{x.Title} ({x.Name}) bulunamadı", $"{x.Title} ({x.Name}) not found")).ToList();
 
         return
         [
             stopped.Count == 0
-                ? new CheckResult("Kritik Windows hizmetleri", CheckState.Healthy, $"{MustRun.Length} çekirdek hizmetin tamamı çalışıyor", null, Nav.SystemTools, Nav.Services)
-                : new CheckResult("Kritik Windows hizmetleri", CheckState.Warning, $"{stopped.Count} çekirdek hizmet çalışmıyor",
+                ? new CheckResult(L.T("Kritik Windows hizmetleri", "Critical Windows services"), CheckState.Healthy, L.T($"{MustRun.Length} çekirdek hizmetin tamamı çalışıyor", $"All {MustRun.Length} core services are running"), null, Nav.SystemTools, Nav.Services)
+                : new CheckResult(L.T("Kritik Windows hizmetleri", "Critical Windows services"), CheckState.Warning, L.T($"{stopped.Count} çekirdek hizmet çalışmıyor", $"{stopped.Count} core service(s) not running"),
                     string.Join("\n", stopped), Nav.SystemTools, Nav.Services),
             disabled.Count + missing.Count == 0
-                ? new CheckResult("Güncelleme hizmetleri", CheckState.Healthy, "Windows Update ve kurulum hizmetleri kullanılabilir", null, Nav.SystemTools, Nav.Services)
-                : new CheckResult("Güncelleme hizmetleri", CheckState.Warning, "Güncelleme / kurulum hizmetlerinden biri kullanılamıyor",
+                ? new CheckResult(L.T("Güncelleme hizmetleri", "Update services"), CheckState.Healthy, L.T("Windows Update ve kurulum hizmetleri kullanılabilir", "Windows Update and installation services are available"), null, Nav.SystemTools, Nav.Services)
+                : new CheckResult(L.T("Güncelleme hizmetleri", "Update services"), CheckState.Warning, L.T("Güncelleme / kurulum hizmetlerinden biri kullanılamıyor", "One of the update / installation services is unavailable"),
                     string.Join("\n", disabled.Concat(missing)), Nav.SystemTools, Nav.Services)
         ];
     }
@@ -196,25 +196,25 @@ public static class ServiceText
 {
     public static string State(string? state) => state switch
     {
-        "Running" => "Çalışıyor",
-        "Stopped" => "Durduruldu",
-        "Start Pending" => "Başlatılıyor",
-        "Stop Pending" => "Durduruluyor",
-        "Paused" => "Duraklatıldı",
-        "Pause Pending" => "Duraklatılıyor",
-        "Continue Pending" => "Sürdürülüyor",
-        null => "Bilinmiyor",
+        "Running" => L.T("Çalışıyor", "Running"),
+        "Stopped" => L.T("Durduruldu", "Stopped"),
+        "Start Pending" => L.T("Başlatılıyor", "Starting"),
+        "Stop Pending" => L.T("Durduruluyor", "Stopping"),
+        "Paused" => L.T("Duraklatıldı", "Paused"),
+        "Pause Pending" => L.T("Duraklatılıyor", "Pausing"),
+        "Continue Pending" => L.T("Sürdürülüyor", "Resuming"),
+        null => L.T("Bilinmiyor", "Unknown"),
         _ => state
     };
 
     public static string StartMode(string? mode, bool? delayed = null) => mode switch
     {
-        "Auto" => delayed == true ? "Otomatik (gecikmeli)" : "Otomatik",
-        "Manual" => "El ile",
-        "Disabled" => "Devre dışı",
-        "Boot" => "Önyükleme",
-        "System" => "Sistem",
-        null => "Bilinmiyor",
+        "Auto" => delayed == true ? L.T("Otomatik (gecikmeli)", "Automatic (delayed)") : L.T("Otomatik", "Automatic"),
+        "Manual" => L.T("El ile", "Manual"),
+        "Disabled" => L.T("Devre dışı", "Disabled"),
+        "Boot" => L.T("Önyükleme", "Boot"),
+        "System" => L.T("Sistem", "System"),
+        null => L.T("Bilinmiyor", "Unknown"),
         _ => mode
     };
 }

@@ -21,7 +21,7 @@ public sealed class PowerShellResult
         if (ScriptError is not null) return ScriptError;
         if (!Process.Succeeded || Data is null)
             return ProcessRunner.Describe(Process, what);
-        return $"{what} bilinmeyen bir hata döndürdü.";
+        return L.T($"{what} bilinmeyen bir hata döndürdü.", $"{what} returned an unknown error.");
     }
 }
 
@@ -66,7 +66,8 @@ public static class PowerShellRunner
         Action<string>? onLog = null,
         string? traceName = null)
     {
-        var fullScript = Prelude + "try {\n" + script + "\n} catch { Write-Failure $_ }\n";
+        // «Türkçe|English» işaretleri seçili dile çevrilir (betiklerin günlüğe yazdığı satırlar; v2.0.0).
+        var fullScript = Prelude + "try {\n" + L.Pick(script) + "\n} catch { Write-Failure $_ }\n";
         var encoded = Convert.ToBase64String(Encoding.Unicode.GetBytes(fullScript));
         var args = $"-NoLogo -NoProfile -NonInteractive -ExecutionPolicy Bypass -EncodedCommand {encoded}";
 
@@ -80,7 +81,7 @@ public static class PowerShellRunner
                 else if (line.StartsWith("##RESULT|", StringComparison.Ordinal))
                     resultLine = line[9..];
             },
-            displayCommand: "powershell.exe: " + (traceName ?? "PowerShell betiği")).ConfigureAwait(false);
+            displayCommand: "powershell.exe: " + (traceName ?? L.T("PowerShell betiği", "PowerShell script"))).ConfigureAwait(false);
 
         JsonElement? data = null;
         string? scriptError = null;
@@ -101,15 +102,15 @@ public static class PowerShellRunner
             }
             catch (JsonException ex)
             {
-                scriptError = $"PowerShell sonucu okunamadı: {ex.Message}";
+                scriptError = L.T($"PowerShell sonucu okunamadı: {ex.Message}", $"Could not read the PowerShell result: {ex.Message}");
             }
         }
         else if (result.Started && !result.TimedOut && !result.Cancelled)
         {
             var errLine = ProcessRunner.LastMeaningfulLine(result.StdErr);
             scriptError = errLine is null
-                ? $"PowerShell betiği sonuç döndürmedi (çıkış kodu {result.ExitCodeHex})."
-                : $"PowerShell hatası: {errLine}";
+                ? L.T($"PowerShell betiği sonuç döndürmedi (çıkış kodu {result.ExitCodeHex}).", $"The PowerShell script returned no result (exit code {result.ExitCodeHex}).")
+                : L.T($"PowerShell hatası: {errLine}", $"PowerShell error: {errLine}");
         }
 
         return new PowerShellResult { Process = result, Data = data, ScriptError = scriptError };

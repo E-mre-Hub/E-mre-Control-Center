@@ -5,6 +5,8 @@
 # Derleme çıktıları (EXE depoya konmaz; GitHub Releases üzerinden dağıtılır)
 /E-mre Control Center.exe
 /E-mre Control Center Setup.exe
+/E-mre Control Center Setup TR.exe
+/E-mre Control Center Setup EN.exe
 /E-mre Hub.exe
 /RTX Windows Updater.exe
 *.zip

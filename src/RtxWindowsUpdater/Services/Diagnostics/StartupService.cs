@@ -24,17 +24,17 @@ public sealed record StartupEntry(
 {
     public string SourceText => Source switch
     {
-        StartupSource.RegistryUser => "Kayıt defteri – bu kullanıcı (HKCU Run)",
-        StartupSource.RegistryMachine => "Kayıt defteri – tüm kullanıcılar (HKLM Run)",
-        StartupSource.RegistryMachine32 => "Kayıt defteri – tüm kullanıcılar, 32 bit (HKLM Run)",
-        StartupSource.FolderUser => "Başlangıç klasörü – bu kullanıcı",
-        StartupSource.FolderCommon => "Başlangıç klasörü – tüm kullanıcılar",
-        StartupSource.ScheduledTask => "Görev Zamanlayıcı (oturum açılışı / önyükleme)",
-        _ => "Microsoft Store uygulaması"
+        StartupSource.RegistryUser => L.T("Kayıt defteri – bu kullanıcı (HKCU Run)", "Registry – this user (HKCU Run)"),
+        StartupSource.RegistryMachine => L.T("Kayıt defteri – tüm kullanıcılar (HKLM Run)", "Registry – all users (HKLM Run)"),
+        StartupSource.RegistryMachine32 => L.T("Kayıt defteri – tüm kullanıcılar, 32 bit (HKLM Run)", "Registry – all users, 32-bit (HKLM Run)"),
+        StartupSource.FolderUser => L.T("Başlangıç klasörü – bu kullanıcı", "Startup folder – this user"),
+        StartupSource.FolderCommon => L.T("Başlangıç klasörü – tüm kullanıcılar", "Startup folder – all users"),
+        StartupSource.ScheduledTask => L.T("Görev Zamanlayıcı (oturum açılışı / önyükleme)", "Task Scheduler (sign-in / boot)"),
+        _ => L.T("Microsoft Store uygulaması", "Microsoft Store app")
     };
-    public string StateText => Enabled ? "Etkin" : "Devre dışı";
+    public string StateText => Enabled ? L.T("Etkin", "Enabled") : L.T("Devre dışı", "Disabled");
     public string LocationText => TargetPath ?? "—";
-    public string PublisherText => Publisher ?? "Bilinmiyor (dosya sürüm bilgisi yok)";
+    public string PublisherText => Publisher ?? L.T("Bilinmiyor (dosya sürüm bilgisi yok)", "Unknown (no file version information)");
     public bool Toggleable => ProtectedReason is null && Source is StartupSource.RegistryUser or StartupSource.RegistryMachine
         or StartupSource.RegistryMachine32 or StartupSource.FolderUser or StartupSource.FolderCommon;
 }
@@ -82,20 +82,20 @@ public sealed class StartupService(Logger logger)
             foreach (var t in ps.Data!.Value.Arr("tasks"))
             {
                 var exe = Environment.ExpandEnvironmentVariables(t.Str("exe")?.Trim('"') ?? "");
-                var command = string.IsNullOrEmpty(exe) ? "(komut satırı olmayan eylem)" : $"\"{exe}\" {t.Str("args")}".Trim();
+                var command = string.IsNullOrEmpty(exe) ? L.T("(komut satırı olmayan eylem)", "(action without a command line)") : $"\"{exe}\" {t.Str("args")}".Trim();
                 var state = t.Str("state");
                 entries.Add(new StartupEntry((t.Str("path") ?? "\\") + (t.Str("name") ?? "?"), command, exe.Length == 0 ? null : exe,
                     exe.Length == 0 ? null : Publisher(exe), StartupSource.ScheduledTask,
                     !string.Equals(state, "Disabled", StringComparison.OrdinalIgnoreCase), null, false,
-                    "Zamanlanmış görev – burada yalnızca gösterilir; Görev Zamanlayıcı'dan yönetilir."));
+                    L.T("Zamanlanmış görev – burada yalnızca gösterilir; Görev Zamanlayıcı'dan yönetilir.", "Scheduled task – only shown here; managed in Task Scheduler.")));
             }
         }
         else
         {
-            errors.Add("Zamanlanmış görevler okunamadı: " + ps.DescribeFailure("Get-ScheduledTask"));
+            errors.Add(L.T("Zamanlanmış görevler okunamadı: ", "Could not read scheduled tasks: ") + ps.DescribeFailure("Get-ScheduledTask"));
         }
         var ordered = entries.OrderBy(e => e.Source == StartupSource.ScheduledTask).ThenBy(e => e.Name, StringComparer.CurrentCultureIgnoreCase).ToList();
-        logger.Info($"Başlangıç kayıtları: {ordered.Count} ({ordered.Count(e => e.Enabled)} etkin)" + (errors.Count > 0 ? "; " + string.Join("; ", errors) : "."));
+        logger.Info(L.T($"Başlangıç kayıtları: {ordered.Count} ({ordered.Count(e => e.Enabled)} etkin)", $"Startup entries: {ordered.Count} ({ordered.Count(e => e.Enabled)} enabled)") + (errors.Count > 0 ? "; " + string.Join("; ", errors) : "."));
         return new StartupScan(ordered, errors);
     }
 
@@ -107,15 +107,15 @@ public sealed class StartupService(Logger logger)
             try { read(); }
             catch (Exception ex) when (ex is System.Security.SecurityException or UnauthorizedAccessException or IOException)
             {
-                errors.Add($"{what} okunamadı: {ex.Message}");
+                errors.Add(L.T($"{what} okunamadı: {ex.Message}", $"Could not read {what}: {ex.Message}"));
             }
         }
         Guard("HKCU Run", () => ReadRun(list, Registry.CurrentUser, RunPath, StartupSource.RegistryUser));
         Guard("HKLM Run", () => ReadRun(list, Registry.LocalMachine, RunPath, StartupSource.RegistryMachine));
         Guard("HKLM Run (32 bit)", () => ReadRun(list, Registry.LocalMachine, Run32Path, StartupSource.RegistryMachine32));
-        Guard("Başlangıç klasörü", () => ReadFolder(list, Environment.GetFolderPath(Environment.SpecialFolder.Startup), StartupSource.FolderUser));
-        Guard("Ortak Başlangıç klasörü", () => ReadFolder(list, Environment.GetFolderPath(Environment.SpecialFolder.CommonStartup), StartupSource.FolderCommon));
-        Guard("Store başlangıç görevleri", () => ReadStoreTasks(list, StorePackages.DisplayNamesByFamily()));
+        Guard(L.T("Başlangıç klasörü", "Startup folder"), () => ReadFolder(list, Environment.GetFolderPath(Environment.SpecialFolder.Startup), StartupSource.FolderUser));
+        Guard(L.T("Ortak Başlangıç klasörü", "Common Startup folder"), () => ReadFolder(list, Environment.GetFolderPath(Environment.SpecialFolder.CommonStartup), StartupSource.FolderCommon));
+        Guard(L.T("Store başlangıç görevleri", "Store startup tasks"), () => ReadStoreTasks(list, StorePackages.DisplayNamesByFamily()));
         return list;
     }
 
@@ -161,7 +161,7 @@ public sealed class StartupService(Logger logger)
                 if (tk?.GetValue("State") is not int state) continue;
                 var app = names.TryGetValue(package, out var display) ? display : package.Contains('_') ? package[..package.LastIndexOf('_')] : package;
                 list.Add(new StartupEntry($"{app} ({task})", package, null, null, StartupSource.StoreApp, state is 2 or 4, null, false,
-                    state is 3 or 4 ? "Kuruluş ilkesiyle ayarlanmış." : "Store uygulaması – Ayarlar → Uygulamalar → Başlangıç'tan yönetilir."));
+                    state is 3 or 4 ? L.T("Kuruluş ilkesiyle ayarlanmış.", "Set by organization policy.") : L.T("Store uygulaması – Ayarlar → Uygulamalar → Başlangıç'tan yönetilir.", "Store app – managed in Settings → Apps → Startup.")));
             }
         }
     }
@@ -192,7 +192,7 @@ public sealed class StartupService(Logger logger)
     /// </summary>
     public (bool Success, string Message) SetEnabled(StartupEntry entry, bool enable)
     {
-        if (!entry.Toggleable) return (false, entry.ProtectedReason ?? "Bu kaynak buradan değiştirilemez.");
+        if (!entry.Toggleable) return (false, entry.ProtectedReason ?? L.T("Bu kaynak buradan değiştirilemez.", "This source cannot be changed here."));
         var valueName = entry.Source is StartupSource.FolderUser or StartupSource.FolderCommon ? Path.GetFileName(entry.Command) : entry.Name;
         var (hive, sub) = ApprovedLocation(entry.Source);
         var data = new byte[12];
@@ -205,18 +205,18 @@ public sealed class StartupService(Logger logger)
         }
         catch (Exception ex) when (ex is UnauthorizedAccessException or System.Security.SecurityException or IOException)
         {
-            var msg = entry.NeedsAdmin ? "Tüm kullanıcılar için olan kayıt yönetici yetkisi gerektirir: " + ex.Message : ex.Message;
-            logger.Warning($"Başlangıç durumu değiştirilemedi ({entry.Name}): {msg}");
-            return (false, "Değiştirilemedi: " + msg);
+            var msg = entry.NeedsAdmin ? L.T("Tüm kullanıcılar için olan kayıt yönetici yetkisi gerektirir: ", "Entries for all users require administrator rights: ") + ex.Message : ex.Message;
+            logger.Warning(L.T($"Başlangıç durumu değiştirilemedi ({entry.Name}): {msg}", $"Could not change the startup state ({entry.Name}): {msg}"));
+            return (false, L.T("Değiştirilemedi: ", "Could not change: ") + msg);
         }
         var now = IsApproved(entry.Source, valueName);
         if (now != enable)
         {
-            logger.Warning($"Başlangıç durumu doğrulanamadı ({entry.Name}): yazıldı ama okunan durum {now?.ToString() ?? "yok"}.");
-            return (false, "Değer yazıldı ancak geri okunan durum beklenenle aynı değil.");
+            logger.Warning(L.T($"Başlangıç durumu doğrulanamadı ({entry.Name}): yazıldı ama okunan durum {now?.ToString() ?? "yok"}.", $"Could not verify the startup state ({entry.Name}): written, but the state read back is {now?.ToString() ?? "none"}."));
+            return (false, L.T("Değer yazıldı ancak geri okunan durum beklenenle aynı değil.", "The value was written but the state read back is not the expected one."));
         }
-        logger.Info($"Başlangıç kaydı {(enable ? "etkinleştirildi" : "devre dışı bırakıldı")}: {entry.Name} ({entry.SourceText}); kayıt silinmedi.");
-        return (true, enable ? "Başlangıçta yeniden çalışacak." : "Bir sonraki oturum açılışında çalışmayacak (kayıt silinmedi; yeniden etkinleştirilebilir).");
+        logger.Info(L.T($"Başlangıç kaydı {(enable ? "etkinleştirildi" : "devre dışı bırakıldı")}: {entry.Name} ({entry.SourceText}); kayıt silinmedi.", $"Startup entry {(enable ? "enabled" : "disabled")}: {entry.Name} ({entry.SourceText}); the entry was not deleted."));
+        return (true, enable ? L.T("Başlangıçta yeniden çalışacak.", "It will run again at startup.") : L.T("Bir sonraki oturum açılışında çalışmayacak (kayıt silinmedi; yeniden etkinleştirilebilir).", "It will not run at the next sign-in (the entry was not deleted; it can be enabled again)."));
     }
 
     // ------------------------------------------------------------------ yardımcılar
@@ -244,7 +244,7 @@ public sealed class StartupService(Logger logger)
         var windows = Environment.GetFolderPath(Environment.SpecialFolder.Windows).TrimEnd('\\') + "\\";
         var full = target;
         if (!Path.IsPathRooted(full)) full = Path.Combine(Environment.SystemDirectory, full);
-        return full.StartsWith(windows, StringComparison.OrdinalIgnoreCase) ? "Windows bileşeni – değiştirilmez" : null;
+        return full.StartsWith(windows, StringComparison.OrdinalIgnoreCase) ? L.T("Windows bileşeni – değiştirilmez", "Windows component – not changed") : null;
     }
 
     private static string? Publisher(string path)

@@ -30,9 +30,9 @@ public sealed record DnsServerResult(
 {
     public string Family => Server.AddressFamily == AddressFamily.InterNetworkV6 ? "IPv6" : "IPv4";
     public string ServerText => Server.ToString().Split('%')[0];
-    public string ResultText => Placeholder ? "Test edilmedi (yapılandırılmamış yer tutucu adres)"
-        : Queried == 0 ? "—" : $"{Succeeded}/{Queried} başarılı";
-    public string TimeText => MedianMs is { } m ? $"{m:0} ms" + (MaxMs is { } x && x > m + 1 ? $" (en yüksek {x:0} ms)" : "") : "—";
+    public string ResultText => Placeholder ? L.T("Test edilmedi (yapılandırılmamış yer tutucu adres)", "Not tested (unconfigured placeholder address)")
+        : Queried == 0 ? "—" : L.T($"{Succeeded}/{Queried} başarılı", $"{Succeeded}/{Queried} succeeded");
+    public string TimeText => MedianMs is { } m ? $"{m:0} ms" + (MaxMs is { } x && x > m + 1 ? L.T($" (en yüksek {x:0} ms)", $" (max {x:0} ms)") : "") : "—";
     public string FailuresText => Failures.Count == 0 ? "" : string.Join(" · ", Failures);
     public string StateText => CheckStates.Text(State);
 }
@@ -65,7 +65,7 @@ public sealed class DnsDiagnosticsService(Logger logger)
             .SelectMany(a => a.DnsServers.Select(d => (Server: d, Adapter: a.Name)))
             .GroupBy(x => x.Server).Select(g => g.First()).ToList();
         if (servers.Count == 0)
-            return new DnsReport([], adapters.Any(a => a.IsUp) ? "Etkin bağlantıda yapılandırılmış DNS sunucusu yok." : "Etkin ağ bağlantısı yok; DNS test edilemedi.");
+            return new DnsReport([], adapters.Any(a => a.IsUp) ? L.T("Etkin bağlantıda yapılandırılmış DNS sunucusu yok.", "No DNS server is configured on the active connection.") : L.T("Etkin ağ bağlantısı yok; DNS test edilemedi.", "No active network connection; DNS could not be tested."));
 
         var results = new List<DnsServerResult>();
         foreach (var (server, adapter) in servers)
@@ -76,10 +76,10 @@ public sealed class DnsDiagnosticsService(Logger logger)
                 results.Add(new DnsServerResult(server, adapter, true, 0, 0, null, null, null, "—", [], CheckState.Info));
                 continue;
             }
-            progress?.Report($"DNS sunucusu {server} sorgulanıyor…");
+            progress?.Report(L.T($"DNS sunucusu {server} sorgulanıyor…", $"Querying DNS server {server}…"));
             results.Add(await TestServerAsync(server, adapter, ct));
         }
-        logger.Info("DNS tanılama: " + string.Join(" | ", results.Select(r => $"{r.ServerText} ({r.Adapter}): {r.ResultText}, {r.TimeText}, DNSSEC {r.DnssecText}")));
+        logger.Info(L.T("DNS tanılama: ", "DNS diagnostics: ") + string.Join(" | ", results.Select(r => $"{r.ServerText} ({r.Adapter}): {r.ResultText}, {r.TimeText}, DNSSEC {r.DnssecText}")));
         return new DnsReport(results, null);
     }
 
@@ -102,19 +102,19 @@ public sealed class DnsDiagnosticsService(Logger logger)
         var signed = await QueryAsync(server, SignedDomain, 1, true, ct);
         var broken = await QueryAsync(server, BrokenSignatureDomain, 1, true, ct);
         if (signed.Error is not null || broken.Error is not null)
-            dnssec = "Denetlenemedi (" + (signed.Error ?? broken.Error) + ")";
+            dnssec = L.T("Denetlenemedi (", "Could not check (") + (signed.Error ?? broken.Error) + ")";
         else if (signed.Authenticated && broken.Rcode == 2)
         {
             validates = true;
-            dnssec = "Doğruluyor (imzalı yanıt doğrulandı, bozuk imza reddedildi)";
+            dnssec = L.T("Doğruluyor (imzalı yanıt doğrulandı, bozuk imza reddedildi)", "Validates (signed answer validated, broken signature rejected)");
         }
         else if (!signed.Authenticated && broken.Rcode == 0)
         {
             validates = false;
-            dnssec = "Doğrulamıyor (bozuk imzalı alan adı da çözümlendi)";
+            dnssec = L.T("Doğrulamıyor (bozuk imzalı alan adı da çözümlendi)", "Does not validate (the domain with a broken signature also resolved)");
         }
         else
-            dnssec = $"Belirsiz (AD={(signed.Authenticated ? 1 : 0)}, bozuk imza yanıt kodu {broken.Rcode})";
+            dnssec = L.T($"Belirsiz (AD={(signed.Authenticated ? 1 : 0)}, bozuk imza yanıt kodu {broken.Rcode})", $"Inconclusive (AD={(signed.Authenticated ? 1 : 0)}, broken-signature response code {broken.Rcode})");
 
         var state = succeeded == 0 ? CheckState.Error
             : succeeded < TestDomains.Length ? CheckState.Warning
@@ -126,12 +126,12 @@ public sealed class DnsDiagnosticsService(Logger logger)
 
     internal static string Describe(DnsReply r) => r.Error ?? r.Rcode switch
     {
-        0 when r.Answers == 0 => "yanıt boş (kayıt yok)",
-        1 => "biçim hatası (FORMERR)",
-        2 => "sunucu hatası (SERVFAIL)",
-        3 => "alan adı bulunamadı (NXDOMAIN)",
-        5 => "sunucu sorguyu reddetti (REFUSED)",
-        _ => $"yanıt kodu {r.Rcode}"
+        0 when r.Answers == 0 => L.T("yanıt boş (kayıt yok)", "empty answer (no record)"),
+        1 => L.T("biçim hatası (FORMERR)", "format error (FORMERR)"),
+        2 => L.T("sunucu hatası (SERVFAIL)", "server failure (SERVFAIL)"),
+        3 => L.T("alan adı bulunamadı (NXDOMAIN)", "domain not found (NXDOMAIN)"),
+        5 => L.T("sunucu sorguyu reddetti (REFUSED)", "the server refused the query (REFUSED)"),
+        _ => L.T($"yanıt kodu {r.Rcode}", $"response code {r.Rcode}")
     };
 
     /// <summary>
@@ -163,14 +163,14 @@ public sealed class DnsDiagnosticsService(Logger logger)
             }
             catch (OperationCanceledException) when (!ct.IsCancellationRequested)
             {
-                lastError = $"{QueryTimeout.TotalSeconds:0} sn içinde yanıt yok";
+                lastError = L.T($"{QueryTimeout.TotalSeconds:0} sn içinde yanıt yok", $"no answer within {QueryTimeout.TotalSeconds:0} sec");
             }
             catch (SocketException ex)
             {
                 return new DnsReply(null, 0, false, null, ex.SocketErrorCode switch
                 {
-                    SocketError.ConnectionReset => "sunucu 53 numaralı bağlantı noktasında yanıt vermiyor (ICMP port unreachable)",
-                    SocketError.NetworkUnreachable or SocketError.HostUnreachable => "sunucuya ulaşılamıyor",
+                    SocketError.ConnectionReset => L.T("sunucu 53 numaralı bağlantı noktasında yanıt vermiyor (ICMP port unreachable)", "the server does not respond on port 53 (ICMP port unreachable)"),
+                    SocketError.NetworkUnreachable or SocketError.HostUnreachable => L.T("sunucuya ulaşılamıyor", "the server cannot be reached"),
                     _ => ex.Message
                 });
             }
@@ -188,7 +188,7 @@ public sealed class DnsDiagnosticsService(Logger logger)
         foreach (var label in name.TrimEnd('.').Split('.'))
         {
             var bytes = Encoding.ASCII.GetBytes(label);
-            if (bytes.Length is 0 or > 63) throw new ArgumentException("Geçersiz alan adı: " + name, nameof(name));
+            if (bytes.Length is 0 or > 63) throw new ArgumentException(L.T("Geçersiz alan adı: ", "Invalid domain name: ") + name, nameof(name));
             buf.Add((byte)bytes.Length);
             buf.AddRange(bytes);
         }

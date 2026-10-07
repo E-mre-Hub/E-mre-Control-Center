@@ -30,9 +30,9 @@ public sealed class OoklaSpeedtestService(Logger logger)
 
     public static readonly IReadOnlyList<(string Title, string Url)> LicenseLinks =
     [
-        ("Son Kullanıcı Lisans Sözleşmesi", "https://www.speedtest.net/about/eula"),
-        ("Kullanım Koşulları", "https://www.speedtest.net/about/terms"),
-        ("Gizlilik Politikası", "https://www.speedtest.net/about/privacy")
+        (L.T("Son Kullanıcı Lisans Sözleşmesi", "End User License Agreement"), "https://www.speedtest.net/about/eula"),
+        (L.T("Kullanım Koşulları", "Terms of Use"), "https://www.speedtest.net/about/terms"),
+        (L.T("Gizlilik Politikası", "Privacy Policy"), "https://www.speedtest.net/about/privacy")
     ];
 
     private static readonly string[] AcceptArgs = ["--accept-license", "--accept-gdpr"];
@@ -80,7 +80,7 @@ public sealed class OoklaSpeedtestService(Logger logger)
                 var version = line.Split(' ', StringSplitOptions.RemoveEmptyEntries).ElementAtOrDefault(3) ?? line;
                 return new OoklaCli(path, version);
             }
-            logger.Warning($"Ookla aracı adayı reddedildi ({path}): " + (r.Succeeded ? $"beklenmeyen sürüm çıktısı \"{line}\"" : ProcessRunner.Describe(r, "speedtest")));
+            logger.Warning(L.T($"Ookla aracı adayı reddedildi ({path}): ", $"Ookla tool candidate rejected ({path}): ") + (r.Succeeded ? L.T($"beklenmeyen sürüm çıktısı \"{line}\"", $"unexpected version output \"{line}\"") : ProcessRunner.Describe(r, "speedtest")));
         }
         return null;
     }
@@ -92,13 +92,13 @@ public sealed class OoklaSpeedtestService(Logger logger)
     public async Task<(OoklaCli? Cli, string Message)> InstallAsync(CancellationToken ct)
     {
         var winget = WingetManager.LocateWinget();
-        if (winget is null) return (null, "winget bulunamadı (Uygulama Yükleyicisi kurulu değil); araç kurulamadı.");
-        logger.Info($"Ookla Speedtest aracı kuruluyor: winget install --id {PackageId} --exact --source winget --scope user");
+        if (winget is null) return (null, L.T("winget bulunamadı (Uygulama Yükleyicisi kurulu değil); araç kurulamadı.", "winget not found (App Installer is not installed); the tool could not be installed."));
+        logger.Info(L.T($"Ookla Speedtest aracı kuruluyor: winget install --id {PackageId} --exact --source winget --scope user", $"Installing the Ookla Speedtest tool: winget install --id {PackageId} --exact --source winget --scope user"));
         var install = await ProcessRunner.RunCmdAsync(winget,
             ["install", "--id", PackageId, "--exact", "--source", "winget", "--scope", "user",
              "--accept-package-agreements", "--accept-source-agreements", "--disable-interactivity"],
             TimeSpan.FromMinutes(5), ct, onStdOut: Forward, onStdErr: Forward).ConfigureAwait(false);
-        if (install.Cancelled) return (null, "Kurulum iptal edildi.");
+        if (install.Cancelled) return (null, L.T("Kurulum iptal edildi.", "Installation cancelled."));
 
         var list = await ProcessRunner.RunCmdAsync(winget,
             ["list", "--id", PackageId, "--exact", "--source", "winget", "--accept-source-agreements", "--disable-interactivity"],
@@ -107,17 +107,17 @@ public sealed class OoklaSpeedtestService(Logger logger)
         var cli = await LocateAsync(ct).ConfigureAwait(false);
         if (listed && cli is not null)
         {
-            var msg = $"Ookla Speedtest aracı kuruldu ve doğrulandı: {PackageId} {cli.Version} ({cli.Path}).";
+            var msg = L.T($"Ookla Speedtest aracı kuruldu ve doğrulandı: {PackageId} {cli.Version} ({cli.Path}).", $"Ookla Speedtest tool installed and verified: {PackageId} {cli.Version} ({cli.Path}).");
             logger.Success(msg);
             return (cli, msg);
         }
 
         var reason = !install.Succeeded
             ? WingetManager.DescribeFailure(install)
-            : !listed ? "winget kurulumu bildirdi ancak paket kurulu paketler listesinde görünmüyor."
-            : "paket kurulu görünüyor ancak speedtest.exe bulunamadı veya doğrulanamadı.";
-        logger.Error("Ookla Speedtest aracı kurulamadı: " + reason);
-        return (null, "Kurulamadı: " + reason);
+            : !listed ? L.T("winget kurulumu bildirdi ancak paket kurulu paketler listesinde görünmüyor.", "winget reported the installation but the package does not appear in the installed packages list.")
+            : L.T("paket kurulu görünüyor ancak speedtest.exe bulunamadı veya doğrulanamadı.", "the package appears installed but speedtest.exe was not found or could not be verified.");
+        logger.Error(L.T("Ookla Speedtest aracı kurulamadı: ", "The Ookla Speedtest tool could not be installed: ") + reason);
+        return (null, L.T("Kurulamadı: ", "Could not install: ") + reason);
 
         void Forward(string line)
         {
@@ -144,13 +144,13 @@ public sealed class OoklaSpeedtestService(Logger logger)
         try
         {
             var servers = ParseServers(r.StdOut);
-            logger.Info($"Ookla sunucu listesi alındı: {servers.Count} sunucu (" +
+            logger.Info(L.T($"Ookla sunucu listesi alındı: {servers.Count} sunucu (", $"Ookla server list received: {servers.Count} servers (") +
                         string.Join(", ", servers.Take(4).Select(s => $"{s.Location} - {s.Sponsor}")) + (servers.Count > 4 ? ", …" : "") + ").");
-            return servers.Count == 0 ? (null, "Ookla yakında sunucu bildirmedi.") : (servers, null);
+            return servers.Count == 0 ? (null, L.T("Ookla yakında sunucu bildirmedi.", "Ookla reported no nearby servers.")) : (servers, null);
         }
         catch (JsonException ex)
         {
-            return (null, "Sunucu listesi yorumlanamadı: " + ex.Message);
+            return (null, L.T("Sunucu listesi yorumlanamadı: ", "Could not interpret the server list: ") + ex.Message);
         }
     }
 
@@ -180,7 +180,7 @@ public sealed class OoklaSpeedtestService(Logger logger)
         var args = new List<string> { "--format=jsonl", "--progress=yes", "--progress-update-interval=100" };
         if (serverId is { } id) args.Add("--server-id=" + id.ToString(CultureInfo.InvariantCulture));
         args.AddRange(AcceptArgs);
-        logger.Info($"Hız testi başladı: {SpeedTestProviders.Ookla}, sunucu {(serverId is { } sid ? sid.ToString(CultureInfo.InvariantCulture) : "otomatik")}.");
+        logger.Info(L.T($"Hız testi başladı: {SpeedTestProviders.Ookla}, sunucu {(serverId is { } sid ? sid.ToString(CultureInfo.InvariantCulture) : "otomatik")}.", $"Speed test started: {SpeedTestProviders.Ookla}, server {(serverId is { } sid2 ? sid2.ToString(CultureInfo.InvariantCulture) : "automatic")}."));
         progress?.Report(new SpeedTestProgress(SpeedTestPhase.Connecting, 0, null, null, null));
 
         var r = await ProcessRunner.RunAsync(exe, string.Join(' ', args), TestTimeout, ct,
@@ -190,8 +190,8 @@ public sealed class OoklaSpeedtestService(Logger logger)
         if (r.Cancelled || ct.IsCancellationRequested)
         {
             result.Phase = SpeedTestPhase.Cancelled;
-            result.Error = "Test iptal edildi.";
-            logger.Warning($"Hız testi iptal edildi ({result.Duration.TotalSeconds:0} sn).");
+            result.Error = L.T("Test iptal edildi.", "Test cancelled.");
+            logger.Warning(L.T($"Hız testi iptal edildi ({result.Duration.TotalSeconds:0} sn).", $"Speed test cancelled ({result.Duration.TotalSeconds:0} sec)."));
             return result;
         }
         if (!r.Succeeded || !parser.HasResult)
@@ -199,17 +199,17 @@ public sealed class OoklaSpeedtestService(Logger logger)
             result.Phase = SpeedTestPhase.Failed;
             result.Error = parser.Errors.Count > 0 ? string.Join(" · ", parser.Errors)
                 : !r.Succeeded ? ErrorText(r)
-                : "Ookla aracı sonuç bildirmedi.";
-            logger.Error("Hız testi başarısız: " + result.Error);
+                : L.T("Ookla aracı sonuç bildirmedi.", "The Ookla tool reported no result.");
+            logger.Error(L.T("Hız testi başarısız: ", "Speed test failed: ") + result.Error);
             return result;
         }
 
         result.Phase = SpeedTestPhase.Completed;
-        logger.Success($"Hız testi tamamlandı ({result.Duration.TotalSeconds:0} sn, {SpeedTestProviders.Ookla}): sunucu {result.Server?.ServerName} " +
-                       $"(id {result.Server?.ServerId}), indirme {result.Download?.Mbps:0.00} Mbps, yükleme {result.Upload?.Mbps:0.00} Mbps, " +
-                       $"ping {result.IdleLatency?.MedianMs:0.0} ms, paket kaybı " +
-                       (result.PacketLoss?.LossPercent is { } l ? $"%{l:0.#}" : "ölçülemedi") +
-                       $", kullanılan veri {result.DataUsedBytes / 1_000_000.0:0.0} MB" + (result.ResultUrl is { } u ? $", sonuç {u}" : ""));
+        logger.Success(L.T($"Hız testi tamamlandı ({result.Duration.TotalSeconds:0} sn, {SpeedTestProviders.Ookla}): sunucu {result.Server?.ServerName} ", $"Speed test completed ({result.Duration.TotalSeconds:0} sec, {SpeedTestProviders.Ookla}): server {result.Server?.ServerName} ") +
+                       L.T($"(id {result.Server?.ServerId}), indirme {result.Download?.Mbps:0.00} Mbps, yükleme {result.Upload?.Mbps:0.00} Mbps, ", $"(id {result.Server?.ServerId}), download {result.Download?.Mbps:0.00} Mbps, upload {result.Upload?.Mbps:0.00} Mbps, ") +
+                       L.T($"ping {result.IdleLatency?.MedianMs:0.0} ms, paket kaybı ", $"ping {result.IdleLatency?.MedianMs:0.0} ms, packet loss ") +
+                       (result.PacketLoss?.LossPercent is { } l ? $"%{l:0.#}" : L.T("ölçülemedi", "not measured")) +
+                       L.T($", kullanılan veri {result.DataUsedBytes / 1_000_000.0:0.0} MB", $", data used {result.DataUsedBytes / 1_000_000.0:0.0} MB") + (result.ResultUrl is { } u ? L.T($", sonuç {u}", $", result {u}") : ""));
         return result;
     }
 
@@ -219,12 +219,12 @@ public sealed class OoklaSpeedtestService(Logger logger)
         if (!r.Started || r.TimedOut) return ProcessRunner.Describe(r, "speedtest");
         var logs = (r.StdErr + "\n" + r.StdOut).Split('\n')
             .Select(OoklaEventParser.LogMessage).Where(m => m is not null).Cast<string>().ToList();
-        if (logs.Count > 0) return $"Ookla aracı hata bildirdi (çıkış kodu {r.ExitCode}): {string.Join(" · ", logs)}";
+        if (logs.Count > 0) return L.T($"Ookla aracı hata bildirdi (çıkış kodu {r.ExitCode}): {string.Join(" · ", logs)}", $"The Ookla tool reported an error (exit code {r.ExitCode}): {string.Join(" · ", logs)}");
         if (r.StdErr.Contains("--accept-license", StringComparison.Ordinal))
-            return "Ookla lisansı kabul edilmediği için araç çalışmadı.";
+            return L.T("Ookla lisansı kabul edilmediği için araç çalışmadı.", "The tool did not run because the Ookla license was not accepted.");
         var line = (r.StdErr + "\n" + r.StdOut).Split('\n').Select(l => l.Trim())
             .LastOrDefault(l => l.Length > 2 && l.Any(char.IsLetter) && !l.StartsWith("http", StringComparison.Ordinal) && !l.All(c => c == '='));
-        return line is null ? $"Ookla aracı {r.ExitCode} çıkış koduyla sonlandı." : $"Ookla aracı {r.ExitCode} çıkış koduyla sonlandı: {line}";
+        return line is null ? L.T($"Ookla aracı {r.ExitCode} çıkış koduyla sonlandı.", $"The Ookla tool ended with exit code {r.ExitCode}.") : L.T($"Ookla aracı {r.ExitCode} çıkış koduyla sonlandı: {line}", $"The Ookla tool ended with exit code {r.ExitCode}: {line}");
     }
 
     private static string Str(JsonElement e, string name) =>
@@ -338,7 +338,7 @@ internal sealed class OoklaEventParser(IProgress<SpeedTestProgress>? progress)
         if (Num(root, "packetLoss") is { } loss)
             _result.PacketLoss = new PacketLossStats(0, 0, null) { ReportedPercent = loss };
         else
-            _result.PacketLossNote = "Ookla bu ağda paket kaybını ölçemedi (\"Not available\")";
+            _result.PacketLossNote = L.T("Ookla bu ağda paket kaybını ölçemedi (\"Not available\")", "Ookla could not measure packet loss on this network (\"Not available\")");
         if (root.TryGetProperty("result", out var res))
         {
             var url = Str(res, "url");

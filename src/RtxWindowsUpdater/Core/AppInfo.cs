@@ -23,6 +23,12 @@ public static class AppInfo
     public const string TermsUrlEn = RepositoryUrl + "/blob/main/legal/en/terms-of-use.md";
     public const string IssuesUrl = RepositoryUrl + "/issues";
 
+    /// <summary>Seçili dildeki belge (gereksinim sayfasında önce bu gösterilir) ve diğer dildeki karşılığı (v2.0.0).</summary>
+    public static string TermsUrlLocal => L.En ? TermsUrlEn : TermsUrl;
+    public static string PrivacyPolicyUrlLocal => L.En ? PrivacyPolicyUrlEn : PrivacyPolicyUrl;
+    public static string TermsUrlOther => L.En ? TermsUrl : TermsUrlEn;
+    public static string PrivacyPolicyUrlOther => L.En ? PrivacyPolicyUrl : PrivacyPolicyUrlEn;
+
     /// <summary>Uygulamanın açmasına izin verilen yasal / proje adresleri (başka adres açılmaz).</summary>
     public static IReadOnlyList<string> LegalLinks { get; } = [PrivacyPolicyUrl, TermsUrl, PrivacyPolicyUrlEn, TermsUrlEn, IssuesUrl];
 
