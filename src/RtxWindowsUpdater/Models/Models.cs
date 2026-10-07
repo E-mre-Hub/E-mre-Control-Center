@@ -100,7 +100,13 @@ public enum ManualUpdateKind
     /// <summary>Paket yalnızca açık hedeflemeyle güncellenir (manifestte RequireExplicitUpgrade – genelde kendini güncelleyen uygulamalar – veya sabitleme).</summary>
     ExplicitTargeting,
     /// <summary>Kurulu sürümün kurulum türü (ör. MSI) yeni sürümden (ör. EXE) farklı: 0x8A15008E. Yalnızca kaldır + yeniden kur ile güncellenir.</summary>
-    TechnologyMismatch
+    TechnologyMismatch,
+    /// <summary>
+    /// Önceki güncellemede winget başarı bildirdi ama kurulu sürüm HİÇ değişmedi ve dosyaları kullanan açık uygulama yoktu (ör. Google
+    /// Play Games: winget kataloğundaki 156.0.8067.0 Google güncelleyicisinin sürümü, uygulama 26.9.x bildiriyor). Aynı sürüm çifti
+    /// otomatik denenmez; kullanıcı isterse manuel olarak yeniden denenir.
+    /// </summary>
+    NoVersionChange
 }
 
 /// <summary>Bir öğe için denenen güncellemenin gerçek sonucu.</summary>

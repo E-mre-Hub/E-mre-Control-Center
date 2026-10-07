@@ -39,19 +39,31 @@ public sealed class DefenderManager(Logger logger, HttpClient http) : IUpdateMod
         }
         """;
 
+    /// <summary>
+    /// Tanım güncellemesi. 2026-10-07 KULLANICI SORUNU: varsayılan kaynak sırası "MicrosoftUpdateServer|MMPC"; Windows Update hata
+    /// vermeden "yeni tanım yok" dediği için Update-MpSignature başarıyla dönüyor ama sürüm değişmiyordu (cihaz 1.459.576.0, Microsoft'un
+    /// yayımladığı 1.459.588.0) ve eski betik yalnızca HATA olunca sonraki kaynağa geçtiği için MMPC hiç denenmiyordu. Artık sürüm
+    /// değişmezse de sıradaki resmi kaynak denenir: varsayılan sıra → (yalnızca varsayılan hata verdiyse) Microsoft Update → Microsoft'un
+    /// tanım sunucusu (MMPC). Sürüm değişince durulur; hangi kaynağın getirdiği döner.
+    /// </summary>
     private const string UpdateScript = """
-        $before = (Get-MpComputerStatus).AntivirusSignatureVersion
+        $before = [string](Get-MpComputerStatus).AntivirusSignatureVersion
         Write-Log ('Mevcut tanım sürümü: ' + $before)
-        $done = $false; $lastErr = $null
+        $ok = $false; $defaultOk = $false; $lastErr = $null; $source = $null
         foreach ($src in @($null, 'MicrosoftUpdateServer', 'MMPC')) {
+            if ($src -eq 'MicrosoftUpdateServer' -and $defaultOk) { continue }
             try {
-                if ($src) { Write-Log ('Alternatif kaynak deneniyor: ' + $src); Update-MpSignature -UpdateSource $src -ErrorAction Stop }
-                else { Write-Log 'Update-MpSignature çalıştırılıyor...'; Update-MpSignature -ErrorAction Stop }
-                $done = $true; break
-            } catch { $lastErr = $_.Exception.Message; Write-Log ('Hata: ' + $lastErr) }
+                if ($src -eq 'MMPC') { Write-Log 'Microsoft tanım sunucusundan (MMPC) doğrudan deneniyor...'; Update-MpSignature -UpdateSource MMPC -ErrorAction Stop }
+                elseif ($src) { Write-Log ('Kaynak deneniyor: ' + $src); Update-MpSignature -UpdateSource $src -ErrorAction Stop }
+                else { Write-Log 'Update-MpSignature çalıştırılıyor (Windows varsayılan kaynak sırası)...'; Update-MpSignature -ErrorAction Stop; $defaultOk = $true }
+                $ok = $true
+            } catch { $lastErr = $_.Exception.Message; Write-Log ('Hata: ' + $lastErr); continue }
+            $now = [string](Get-MpComputerStatus).AntivirusSignatureVersion
+            if ($now -ne $before) { if ($src) { $source = $src } else { $source = 'default' }; break }
+            Write-Log ('Tanım sürümü değişmedi (' + $now + ').')
         }
-        $after = (Get-MpComputerStatus).AntivirusSignatureVersion
-        Write-Result @{ ok = $done; before = [string]$before; after = [string]$after; lastError = $lastErr }
+        $after = [string](Get-MpComputerStatus).AntivirusSignatureVersion
+        Write-Result @{ ok = $ok; before = $before; after = $after; source = $source; lastError = $lastErr }
         """;
 
     private sealed record LocalStatus(
@@ -193,7 +205,13 @@ public sealed class DefenderManager(Logger logger, HttpClient http) : IUpdateMod
 
         if (reached || changed)
         {
-            logger.Success($"Defender tanımları güncellendi: {before} → {after}");
+            var via = d.Str("source") switch
+            {
+                "MMPC" => " (Microsoft tanım sunucusu – MMPC)",
+                "MicrosoftUpdateServer" => " (Microsoft Update)",
+                _ => string.Empty
+            };
+            logger.Success($"Defender tanımları güncellendi: {before} → {after}{via}");
             return new ModuleResult
             {
                 Key = Key,
@@ -204,7 +222,9 @@ public sealed class DefenderManager(Logger logger, HttpClient http) : IUpdateMod
             };
         }
 
-        var msg = $"Update-MpSignature tamamlandı ancak tanım sürümü değişmedi ({after}). Microsoft sunucularında yeni paket henüz dağıtılmamış olabilir.";
+        var msg = $"Update-MpSignature tamamlandı ancak tanım sürümü değişmedi ({after}" + (target is null ? ")" : $"; Microsoft'un yayımladığı son sürüm {target})") +
+                  ". Windows'un varsayılan kaynağı ve Microsoft tanım sunucusu (MMPC) yeni paket vermedi; paket henüz dağıtılıyor olabilir. " +
+                  "Bir süre sonra yeniden deneyin veya Windows Güvenliği → Virüs ve tehdit koruması → Koruma güncelleştirmeleri'nden denetleyin.";
         logger.Warning(msg);
         return ModuleResult.Failed(Key, msg, check.Details);
     }

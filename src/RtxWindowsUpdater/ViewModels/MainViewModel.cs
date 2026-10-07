@@ -116,6 +116,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         _notifications.Enabled = _notificationsEnabled;
         // Önceki oturumlarda winget'in gerçekten 0x8A15008E döndürdüğü paketler (aynı sürüm tekrar otomatik denenmez).
         WingetManager.LoadKnownTechnologyMismatches(state.State.WingetTechnologyMismatch);
+        WingetManager.LoadKnownNoVersionChange(state.State.WingetNoVersionChange);
         _dispatcher = Dispatcher.CurrentDispatcher;
         _logTimer = new DispatcherTimer(DispatcherPriority.Background) { Interval = TimeSpan.FromMilliseconds(100) };
         _logTimer.Tick += FlushPendingLogs;
@@ -1379,7 +1380,12 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
                 $"{g.Result.Key}|{i.Id}",
                 $"{i.Name}   {i.CurrentVersion} → {i.NewVersion}",
                 0,
-                i.Manual == ManualUpdateKind.TechnologyMismatch ? "kaldır + yeni sürümü kur" : "açık hedeflemeyle güncelle",
+                i.Manual switch
+                {
+                    ManualUpdateKind.TechnologyMismatch => "kaldır + yeni sürümü kur",
+                    ManualUpdateKind.NoVersionChange => "yeniden dene (önceki denemede sürüm değişmedi)",
+                    _ => "açık hedeflemeyle güncelle"
+                },
                 isChecked: false)))
             .ToList();
 
@@ -1390,7 +1396,9 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
             "hedeflenerek winget ile güncellenir.\n" +
             "• Kaldır + yeni sürümü kur: mevcut sürüm farklı bir kurulum türüyle (ör. MSI) kurulmuş; winget yerinde yükseltemez " +
             "(0x8A15008E). Seçerseniz mevcut sürüm KALDIRILIR ve yeni sürüm kurulur. Kaldırma başarısız olursa hiçbir şey değişmez; " +
-            "kurulum başarısız olursa paket kurulu olmadan kalabilir ve bu açıkça bildirilir.",
+            "kurulum başarısız olursa paket kurulu olmadan kalabilir ve bu açıkça bildirilir.\n" +
+            "• Yeniden dene: önceki güncellemede winget başarı bildirdi ama kurulu sürüm değişmedi (winget'in sürüm numarası uygulamanın " +
+            "kendi sürümünden farklı olabilir). Seçerseniz paket yeniden kurulur; sürüm yine değişmezse bu açıkça bildirilir.",
             Icons.Winget, DialogKind.Question, "Seçilenleri uygula", "Şimdi değil",
             choices: choices, choicesTitle: "OTOMATİK UYGULANMAYAN GÜNCELLEMELER", choicesAreSizes: false);
         var selected = choices.Where(c => c.IsChecked).Select(c => c.Id).ToList();
@@ -1693,6 +1701,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         }
         // Winget'in bu işlemde bildirdiği kurulum teknolojisi uyuşmazlıkları kalıcı olarak saklanır (yalnızca değiştiyse yazılır).
         _state.SetWingetTechnologyMismatch(WingetManager.KnownTechnologyMismatches);
+        _state.SetWingetNoVersionChange(WingetManager.KnownNoVersionChange);
 
         var state = error is not null ? OperationState.Failed
             : !completed ? OperationState.Cancelled

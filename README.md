@@ -325,22 +325,22 @@ tırnak içinde yazılır). Depo: https://github.com/E-mre-Hub/E-mre-Control-Cen
 
 ### Yeni sürüm yayınlama (depo sahibi)
 
-1. `src\RtxWindowsUpdater\RtxWindowsUpdater.csproj` içindeki `<Version>` değerini artırın (ör. `1.9.1`).
+1. `src\RtxWindowsUpdater\RtxWindowsUpdater.csproj` içindeki `<Version>` değerini artırın (ör. `1.9.2`).
 2. Değişiklikleri commit'leyip gönderin, ardından etiket oluşturun:
 
 ```bash
-git tag v1.9.1
+git tag v1.9.2
 ```
 
 ```bash
-git push origin v1.9.1
+git push origin v1.9.2
 ```
 
 3. GitHub Actions (`.github/workflows/release.yml`) EXE'yi Windows sunucusunda derler ve **Releases** sayfasına iki dosya ekler:
-   `E-mre-Control-Center-Setup-v1.9.1.exe` (kurulum) ve `E-mre-Control-Center-v1.9.1.zip` (taşınabilir). Arkadaşlar oradan indirir;
+   `E-mre-Control-Center-Setup-v1.9.2.exe` (kurulum) ve `E-mre-Control-Center-v1.9.2.zip` (taşınabilir). Arkadaşlar oradan indirir;
    yüklü uygulamalar bu yayını "Yeni sürüm yayınlandı" olarak görür (v1.7.2 ve sonrası).
-   Etiketteki sürüm (v1.9.1) EXE'nin sürümü olarak kullanılır; csproj'daki `<Version>` ile aynı olmalıdır. Yayının metni yalnızca
-   README'deki `### v1.9.1` bölümüdür (uygulamadaki güncelleme penceresinde de bu metin görünür); bu bölüm etiketten önce yazılmalıdır.
+   Etiketteki sürüm (v1.9.2) EXE'nin sürümü olarak kullanılır; csproj'daki `<Version>` ile aynı olmalıdır. Yayının metni yalnızca
+   README'deki `### v1.9.2` bölümüdür (uygulamadaki güncelleme penceresinde de bu metin görünür); bu bölüm etiketten önce yazılmalıdır.
 
 Not: Herkese açık depolarda GitHub Actions standart sunucularda ücretsizdir;
 bir derleme yaklaşık 3-5 dakika sürer.
@@ -946,6 +946,24 @@ eski klasörlerde kalır (`%LOCALAPPDATA%\E-mre Hub\Logs\`, `%LOCALAPPDATA%\RTX 
   yöneticinin klasörü).
 
 ## Sürüm geçmişi
+
+### v1.9.2
+
+**Düzeltme: Microsoft Defender tanımları güncellenemiyordu**
+- Windows Update hata vermeden "yeni tanım yok" dediğinde, Microsoft'un yayımladığı daha yeni tanımlar olsa bile güncelleme
+  "başarısız" bitiyordu: uygulama sonraki kaynağa yalnızca hata olunca geçiyordu. Artık sürüm değişmezse Microsoft'un resmi tanım
+  sunucusu (MMPC) da denenir; günlükte yeni tanımın hangi kaynaktan geldiği yazar.
+
+**Düzeltme: Hep "güncelleme var" görünen winget paketleri (ör. Google Play Games)**
+- Bazı paketlerde winget kurulumun başarılı olduğunu bildirir ama uygulamanın kurulu sürümü hiç değişmez (winget kataloğundaki sürüm
+  numarası uygulamanınkinden farklıdır; Google Play Games'te katalog 156.0.8067.0, uygulama 26.9.x). Bu paketler her Tümünü
+  Güncelle'de yeniden kuruluyor ve 1 dakika boyunca doğrulanmaya çalışılıyordu.
+- Artık böyle bir paket "kurulu sürüm değişmedi" olarak not edilir. Aynı sürüm bir dahaki kontrolde otomatik denenmez,
+  "Otomatik uygulanmayan güncellemeler" listesinde "yeniden dene" seçeneğiyle sunulur. Paketin sürümü değişince normal güncellemeye döner.
+
+**İyileştirme**
+- Uygulama kapanırken günlüğe "Uygulama kapanıyor" satırı yazılır (Windows kapanırken de). Böylece günlükten uygulamanın normal mi
+  kapandığı yoksa dışarıdan mı sonlandırıldığı anlaşılır.
 
 ### v1.9.1
 

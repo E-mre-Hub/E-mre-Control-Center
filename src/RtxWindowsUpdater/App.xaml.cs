@@ -80,7 +80,13 @@ public partial class App : Application
         // Bildirim alanı: pencere kapatılınca uygulama arka planda sürer; simge çift tıklamayla açılır, sağ tıkla kısayollar.
         _tray = new TrayController(window, _viewModel, _logger);
         window.Tray = _tray;
-        SessionEnding += (_, _) => AppLifetime.MarkExiting(); // Windows kapanırken pencere gizlenmez, uygulama kapanır
+        SessionEnding += (_, args) =>
+        {
+            AppLifetime.MarkExiting(); // Windows kapanırken pencere gizlenmez, uygulama kapanır
+            _logger?.Info(args.ReasonSessionEnding == ReasonSessionEnding.Shutdown
+                ? "Windows kapatılıyor / yeniden başlatılıyor; uygulama kapanacak."
+                : "Windows oturumu kapatılıyor; uygulama kapanacak.");
+        };
         window.Show();
     }
 
@@ -250,6 +256,8 @@ public partial class App : Application
 
     protected override void OnExit(ExitEventArgs e)
     {
+        // Normal kapanış günlüğe yazılır: günlük bu satırsız biterse uygulama dışarıdan sonlandırılmış (ör. Görev Yöneticisi) demektir.
+        if (_viewModel is not null) _logger?.Info($"Uygulama kapanıyor (çıkış kodu {e.ApplicationExitCode}).");
         _tray?.Dispose();
         _viewModel?.Dispose();
         // Kontrol amaçlı (iptal edilebilir) araç süreçleri kapanışta kesin sonlandırılır; iptalin kendi sonlandırma adımı arka

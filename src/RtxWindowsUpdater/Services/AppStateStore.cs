@@ -229,6 +229,9 @@ public sealed class AppState
 
     /// <summary>Winget'in 0x8A15008E döndürdüğü paketler ("kaynak|Id" → hedef sürüm); yeniden denemeyi önlemek için.</summary>
     public Dictionary<string, string> WingetTechnologyMismatch { get; set; } = new(StringComparer.OrdinalIgnoreCase);
+
+    /// <summary>"kaynak|Id" → "kurulu|sunulan": winget başarı bildirip kurulu sürümün değişmediği paketler (v1.9.2).</summary>
+    public Dictionary<string, string> WingetNoVersionChange { get; set; } = new(StringComparer.OrdinalIgnoreCase);
 }
 
 /// <summary>
@@ -295,6 +298,7 @@ public sealed class AppStateStore
             state.Recent ??= [];
             state.SpeedTests ??= [];
             state.WingetTechnologyMismatch ??= new(StringComparer.OrdinalIgnoreCase);
+            state.WingetNoVersionChange ??= new(StringComparer.OrdinalIgnoreCase);
             return state;
         }
         catch (Exception ex)
@@ -316,6 +320,20 @@ public sealed class AppStateStore
         {
             State.Recent.Insert(0, record);
             if (State.Recent.Count > MaxRecent) State.Recent.RemoveRange(MaxRecent, State.Recent.Count - MaxRecent);
+        }
+        SaveInBackground();
+    }
+
+    /// <summary>"Sürüm değişmedi" kayıtlarını yalnızca değiştiyse kaydeder.</summary>
+    public void SetWingetNoVersionChange(IReadOnlyDictionary<string, string> entries)
+    {
+        lock (_lock)
+        {
+            var current = State.WingetNoVersionChange;
+            if (current.Count == entries.Count &&
+                entries.All(e => current.TryGetValue(e.Key, out var v) && string.Equals(v, e.Value, StringComparison.OrdinalIgnoreCase)))
+                return;
+            State.WingetNoVersionChange = new Dictionary<string, string>(entries, StringComparer.OrdinalIgnoreCase);
         }
         SaveInBackground();
     }
