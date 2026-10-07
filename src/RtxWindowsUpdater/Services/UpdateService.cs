@@ -28,7 +28,7 @@ public sealed record UpdateCheckResult(bool Success, UpdateInfo? Update, string 
 
 /// <summary>
 /// Uygulama içi güncelleme. Sürümler herkese açık ana deponun GitHub Releases'ından okunur (<see cref="AppInfo.ReleasesRepository"/>;
-/// GitHub Actions her etiketle kurulum dosyasını ve README'deki sürüm notunu oraya yayınlar). Denetim anonimdir
+/// GitHub Actions her etiketle kurulum dosyasını ve CHANGELOG.md'deki sürüm notunu oraya yayınlar). Denetim anonimdir
 /// (GitHub API, IP başına saatte 60 istek). İndirilen kurulum dosyası yalnızca şu üç doğrulamadan geçerse kullanılır:
 /// GitHub'ın bildirdiği boyut, GitHub'ın bildirdiği SHA-256 özeti ve EXE'nin içindeki ürün adı + sürüm (etiketle aynı olmalı).
 /// </summary>
@@ -252,7 +252,7 @@ public sealed class UpdateService(Uri latestReleaseUrl, Action<string> log)
     internal static string CleanNotes(string markdown)
     {
         var text = markdown.Replace("\r", "");
-        text = Regex.Replace(text, @"\n[ \t]{2,}(?![-*] )", " "); // README'de alt satıra kayan madde devamı → aynı satır
+        text = Regex.Replace(text, @"\n[ \t]{2,}(?![-*] )", " "); // sürüm notunda alt satıra kayan madde devamı → aynı satır
         text = Regex.Replace(text, @"\*\*|__|`", "");
         // GitHub'ın otomatik eklediği satırlar ("Full Changelog: https://…", "What's Changed") pencerede gösterilmez.
         text = Regex.Replace(text, @"^(Full Changelog|What's Changed)\b.*(\n|$)", "", RegexOptions.Multiline);
