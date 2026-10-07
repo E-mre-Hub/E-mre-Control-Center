@@ -62,7 +62,35 @@ public sealed class UpdateOrchestrator : IDisposable
         ModuleOrder = Modules.Select(m => m.Key).ToList();
 
         foreach (var m in Modules.OfType<IProgressReportingModule>())
-            m.ProgressChanged += p => _activity?.Report(p);
+            m.ProgressChanged += p =>
+            {
+                _activity?.Report(p);
+                ForwardToStep(p);
+            };
+    }
+
+    /// <summary>
+    /// Çalışan modülün genel ilerlemedeki payı (Start → Start + Span). Modülün kendi canlı ilerlemesi (Winget n/toplam paket,
+    /// SFC / DISM / MRT yüzdesi, geçici dosya kategorileri) genel çubuğa ve adım metnine yansır. 2026-10-07 KULLANICI SORUNU:
+    /// 4 adımlı güncellemede Winget 7 paketi yaklaşık 25 dk kurarken genel çubuk %0'da kaldı ve uygulama "dondu" sanıldı.
+    /// </summary>
+    private sealed class StepContext(string key, string name, IProgress<StepProgress> step, double start, double span)
+    {
+        public string Key { get; } = key;
+        public string Name { get; } = name;
+        public IProgress<StepProgress> Step { get; } = step;
+        public double Start { get; } = start;
+        public double Span { get; } = span;
+        public double LastFraction; // yüzdesiz (belirsiz) bildirimde çubuk geri gitmesin
+    }
+
+    private volatile StepContext? _stepContext;
+
+    private void ForwardToStep(ModuleProgress p)
+    {
+        if (_stepContext is not { } c || c.Key != p.Key || string.IsNullOrWhiteSpace(p.Text)) return;
+        if (p.Percent is double percent) c.LastFraction = Math.Clamp(percent, 0, 100) / 100;
+        c.Step.Report(new StepProgress($"{c.Name}: {p.Text}", c.Start + c.Span * c.LastFraction));
     }
 
     /// <summary>Bu sistemde kullanım dışı modüller (ör. RTX yoksa NVIDIA). Hiçbir kontrol / güncelleme akışına girmez.</summary>
@@ -207,7 +235,9 @@ public sealed class UpdateOrchestrator : IDisposable
                 rep.Step.Report(new StepProgress(CheckTexts[m.Key], 8 + 92.0 * i / targets.Count));
                 rep.ModuleState.Report(new ModuleResult { Key = m.Key, Status = ComponentStatus.Checking, Summary = RunningText(m.Key, check: true) });
 
+                _stepContext = new StepContext(m.Key, m.DisplayName, rep.Step, 8 + 92.0 * i / targets.Count, 92.0 / targets.Count);
                 var r = await SafeRunAsync(() => m.CheckAsync(ct), m, OperationKind.Check, isCheck: true, ct);
+                _stepContext = null;
                 var labeled = ApplyNetworkCaveat(r, network);
                 if (!ReferenceEquals(labeled, r))
                     _logger.Warning($"{m.DisplayName}: internet bağlantısı doğrulanamadığı için sonuç \"Dikkat\" olarak işaretlendi (winget önbellekteki listeyi kullanmış olabilir).");
@@ -237,6 +267,7 @@ public sealed class UpdateOrchestrator : IDisposable
         finally
         {
             _activity = null;
+            _stepContext = null;
         }
     }
 
@@ -309,9 +340,13 @@ public sealed class UpdateOrchestrator : IDisposable
                 rep.Step.Report(new StepProgress(UpdateTexts[m.Key], 100.0 * i / Math.Max(1, targets.Count)));
                 rep.ModuleState.Report(new ModuleResult { Key = m.Key, Status = ComponentStatus.Updating, Summary = RunningText(m.Key, check: false) });
 
-                // Güncelleme/onarım başladıktan sonra yarıda kesilmez; iptal yalnızca adımlar arasında uygulanır.
+                // Güncelleme/onarım başladıktan sonra yarıda kesilmez; iptal adımlar arasında uygulanır. Bağımsız öğeleri sırayla
+                // kuran modüller (Winget) belirteci alır: başlamış kurulum yine kesilmez, yalnızca KALAN paketler başlatılmaz.
                 var check = checks[m.Key];
-                var r = await SafeRunAsync(() => m.UpdateAsync(check, CancellationToken.None), m, OperationKind.Update, isCheck: false, CancellationToken.None);
+                var moduleToken = m is IStopsBetweenItems ? ct : CancellationToken.None;
+                _stepContext = new StepContext(m.Key, m.DisplayName, rep.Step, 100.0 * i / Math.Max(1, targets.Count), 100.0 / Math.Max(1, targets.Count));
+                var r = await SafeRunAsync(() => m.UpdateAsync(check, moduleToken), m, OperationKind.Update, isCheck: false, CancellationToken.None);
+                _stepContext = null;
                 results[m.Key] = r;
                 rep.ModuleState.Report(r);
             }
@@ -319,6 +354,7 @@ public sealed class UpdateOrchestrator : IDisposable
         finally
         {
             _activity = null;
+            _stepContext = null;
         }
 
         if (mode == RunMode.All && !cleanRecycleBin && keys.Contains(ComponentKeys.RecycleBin) &&
@@ -377,8 +413,10 @@ public sealed class UpdateOrchestrator : IDisposable
             rep.Step.Report(new StepProgress($"{module.DisplayName}: seçilen manuel güncellemeler uygulanıyor...", 5));
             rep.ModuleState.Report(new ModuleResult { Key = module.Key, Status = ComponentStatus.Updating, Summary = "Manuel güncelleme uygulanıyor..." });
             // Kaldırma/kurulum başladıktan sonra yarıda kesilmez.
+            _stepContext = new StepContext(module.Key, module.DisplayName, rep.Step, 5, 90);
             var r = await SafeRunAsync(() => manual.UpdateManualAsync(check, ids, CancellationToken.None),
                 module, OperationKind.Update, isCheck: false, CancellationToken.None);
+            _stepContext = null;
             rep.ModuleState.Report(r);
             rep.Step.Report(new StepProgress("İşlem tamamlandı", 100));
             LogUpdateOutcome($"{module.DisplayName}: manuel güncellemeler tamamlandı", new Dictionary<string, ModuleResult> { [r.Key] = r });
@@ -387,6 +425,7 @@ public sealed class UpdateOrchestrator : IDisposable
         finally
         {
             _activity = null;
+            _stepContext = null;
         }
     }
 
@@ -412,8 +451,10 @@ public sealed class UpdateOrchestrator : IDisposable
             rep.Step.Report(new StepProgress($"{module.DisplayName}: çalışan uygulamalar kapatılıp güncelleme yeniden deneniyor...", 5));
             rep.ModuleState.Report(new ModuleResult { Key = module.Key, Status = ComponentStatus.Updating, Summary = "Yeniden deneniyor..." });
             // Kapatma ve kurulum başladıktan sonra yarıda kesilmez.
+            _stepContext = new StepContext(module.Key, module.DisplayName, rep.Step, 5, 90);
             var r = await SafeRunAsync(() => retry.RetryAfterClosingAsync(previous, approved, CancellationToken.None),
                 module, OperationKind.Update, isCheck: false, CancellationToken.None);
+            _stepContext = null;
             rep.ModuleState.Report(r);
             rep.Step.Report(new StepProgress("İşlem tamamlandı", 100));
             LogUpdateOutcome($"{module.DisplayName}: yeniden deneme tamamlandı", new Dictionary<string, ModuleResult> { [r.Key] = r });
@@ -422,6 +463,7 @@ public sealed class UpdateOrchestrator : IDisposable
         finally
         {
             _activity = null;
+            _stepContext = null;
         }
     }
 
@@ -446,7 +488,9 @@ public sealed class UpdateOrchestrator : IDisposable
         {
             rep.Step.Report(new StepProgress(ActionTexts[key], 5));
             rep.ModuleState.Report(new ModuleResult { Key = key, Status = ComponentStatus.Updating, Summary = RunningText(key, check: key != ComponentKeys.Sfc) });
+            _stepContext = new StepContext(key, m.DisplayName, rep.Step, 5, 90);
             var r = await SafeRunAsync(() => m.RunActionAsync(ct), m, OperationKind.Action, isCheck: key != ComponentKeys.Sfc, ct);
+            _stepContext = null;
             rep.ModuleState.Report(r);
             rep.Step.Report(new StepProgress("İşlem tamamlandı", 100));
             return r;
@@ -454,6 +498,7 @@ public sealed class UpdateOrchestrator : IDisposable
         finally
         {
             _activity = null;
+            _stepContext = null;
         }
     }
 

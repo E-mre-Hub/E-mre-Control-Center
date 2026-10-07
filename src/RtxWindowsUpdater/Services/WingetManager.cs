@@ -1,3 +1,5 @@
+using System.Diagnostics;
+using System.Globalization;
 using System.IO;
 using System.Text.RegularExpressions;
 using RtxWindowsUpdater.Core;
@@ -14,7 +16,8 @@ namespace RtxWindowsUpdater.Services;
 /// Hata kodları winget'in resmi dönüş kodu belgesine (APPINSTALLER_CLI_ERROR_*) göre yorumlanır;
 /// winget'in kendi mesajı ve (varsa) kurulum programının çıkış kodu her zaman korunur.
 /// </summary>
-public sealed class WingetManager(Logger logger, string source, string key, string displayName) : IUpdateModule, IInUseRetryModule, IManualUpdateModule
+public sealed class WingetManager(Logger logger, string source, string key, string displayName)
+    : IUpdateModule, IInUseRetryModule, IManualUpdateModule, IProgressReportingModule, IStopsBetweenItems
 {
     private static readonly TimeSpan ListTimeout = TimeSpan.FromMinutes(4);
     private static readonly TimeSpan PackageTimeout = TimeSpan.FromMinutes(30);
@@ -167,9 +170,121 @@ public sealed class WingetManager(Logger logger, string source, string key, stri
 
     private static string[] Args(params string[] args) => [.. args, .. CommonArgs];
 
-    private Task<ProcessResult> RunWingetAsync(string winget, string[] args, TimeSpan timeout, CancellationToken ct, bool forward = false) =>
-        ProcessRunner.RunCmdAsync(winget, args, timeout, ct,
-            onStdOut: forward ? ForwardOutput : null, onStdErr: forward ? ForwardOutput : null);
+    private Task<ProcessResult> RunWingetAsync(string winget, string[] args, TimeSpan timeout, CancellationToken ct, bool forward = false,
+        Action<string>? onLine = null)
+    {
+        Action<string>? callback = forward || onLine is not null
+            ? line =>
+            {
+                if (forward) ForwardOutput(line);
+                onLine?.Invoke(line);
+            }
+            : null;
+        return ProcessRunner.RunCmdAsync(winget, args, timeout, ct, onStdOut: callback, onStdErr: callback);
+    }
+
+    /// <summary>Güncelleme sürerken kartta ve genel ilerleme çubuğunda gösterilen canlı durum (paket sırası + aşama).</summary>
+    public event Action<ModuleProgress>? ProgressChanged;
+
+    private void ReportProgress(string text, double? percent)
+    {
+        try { ProgressChanged?.Invoke(new ModuleProgress(key, text, percent)); } catch { /* UI bildirimi */ }
+    }
+
+    /// <summary>
+    /// Tek bir paketin güncellemesi sürerken ilerleme bildirir (2026-10-07 KULLANICI SORUNU: 7 paketlik güncelleme yaklaşık 25 dk sürdü, çubuk
+    /// bu sürede %0'da kaldı ve uygulama "dondu" sanıldı). Gösterilenler YALNIZCA gerçek bilgiler: paket sırası (n/toplam), winget'in
+    /// kendi aşama satırları (indiriliyor / kurulum dosyası doğrulandı / kuruluyor), winget boyut veya yüzde yazdıysa o değer, aksi hâlde
+    /// aşamada geçen süre (5 sn'de bir). Yüzde = tamamlanan paket sayısı; tahmini süre veya uydurma yüzde yok.
+    /// </summary>
+    private sealed class PackageProgress : IDisposable
+    {
+        private static readonly Regex Sizes = new(@"(\d+(?:[.,]\d+)?)\s*(B|KB|MB|GB)\s*/\s*(\d+(?:[.,]\d+)?)\s*(B|KB|MB|GB)",
+            RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
+        private static readonly Regex Percent = new(@"(?<!\d)(\d{1,3})\s*%", RegexOptions.CultureInvariant);
+
+        private readonly WingetManager _owner;
+        private readonly string _prefix;
+        private readonly double _percent;
+        private readonly Stopwatch _phaseClock = Stopwatch.StartNew();
+        private readonly Timer _timer;
+        private readonly object _lock = new();
+        private string _phase = "başlatılıyor";
+        private string? _detail;
+        private bool _disposed;
+
+        public PackageProgress(WingetManager owner, int index, int total, string name)
+        {
+            _owner = owner;
+            _prefix = $"{index + 1}/{total} · {name}";
+            _percent = 100.0 * index / Math.Max(1, total);
+            Publish();
+            _timer = new Timer(_ => Publish(), null, TimeSpan.FromSeconds(5), TimeSpan.FromSeconds(5));
+        }
+
+        public void SetPhase(string phase)
+        {
+            lock (_lock)
+            {
+                if (_phase == phase) return;
+                _phase = phase;
+                _detail = null;
+                _phaseClock.Restart();
+            }
+            try { _timer.Change(TimeSpan.FromSeconds(5), TimeSpan.FromSeconds(5)); } // yeni aşamanın süresi 5 sn sonra görünür
+            catch (ObjectDisposedException) { return; }
+            Publish();
+        }
+
+        /// <summary>Winget'in çıktı satırı: aşama satırları ve (yazıldıysa) indirme / kurulum ilerlemesi.</summary>
+        public void OnLine(string line)
+        {
+            var cut = line.LastIndexOf('\r');
+            var s = (cut >= 0 ? line[(cut + 1)..] : line).Trim();
+            if (s.Length == 0) return;
+            if (s.Contains('█') || s.Contains('▒'))
+            {
+                var size = Sizes.Match(s);
+                var detail = size.Success
+                    ? $"{FormatSize(size.Groups[1].Value)} {size.Groups[2].Value.ToUpperInvariant()} / {FormatSize(size.Groups[3].Value)} {size.Groups[4].Value.ToUpperInvariant()}"
+                    : Percent.Match(s) is { Success: true } p ? "%" + p.Groups[1].Value : null;
+                if (detail is null) return;
+                lock (_lock) _detail = detail;
+                return; // zamanlayıcı en geç 5 sn içinde gösterir (her ilerleme karesinde bildirim yapılmaz)
+            }
+            if (s.StartsWith("Downloading", StringComparison.OrdinalIgnoreCase)) SetPhase("indiriliyor");
+            else if (s.Contains("verified installer hash", StringComparison.OrdinalIgnoreCase)) SetPhase("kurulum dosyası doğrulandı");
+            else if (s.StartsWith("Starting package install", StringComparison.OrdinalIgnoreCase)) SetPhase("kuruluyor");
+            else if (s.StartsWith("Successfully installed", StringComparison.OrdinalIgnoreCase)) SetPhase("kuruldu");
+        }
+
+        private static string FormatSize(string value) =>
+            double.TryParse(value.Replace(',', '.'), NumberStyles.Float, CultureInfo.InvariantCulture, out var v)
+                ? v.ToString("0.0", CultureInfo.CurrentCulture)
+                : value;
+
+        private void Publish()
+        {
+            string text;
+            lock (_lock)
+            {
+                if (_disposed) return;
+                var elapsed = _phaseClock.Elapsed;
+                var extra = _detail ?? (elapsed.TotalSeconds >= 1 ? FormatElapsed(elapsed) : null);
+                text = extra is null ? $"{_prefix}: {_phase}" : $"{_prefix}: {_phase} ({extra})";
+            }
+            _owner.ReportProgress(text, _percent);
+        }
+
+        private static string FormatElapsed(TimeSpan t) =>
+            t.TotalMinutes >= 1 ? $"{(int)t.TotalMinutes} dk {t.Seconds} sn" : $"{t.Seconds} sn";
+
+        public void Dispose()
+        {
+            lock (_lock) _disposed = true;
+            _timer.Dispose();
+        }
+    }
 
     public async Task<ModuleResult> CheckAsync(CancellationToken ct)
     {
@@ -504,15 +619,25 @@ public sealed class WingetManager(Logger logger, string source, string key, stri
         var resultItems = check.Items.Select(Clone).ToList();
         var attempted = new List<UpdateItem>();
         var batch = new List<UpdateItem>();
+        var skipped = new List<UpdateItem>();
 
-        foreach (var item in targets)
+        for (var n = 0; n < targets.Count; n++)
         {
-            ct.ThrowIfCancellationRequested();
+            var item = targets[n];
             var target = resultItems.First(r => r.Id == item.Id);
+
+            // İptal / çıkış istendi: başlamış paket yarıda kesilmez (kurulumlar iptal edilemez başlatılır); KALAN paketler başlatılmaz.
+            if (ct.IsCancellationRequested)
+            {
+                skipped.Add(target);
+                continue;
+            }
 
             // Edge / WebView2: Microsoft Edge Update (doğrulaması kayıt defterinden; winget doğrulamasına girmez).
             if (IsEdgeManaged(item.Id, out var edge))
             {
+                using var edgeProgress = new PackageProgress(this, n, targets.Count, item.Name);
+                edgeProgress.SetPhase("Microsoft Edge Update ile güncelleniyor");
                 await UpdateEdgeAsync(edge, target);
                 continue;
             }
@@ -525,29 +650,42 @@ public sealed class WingetManager(Logger logger, string source, string key, stri
             }
 
             logger.Info($"{item.Name} güncelleniyor ({item.CurrentVersion} → {item.NewVersion})...");
-            var r = await RunWingetAsync(winget, UpgradeArgs(item.Id), PackageTimeout, CancellationToken.None, forward: true);
+            using var progress = new PackageProgress(this, n, targets.Count, item.Name);
+            var r = await RunWingetAsync(winget, UpgradeArgs(item.Id), PackageTimeout, CancellationToken.None, forward: true, onLine: progress.OnLine);
             Evaluate(r, target);
             attempted.Add(target);
         }
 
-        if (batch.Count > 0)
+        if (batch.Count > 0 && ct.IsCancellationRequested)
+        {
+            skipped.AddRange(batch);
+        }
+        else if (batch.Count > 0)
         {
             // Aynı listeyi (winget'in kendi "otomatik güncellenebilir" kümesini) toplu komutla güncelle.
             logger.Info($"Kimliği tek tek hedeflenemeyen {batch.Count} paket için toplu winget güncellemesi çalıştırılıyor...");
+            using var progress = new PackageProgress(this, targets.Count - batch.Count, targets.Count, $"{batch.Count} paket (toplu güncelleme)");
             var r = await RunWingetAsync(winget,
                 Args("upgrade", "--all", "--source", source, "--silent", "--accept-package-agreements"),
-                PackageTimeout * 2, CancellationToken.None, forward: true);
+                PackageTimeout * 2, CancellationToken.None, forward: true, onLine: progress.OnLine);
             foreach (var t in batch)
                 Evaluate(r, t);
             attempted.AddRange(batch);
         }
 
+        foreach (var t in skipped)
+            t.StatusText = "Atlandı: işlem iptal edildi / uygulama kapatılıyor (kurulum başlatılmadı); bir sonraki güncellemede yeniden sunulur";
+        if (skipped.Count > 0)
+            logger.Warning($"{displayName}: iptal istendiği için {skipped.Count} paket başlatılmadı: {string.Join(", ", skipped.Select(s => s.Name))}.");
+
         // "Uygulama / dosyalar kullanımda" hatalarında güncellemeyi engelleyen GERÇEK işlemler tespit edilir (kapatılmaz).
         foreach (var t in attempted.Where(i => i.InUse))
             DetectBlockers(t);
 
-        var verifyNote = await VerifyAsync(winget, attempted);
-        return Summarize(resultItems, verifyNote, []);
+        if (attempted.Count > 0)
+            ReportProgress($"{attempted.Count} paket işlendi · sonuçlar doğrulanıyor (winget upgrade)", 100.0 * (targets.Count - skipped.Count) / targets.Count);
+        var verifyNote = await VerifyAsync(winget, attempted, ct);
+        return Summarize(resultItems, verifyNote, [], skipped);
     }
 
     /// <summary>
@@ -722,7 +860,9 @@ public sealed class WingetManager(Logger logger, string source, string key, stri
     /// Başarı bildirilen paketler için TEK bir "winget upgrade" ile gerçek doğrulama: aynı yeni sürüm hâlâ listeleniyorsa
     /// paket "doğrulanamadı" olur. Doğrulama yapılamazsa nedeni döner.
     /// </summary>
-    private async Task<string?> VerifyAsync(string winget, IEnumerable<UpdateItem> attempted)
+    /// <param name="stopRetries">İptal / çıkış istenince arka plan kurulumları için yapılan bekleme-yeniden doğrulama kısaltılır
+    /// (doğrulama yine bir kez daha yapılır; sonuç beklenmeden "başarılı" sayılmaz).</param>
+    private async Task<string?> VerifyAsync(string winget, IEnumerable<UpdateItem> attempted, CancellationToken stopRetries = default)
     {
         var claimed = attempted.Where(i => i.Outcome is ItemOutcome.Updated or ItemOutcome.UpdatedReboot).ToList();
         if (claimed.Count == 0) return null;
@@ -750,10 +890,17 @@ public sealed class WingetManager(Logger logger, string source, string key, stri
                 stillPending.TryAdd(row.Id, row);
 
             var waiting = claimed.Where(Pending).ToList();
-            if (waiting.Count == 0 || attempt >= VerifyRetries) break;
+            if (waiting.Count == 0 || attempt >= VerifyRetries || stopRetries.IsCancellationRequested) break;
             logger.Info($"{string.Join(", ", waiting.Select(o => o.Name))}: kurulum programı arka planda sürüyor olabilir; doğrulama " +
                         $"{VerifyRetryDelay.TotalSeconds:0} sn sonra tekrarlanacak ({attempt + 1}/{VerifyRetries}).");
-            await Task.Delay(VerifyRetryDelay);
+            try
+            {
+                await Task.Delay(VerifyRetryDelay, stopRetries);
+            }
+            catch (OperationCanceledException)
+            {
+                // çıkış istendi: son bir doğrulama yapılıp döngüden çıkılır
+            }
         }
 
         foreach (var o in claimed)
@@ -783,8 +930,11 @@ public sealed class WingetManager(Logger logger, string source, string key, stri
     }
 
     /// <summary>Öğelerin gerçek sonuçlarından (Outcome) modül sonucunu üretir.</summary>
-    private ModuleResult Summarize(List<UpdateItem> items, string? verifyNote, IReadOnlyList<string> extraNotes)
+    /// <param name="skipped">İptal / çıkış istendiği için HİÇ başlatılmayan paketler (başarı sayılmaz; sonuç "kısmen" veya "atlandı").</param>
+    private ModuleResult Summarize(List<UpdateItem> items, string? verifyNote, IReadOnlyList<string> extraNotes,
+        IReadOnlyCollection<UpdateItem>? skipped = null)
     {
+        skipped ??= [];
         var attempted = items.Where(i => i.Outcome is not null).ToList();
         var ok = attempted.Count(i => i.Outcome is ItemOutcome.Updated or ItemOutcome.UpdatedReboot);
         var reboot = attempted.Count(i => i.Outcome == ItemOutcome.UpdatedReboot);
@@ -793,7 +943,17 @@ public sealed class WingetManager(Logger logger, string source, string key, stri
 
         ComponentStatus status;
         string summary;
-        if (failed.Count == 0 && unverified.Count == 0)
+        if (skipped.Count > 0 && ok == 0 && failed.Count == 0 && unverified.Count == 0)
+        {
+            status = ComponentStatus.Skipped;
+            summary = $"{skipped.Count} paket atlandı (iptal edildi)";
+        }
+        else if (skipped.Count > 0 && failed.Count == 0 && unverified.Count == 0)
+        {
+            status = ComponentStatus.PartiallyUpdated;
+            summary = $"{ok} güncellendi, {skipped.Count} atlandı (iptal edildi)" + (reboot > 0 ? " – yeniden başlatma gerekli" : "");
+        }
+        else if (failed.Count == 0 && unverified.Count == 0)
         {
             status = reboot > 0 ? ComponentStatus.RebootRequired : ComponentStatus.Updated;
             summary = reboot > 0 ? $"{ok} paket güncellendi – yeniden başlatma gerekli" : $"{ok} paket güncellendi";
@@ -804,6 +964,7 @@ public sealed class WingetManager(Logger logger, string source, string key, stri
             var parts = new List<string> { $"{ok} güncellendi" };
             if (failed.Count > 0) parts.Add($"{failed.Count} güncellenemedi");
             if (unverified.Count > 0) parts.Add($"{unverified.Count} doğrulanamadı");
+            if (skipped.Count > 0) parts.Add($"{skipped.Count} atlandı (iptal edildi)");
             summary = string.Join(", ", parts);
         }
         else
@@ -812,7 +973,7 @@ public sealed class WingetManager(Logger logger, string source, string key, stri
             summary = failed.Count == 1 ? "1 paket güncellenemedi" : $"{failed.Count} paket güncellenemedi";
         }
 
-        if (failed.Count == 0 && unverified.Count == 0) logger.Success($"{displayName}: {summary}.");
+        if (failed.Count == 0 && unverified.Count == 0 && skipped.Count == 0) logger.Success($"{displayName}: {summary}.");
         else logger.Warning($"{displayName}: {summary}.");
 
         var reasons = new List<string>();
@@ -822,10 +983,14 @@ public sealed class WingetManager(Logger logger, string source, string key, stri
         reasons.AddRange(unverified.Select(i => $"{i.Name}: {i.StatusText}."));
         if (verifyNote is not null) reasons.Add(verifyNote);
         if (reboot > 0) reasons.Add("Bazı paketlerin tamamlanması için yeniden başlatma gerekiyor.");
+        if (skipped.Count > 0)
+            reasons.Add($"İşlem iptal edildiği / uygulama kapatıldığı için başlatılmayan paketler: {string.Join(", ", skipped.Select(s => s.Name))}. " +
+                        "Bir sonraki kontrolde yeniden sunulur.");
         reasons.AddRange(extraNotes);
 
         var details = $"Güncellenen: {ok}\nGüncellenemeyen: {failed.Count}";
         if (unverified.Count > 0) details += $"\nDoğrulanamayan: {unverified.Count}";
+        if (skipped.Count > 0) details += $"\nAtlanan (iptal edildi): {skipped.Count}";
         if (reboot > 0) details += $"\nYeniden başlatma bekleyen: {reboot}";
         var blocked = failed.Count(i => i.InUse && i.BlockingProcesses.Any(p => p.CanClose));
         if (blocked > 0) details += $"\nÇalışan uygulama nedeniyle güncellenemeyen: {blocked}";

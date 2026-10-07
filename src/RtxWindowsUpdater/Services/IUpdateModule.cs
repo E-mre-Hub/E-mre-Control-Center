@@ -56,3 +56,12 @@ public interface IProgressReportingModule
 {
     event Action<ModuleProgress>? ProgressChanged;
 }
+
+/// <summary>
+/// Birden çok BAĞIMSIZ öğeyi sırayla kuran modüller (Winget paketleri). Orkestratör bu modüllere gerçek iptal belirtecini verir:
+/// başlamış bir kurulum asla yarıda kesilmez (kurulum süreçleri iptal edilemez başlatılır), iptal / çıkış istenince yalnızca
+/// KALAN öğeler başlatılmaz ve sonuçta "atlandı" olarak raporlanır. Diğer modüller (tek parça onarım / kurulum) belirteç almaz.
+/// </summary>
+public interface IStopsBetweenItems
+{
+}

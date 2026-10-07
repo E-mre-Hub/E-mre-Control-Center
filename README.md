@@ -325,22 +325,22 @@ tırnak içinde yazılır). Depo: https://github.com/E-mre-Hub/E-mre-Control-Cen
 
 ### Yeni sürüm yayınlama (depo sahibi)
 
-1. `src\RtxWindowsUpdater\RtxWindowsUpdater.csproj` içindeki `<Version>` değerini artırın (ör. `1.9.0`).
+1. `src\RtxWindowsUpdater\RtxWindowsUpdater.csproj` içindeki `<Version>` değerini artırın (ör. `1.9.1`).
 2. Değişiklikleri commit'leyip gönderin, ardından etiket oluşturun:
 
 ```bash
-git tag v1.9.0
+git tag v1.9.1
 ```
 
 ```bash
-git push origin v1.9.0
+git push origin v1.9.1
 ```
 
 3. GitHub Actions (`.github/workflows/release.yml`) EXE'yi Windows sunucusunda derler ve **Releases** sayfasına iki dosya ekler:
-   `E-mre-Control-Center-Setup-v1.9.0.exe` (kurulum) ve `E-mre-Control-Center-v1.9.0.zip` (taşınabilir). Arkadaşlar oradan indirir;
+   `E-mre-Control-Center-Setup-v1.9.1.exe` (kurulum) ve `E-mre-Control-Center-v1.9.1.zip` (taşınabilir). Arkadaşlar oradan indirir;
    yüklü uygulamalar bu yayını "Yeni sürüm yayınlandı" olarak görür (v1.7.2 ve sonrası).
-   Etiketteki sürüm (v1.9.0) EXE'nin sürümü olarak kullanılır; csproj'daki `<Version>` ile aynı olmalıdır. Yayının metni yalnızca
-   README'deki `### v1.9.0` bölümüdür (uygulamadaki güncelleme penceresinde de bu metin görünür); bu bölüm etiketten önce yazılmalıdır.
+   Etiketteki sürüm (v1.9.1) EXE'nin sürümü olarak kullanılır; csproj'daki `<Version>` ile aynı olmalıdır. Yayının metni yalnızca
+   README'deki `### v1.9.1` bölümüdür (uygulamadaki güncelleme penceresinde de bu metin görünür); bu bölüm etiketten önce yazılmalıdır.
 
 Not: Herkese açık depolarda GitHub Actions standart sunucularda ücretsizdir;
 bir derleme yaklaşık 3-5 dakika sürer.
@@ -946,6 +946,20 @@ eski klasörlerde kalır (`%LOCALAPPDATA%\E-mre Hub\Logs\`, `%LOCALAPPDATA%\RTX 
   yöneticinin klasörü).
 
 ## Sürüm geçmişi
+
+### v1.9.1
+
+**Düzeltme: Güncelleme sürerken ilerleme %0'da kalıyordu**
+- Tümünü Güncelle'de Winget paketleri birer birer kurulurken (ör. 7 paket, 20-25 dakika) ilerleme çubuğu %0'da kalıyor ve uygulama
+  donmuş gibi görünüyordu. Artık kartta ve ilerleme çubuğunda hangi paketin kurulduğu (ör. "5/7 · Visual Studio Code"), winget'in
+  bildirdiği aşama (indiriliyor / kurulum dosyası doğrulandı / kuruluyor), winget yazıyorsa indirilen boyut, yazmıyorsa o aşamada
+  geçen süre görünür. Yüzde, tamamlanan paket sayısından hesaplanır (tahmini veya uydurma yüzde yok).
+- SFC, DISM, MRT ve geçici dosya adımlarının kendi ilerlemesi de genel ilerleme çubuğuna yansır.
+
+**Düzeltme: İşlem sürerken çıkış / iptal**
+- Güncelleme sürerken "Bitince kapat" veya İptal seçilince, kurulmakta olan paket yarıda kesilmez; ama sıradaki Winget paketleri artık
+  başlatılmaz ve "atlandı (iptal edildi)" olarak raporlanır (eskiden kalan tüm paketlerin kurulması bekleniyordu). Atlanan paketler
+  bir sonraki kontrolde yeniden sunulur.
 
 ### v1.9.0
 

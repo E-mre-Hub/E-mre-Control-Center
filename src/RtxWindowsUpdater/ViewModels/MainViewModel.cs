@@ -1555,7 +1555,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         _cancelRequested = true;
         _cts.Cancel();
         _logger.Warning(IsUpdatePhase
-            ? "İptal istendi: devam eden işlem güvenli şekilde tamamlanacak, kalan adımlar atlanacak."
+            ? "İptal istendi: sürmekte olan kurulum güvenli şekilde tamamlanacak, kalan adımlar ve sıradaki paketler atlanacak."
             : "İptal istendi: kontrol durduruluyor...");
         CommandManager.InvalidateRequerySuggested();
     }

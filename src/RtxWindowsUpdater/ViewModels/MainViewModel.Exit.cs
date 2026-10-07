@@ -41,7 +41,7 @@ public sealed partial class MainViewModel
                 "Durdur ve çık"),
             ExitBlocker.Update => ("Güncelleme / onarım sürüyor",
                 now + "Kurulum, onarım ve temizlik adımları yarıda kesilmez; yarım kalan bir kurulum programı veya sistemi bozabilir. " +
-                "Bu adım bitince kalan adımlar atlanır ve uygulama kendiliğinden kapanır.",
+                "Sürmekte olan kurulum bitince kalan adımlar (ve sıradaki Winget paketleri) atlanır ve uygulama kendiliğinden kapanır.",
                 "Bitince kapat"),
             ExitBlocker.SpeedTest => ("Hız testi sürüyor",
                 "Çıkarsanız hız testi durdurulur (sonuç kaydedilmez) ve uygulama kapanır.",
@@ -64,7 +64,7 @@ public sealed partial class MainViewModel
         _logger.Info(blocker switch
         {
             ExitBlocker.Check => "Çıkış istendi: kontrol durduruluyor, ardından uygulama kapanacak.",
-            ExitBlocker.Update => "Çıkış istendi: devam eden adım yarıda kesilmeyecek; bitince kalan adımlar atlanıp uygulama kapanacak.",
+            ExitBlocker.Update => "Çıkış istendi: sürmekte olan kurulum yarıda kesilmeyecek; bitince kalan adımlar ve sıradaki paketler atlanıp uygulama kapanacak.",
             ExitBlocker.SpeedTest => "Çıkış istendi: hız testi durduruluyor, ardından uygulama kapanacak.",
             _ => "Çıkış istendi: Ookla aracının kurulumu bitince uygulama kapanacak."
         });
