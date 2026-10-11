@@ -1,0 +1,11 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Soru sor / Ask a question
+    url: https://github.com/E-mre-Hub/E-mre_-Discussions/discussions/categories/q-a
+    about: Kullanım soruları topluluk sayfasında yanıtlanır. / Usage questions are answered in the community.
+  - name: Fikir öner / Suggest an idea
+    url: https://github.com/E-mre-Hub/E-mre_-Discussions/discussions/categories/ideas
+    about: Yeni özellik önerileri ve oylama. / Feature ideas and voting.
+  - name: Güvenlik açığı bildir / Report a vulnerability
+    url: https://github.com/E-mre-Hub/E-mre-Control-Center/security/advisories/new
+    about: Güvenlik açıklarını herkese açık yazmayın, özel olarak bildirin. / Do not post vulnerabilities publicly, report them privately.

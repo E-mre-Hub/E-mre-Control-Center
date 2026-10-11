@@ -1,0 +1,89 @@
+name: Hata bildir / Report a bug
+description: Uygulamada bir hata bildirin / Report a problem with the app
+title: "[Hata / Bug]: "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Bu form hata bildirimi içindir. Soru ve fikirler için [Tartışmalar](https://github.com/E-mre-Hub/E-mre_-Discussions/discussions) sayfasını kullanın.
+        **Güvenlik açıklarını burada paylaşmayın**; [özel olarak bildirin](https://github.com/E-mre-Hub/E-mre-Control-Center/security/advisories/new).
+
+        This form is for bug reports. For questions and ideas, use [Discussions](https://github.com/E-mre-Hub/E-mre_-Discussions/discussions).
+        **Do not post security vulnerabilities here**; [report them privately](https://github.com/E-mre-Hub/E-mre-Control-Center/security/advisories/new).
+  - type: input
+    id: version
+    attributes:
+      label: Uygulama sürümü / App version
+      description: Cihaz Bilgileri → Hakkında / Device Info → About
+      placeholder: "2.0.0"
+    validations:
+      required: true
+  - type: input
+    id: windows
+    attributes:
+      label: Windows sürümü / Windows version
+      description: Ayarlar → Sistem → Hakkında / Settings → System → About
+      placeholder: "Windows 11 24H2 (26100)"
+    validations:
+      required: true
+  - type: dropdown
+    id: language
+    attributes:
+      label: Uygulama dili / App language
+      options:
+        - Türkçe
+        - English
+    validations:
+      required: true
+  - type: dropdown
+    id: area
+    attributes:
+      label: Hangi bölüm? / Which area?
+      options:
+        - Güncelleme / Updates (Windows Update, winget, Store, NVIDIA, Defender)
+        - Temizleme / Cleanup
+        - Cihaz Sağlık / Device Health (SFC, DISM, MRT)
+        - Hız Testi / Speed Test
+        - Sistem Araçları / System Tools
+        - Cihaz Bilgileri / Device Info
+        - Genel Ayarlar / General Settings
+        - Kurulum, güncelleme veya kaldırma / Setup, update or uninstall
+        - Diğer / Other
+    validations:
+      required: true
+  - type: textarea
+    id: what
+    attributes:
+      label: Ne oldu? / What happened?
+      description: Ne yaptınız, ne bekliyordunuz, ne oldu? / What did you do, what did you expect and what happened?
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Nasıl tekrarlanır? / Steps to reproduce
+      placeholder: |
+        1.
+        2.
+        3.
+  - type: textarea
+    id: details
+    attributes:
+      label: Detaylı Sonuç veya günlük / Detailed Result or log
+      description: Kartın Detaylı Sonuç ekranındaki metin veya günlük satırları (Genel Ayarlar → Günlük Dosyaları → Dışa aktar). / Text from the card's Detailed Result or log lines (General Settings → Log Files → Export).
+      render: text
+  - type: textarea
+    id: screenshots
+    attributes:
+      label: Ekran görüntüsü / Screenshots
+      description: Görüntüleri buraya sürükleyip bırakabilirsiniz. / You can drag and drop images here.
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Kontrol / Checks
+      options:
+        - label: En son sürümü kullanıyorum. / I am using the latest version.
+          required: true
+        - label: Paylaştıklarımda kişisel bilgi (ad, e-posta, bilgisayar adı vb.) yok. / What I shared contains no personal information.
+          required: true

@@ -186,9 +186,10 @@ kapatmak için simgeye sağ tıklayıp **Çıkış**'ı seçin. Bu davranışı 
 <details>
 <summary><b>Bir hata buldum, nasıl bildiririm?</b></summary>
 
-[GitHub Issues](https://github.com/E-mre-Hub/E-mre-Control-Center/issues) sayfasından bildirebilirsiniz. Windows sürümünüzü, uygulama
-sürümünü ve hatanın nasıl oluştuğunu yazın. Günlük dosyasını **Genel Ayarlar → Günlük Dosyaları → Dışa aktar** ile alabilirsiniz.
-Herkese açık bir sayfaya kişisel bilgi yazmamaya dikkat edin.
+[Hata bildirme formunu](https://github.com/E-mre-Hub/E-mre-Control-Center/issues/new/choose) doldurun; form uygulama ve Windows
+sürümünü, ne olduğunu ve nasıl tekrarlandığını sorar. Günlük dosyasını **Genel Ayarlar → Günlük Dosyaları → Dışa aktar** ile
+alabilirsiniz. Herkese açık bir sayfaya kişisel bilgi yazmamaya dikkat edin. Soru ve fikirler için
+[Tartışmalar](https://github.com/E-mre-Hub/E-mre_-Discussions/discussions) sayfası var.
 </details>
 
 ## Geliştiriciler için
@@ -206,7 +207,8 @@ powershell -ExecutionPolicy Bypass -File .\tools\Build-Exe.ps1
 - **Sürüm geçmişi:** [CHANGELOG.md](CHANGELOG.md).
 - **Katkı ve yapay zekâ araçları için:** [AGENTS.md](AGENTS.md) (kurallar, derleme, dil / tema) ve [CONTEXT.md](CONTEXT.md)
   (ürünün amacı ve temel kararlar). Derleme SDK sürümü `global.json`'da sabittir.
-- **Davranış kuralları:** Issues ve tartışmalarda [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md) geçerlidir.
+- **Katkı:** [CONTRIBUTING.md](CONTRIBUTING.md) (hata bildirimi, pull request, kurallar). Davranış kuralları:
+  [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md).
 - **Yeni sürüm:** `RtxWindowsUpdater.csproj` içindeki `<Version>` artırılır, [CHANGELOG.md](CHANGELOG.md)'ye `### vX.Y.Z` bölümü
   yazılır ve `vX.Y.Z` etiketi gönderilir. GitHub Actions iki kurulum dosyasını (Türkçe ve EN) ve ZIP'i derleyip
   [Releases](https://github.com/E-mre-Hub/E-mre-Control-Center/releases) sayfasına ekler.
@@ -260,7 +262,9 @@ See the [Privacy Policy](legal/en/privacy-policy.md) and the [Terms of Use](lega
 **License:** source-available, not open source; all rights reserved ([LICENSE](LICENSE)). Contributors and AI agents: see
 [AGENTS.md](AGENTS.md) and [CONTEXT.md](CONTEXT.md). Code of conduct: [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md).
 
-**Feedback:** please report bugs and ideas via [GitHub Issues](https://github.com/E-mre-Hub/E-mre-Control-Center/issues).
+**Feedback:** report bugs with the [bug report form](https://github.com/E-mre-Hub/E-mre-Control-Center/issues/new/choose); ask
+questions and share ideas in [Discussions](https://github.com/E-mre-Hub/E-mre_-Discussions/discussions). Contributing:
+[CONTRIBUTING.md](CONTRIBUTING.md).
 
 ---
 
@@ -269,7 +273,8 @@ See the [Privacy Policy](legal/en/privacy-policy.md) and the [Terms of Use](lega
 [İndir / Download](https://github.com/E-mre-Hub/E-mre-Control-Center/releases/latest) ·
 [Sürüm geçmişi / Changelog](CHANGELOG.md) · [Teknik belge](docs/TEKNIK.md) · [Güvenlik / Security](SECURITY.md) ·
 [Lisans / License](LICENSE) · [Davranış kuralları / Code of conduct](CODE_OF_CONDUCT.md) ·
-[Issues](https://github.com/E-mre-Hub/E-mre-Control-Center/issues)
+[Katkı / Contributing](CONTRIBUTING.md) · [Issues](https://github.com/E-mre-Hub/E-mre-Control-Center/issues) ·
+[Topluluk / Community](https://github.com/E-mre-Hub/E-mre_-Discussions/discussions)
 
 © 2026 E-mre Control Center
 
