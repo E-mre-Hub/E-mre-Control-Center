@@ -118,7 +118,9 @@ Hepsi bu. Uygulama Başlat menüsünde (ve isterseniz masaüstünde) yer alır; 
 - İşlem bittikten sonra sonucu sistemden yeniden okur; doğrulayamadığı sonucu "başarılı" göstermez.
 - Her işlemin ayrıntısını günlüğe yazar. Günlükler bilgisayarınızda kalır.
 
-Güvenlik tasarımının ayrıntıları için: [Teknik belge](docs/TEKNIK.md).
+**Uygulamayı yalnızca [resmi Releases sayfasından](https://github.com/E-mre-Hub/E-mre-Control-Center/releases) indirin;** başka
+sitelerdeki kopyalar değiştirilmiş olabilir. Bir güvenlik açığı bulursanız herkese açık Issues yerine [SECURITY.md](SECURITY.md)'deki
+yolla özel olarak bildirin. Güvenlik tasarımının ayrıntıları için: [Teknik belge](docs/TEKNIK.md).
 
 ## Gizlilik
 
@@ -202,14 +204,17 @@ powershell -ExecutionPolicy Bypass -File .\tools\Build-Exe.ps1
 - **Teknik belge:** [docs/TEKNIK.md](docs/TEKNIK.md): mimari, klasör yapısı, güvenlik tasarımı, araçların sonuçlarının nasıl okunduğu,
   dil ve tema altyapısı, bilinen sınırlamalar.
 - **Sürüm geçmişi:** [CHANGELOG.md](CHANGELOG.md).
+- **Katkı ve yapay zekâ araçları için:** [AGENTS.md](AGENTS.md) (kurallar, derleme, dil / tema) ve [CONTEXT.md](CONTEXT.md)
+  (ürünün amacı ve temel kararlar). Derleme SDK sürümü `global.json`'da sabittir.
+- **Davranış kuralları:** Issues ve tartışmalarda [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md) geçerlidir.
 - **Yeni sürüm:** `RtxWindowsUpdater.csproj` içindeki `<Version>` artırılır, [CHANGELOG.md](CHANGELOG.md)'ye `### vX.Y.Z` bölümü
   yazılır ve `vX.Y.Z` etiketi gönderilir. GitHub Actions iki kurulum dosyasını (Türkçe ve EN) ve ZIP'i derleyip
   [Releases](https://github.com/E-mre-Hub/E-mre-Control-Center/releases) sayfasına ekler.
 
 ## Lisans
 
-Kaynak kodu herkese açık olarak incelenebilir; ayrı bir açık kaynak lisansı yayımlanmamıştır. Uygulamanın kullanımı
-[Kullanım Koşulları](legal/tr/kullanim-kosullari.md)'na tabidir. Uygulamanın kullandığı üçüncü taraf hizmetler ve araçlar
+Kaynak kodu herkese açık olarak incelenebilir ama **açık kaynak değildir**; tüm hakları saklıdır ([LICENSE](LICENSE)). Uygulamanın
+kullanımı [Kullanım Koşulları](legal/tr/kullanim-kosullari.md)'na tabidir. Uygulamanın kullandığı üçüncü taraf hizmetler ve araçlar
 (ör. Speedtest by Ookla) kendi koşullarına tabidir.
 
 ---
@@ -248,7 +253,12 @@ kept. To uninstall: Windows Settings → Apps → Installed apps → E-mre Contr
 
 **Safety & privacy:** no account, no telemetry, no analytics, no ads, no cookies. The app does not bypass UAC, does not touch your
 personal folders and does not stop critical Windows services or processes. Settings, history and logs stay on your computer.
-See the [Privacy Policy](legal/en/privacy-policy.md) and the [Terms of Use](legal/en/terms-of-use.md).
+See the [Privacy Policy](legal/en/privacy-policy.md) and the [Terms of Use](legal/en/terms-of-use.md). Download the app only from the
+[official Releases page](https://github.com/E-mre-Hub/E-mre-Control-Center/releases). To report a vulnerability privately, see
+[SECURITY.md](SECURITY.md).
+
+**License:** source-available, not open source; all rights reserved ([LICENSE](LICENSE)). Contributors and AI agents: see
+[AGENTS.md](AGENTS.md) and [CONTEXT.md](CONTEXT.md). Code of conduct: [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md).
 
 **Feedback:** please report bugs and ideas via [GitHub Issues](https://github.com/E-mre-Hub/E-mre-Control-Center/issues).
 
@@ -257,7 +267,8 @@ See the [Privacy Policy](legal/en/privacy-policy.md) and the [Terms of Use](lega
 <div align="center">
 
 [İndir / Download](https://github.com/E-mre-Hub/E-mre-Control-Center/releases/latest) ·
-[Sürüm geçmişi / Changelog](CHANGELOG.md) · [Teknik belge](docs/TEKNIK.md) ·
+[Sürüm geçmişi / Changelog](CHANGELOG.md) · [Teknik belge](docs/TEKNIK.md) · [Güvenlik / Security](SECURITY.md) ·
+[Lisans / License](LICENSE) · [Davranış kuralları / Code of conduct](CODE_OF_CONDUCT.md) ·
 [Issues](https://github.com/E-mre-Hub/E-mre-Control-Center/issues)
 
 © 2026 E-mre Control Center

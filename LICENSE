@@ -1,0 +1,51 @@
+E-mre Control Center
+Copyright (c) 2026 E-mre Control Center. All rights reserved.
+
+This repository is SOURCE-AVAILABLE, NOT OPEN SOURCE.
+
+The source code is published so that anyone can see exactly what the app does.
+All rights in the source code are reserved. Being able to view the code does not
+grant a license to copy, modify, redistribute, sublicense or sell the source code,
+or to use it in other projects.
+
+Use of the app (the compiled program and its setup files) is governed by the
+Terms of Use:
+
+  English: legal/en/terms-of-use.md
+  Türkçe:  legal/tr/kullanim-kosullari.md
+
+In short, you MAY:
+  - download the app from the official Releases page
+    (https://github.com/E-mre-Hub/E-mre-Control-Center/releases) and use it for
+    free on your own computers or the computers of your own business;
+  - read and review the source code and report bugs or security issues.
+
+You MAY NOT:
+  - redistribute the app in modified form or under another name or brand,
+    sell it or rent it;
+  - bundle the app with malware or run it on other people's computers without
+    their permission;
+  - disable or bypass its security measures (for example download verification);
+  - use the app for any unlawful purpose.
+
+Third-party tools and services used by the app (Windows components, winget
+packages, NVIDIA drivers, Speedtest by Ookla and others) are subject to their own
+licenses.
+
+THE APP IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND. See the Terms of Use
+for the full disclaimer and limitation of liability. If anything in this file
+conflicts with the Terms of Use, the Terms of Use prevail.
+
+--------------------------------------------------------------------------------
+
+Türkçe özet
+
+Bu depo AÇIK KAYNAK DEĞİLDİR; kaynak kodu herkesin uygulamanın ne yaptığını
+görebilmesi için yayımlanır. Kaynak koddaki tüm haklar saklıdır: kodun görülebilmesi
+kopyalama, değiştirme, yeniden dağıtma veya başka projelerde kullanma hakkı vermez.
+
+Uygulamayı resmi Releases sayfasından indirip kendi bilgisayarlarınızda ücretsiz
+kullanabilirsiniz. Değiştirilmiş hâlde veya başka bir ad altında dağıtamaz, satamaz,
+kötü amaçlı yazılımla birlikte paketleyemez, güvenlik önlemlerini devre dışı
+bırakamazsınız. Ayrıntılar ve sorumluluk reddi: legal/tr/kullanim-kosullari.md.
+Bu dosya ile Kullanım Koşulları çelişirse Kullanım Koşulları geçerlidir.
