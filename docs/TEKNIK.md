@@ -768,6 +768,25 @@ eski klasörlerde kalır (`%LOCALAPPDATA%\E-mre Hub\Logs\`, `%LOCALAPPDATA%\RTX 
 - Varsayılan koyu temadır. Seçim `state.json` → `Theme` (`dark` / `light`); kurulum ve kaldırma pencerelerinin başlık çubuğundaki
   düğmeyle de değiştirilir ve kurulan uygulamaya iletilir.
 
+**Klavye odağı (v2.0.1)**
+
+- Klavyeyle odaklanabilen her denetim odağı gösterir. WPF'nin `FocusVisualStyle` çerçevesi yalnızca klavyeyle (Tab / ok tuşları)
+  odaklanınca çizilir; fareyle tıklamada görünmez. Çerçeveler `Themes/Theme.xaml`'deki `Focus.*` stilleridir (2 px, `B.NeonBright`,
+  temayla değişir):
+  - Dışa çizilenler denetimin köşesine uyar: `Focus.Ring` (düğmeler), `Focus.Pill` (filtreler), `Focus.Round` ("?" düğmesi),
+    `Focus.Circle` (Hız Testi BAŞLAT), `Focus.Box` (onay kutuları, bağlantı düğmeleri, salt okunur metin kutuları), `Focus.Default`
+    (metin içi bağlantılar).
+  - `Focus.Inset` içe çizilir: başlık çubuğu düğmeleri, kaydırılabilir alanlar (örtük `ScrollViewer` stili), tablolar ve tablo
+    hücreleri, sol menü bölmeleri ve sunucu listesi. Bunlar pencerenin ya da kaydırma alanının kenarına yaslandığı için dışa taşan
+    çerçeve kırpılırdı (kaydırma alanının kendi süsleme katmanı vardır). `Focus.Row` işlem günlüğü satırlarıdır (satır sınırında; satırın
+    iç boşluğu metne yer bırakır).
+- Bazı stiller odağı kendi `IsKeyboardFocused` tetikleyicisiyle neon kenarlık olarak gösterir (ana sayfa kutucukları, arama sonuçları,
+  Sağlık Özeti satırları, anahtarlar, ilk açılış seçim kartları, arama / geri bildirim kutuları); düzenlenebilir metin kutularında yanıp sönen imleç de vardır.
+- `SystemParameters.FocusVisualStyleKey` anahtarıyla genel bir varsayılan tanımlamak işe yaramaz: WPF, odak stili ayarlanmamış öğede
+  Windows'un tema sözlüğüne bakar. Bu yüzden her stil odak çerçevesini açıkça belirtir.
+- Düz `ItemsControl` listeleri odak almaz (örtük stil `Focusable=False`): Tab görünmeyen duraklardan geçmez; içlerindeki düğmeler
+  odaklanır.
+
 ### Windows bildirimleri
 
 - Uzun süren işlemler bitince (SFC, MRT, toplu kontrol/güncelleme; 30 sn'yi aşan tek kart işlemleri) Windows bildirimi

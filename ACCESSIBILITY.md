@@ -16,6 +16,10 @@ bilinen sınırlamaları ve bir engelle karşılaşırsanız nasıl bildireceği
 ### Neler destekleniyor
 
 - **Klavye:** Tab / Shift+Tab ile denetimler arasında gezinilir, Enter / Boşluk ile seçilir.
+  - Odaklanan öğe koyu ve açık temada neon bir çerçeveyle gösterilir (düğmeler, seçimler, bağlantılar, tablolar, işlem günlüğü,
+    kurulum ve kaldırma pencereleri dahil). Çerçeve yalnızca klavyeyle gezinirken görünür.
+  - Ana penceredeki kaydırılabilir bölmeler (ör. kartlar, Cihaz Bilgileri, yasal metinler) Tab ile odaklanıp ok tuşları ve
+    Page Up / Page Down ile kaydırılabilir.
   - Ana sayfada **Ctrl+F** arama kutusuna gider, **Aşağı ok** sonuçlara geçer, **Enter** ilk sonucu açar.
   - **Esc** iletişim kutusunu veya Detaylı Sonuç panelini kapatır, aramayı temizler ve ana sayfaya döner.
   - Bildirim alanındaki simge klavyeyle de açılabilir.
@@ -27,7 +31,6 @@ bilinen sınırlamaları ve bir engelle karşılaşırsanız nasıl bildireceği
 
 ### Bilinen sınırlamalar
 
-- Klavye odağı her düğmede ve seçimde belirgin bir çerçeveyle gösterilmiyor.
 - Uygulama Windows Ekran Okuyucusu ve NVDA ile sistematik olarak test edilmedi; bazı öğeler eksik veya genel bir adla okunabilir.
 - Windows'un yüksek karşıtlık temaları uygulamanın kendi renklerine uygulanmaz; koyu veya açık tema kullanılır.
 - Windows'un "Metin boyutu" ayarı (Erişilebilirlik → Metin boyutu) tüm metinlere uygulanmayabilir.
@@ -57,6 +60,10 @@ limitations and how to report a barrier.
 ### What is supported
 
 - **Keyboard:** move between controls with Tab / Shift+Tab, activate with Enter / Space.
+  - The focused item is shown with a neon outline in both the dark and the light theme (including buttons, choices, links, tables,
+    the operation log and the setup and uninstall windows). The outline only appears while you navigate with the keyboard.
+  - Scrollable sections in the main window (e.g. the cards, Device Info, the legal texts) can be focused with Tab and scrolled with
+    the arrow keys and Page Up / Page Down.
   - On the home screen **Ctrl+F** goes to the search box, **Down arrow** moves to the results and **Enter** opens the first result.
   - **Esc** closes a dialog or the Detailed Result panel, clears the search and returns to the home screen.
   - The notification area icon can also be opened with the keyboard.
@@ -68,7 +75,6 @@ limitations and how to report a barrier.
 
 ### Known limitations
 
-- Keyboard focus is not shown with a clear outline on every button and choice.
 - The app has not been systematically tested with Windows Narrator and NVDA; some elements may be read with a missing or generic name.
 - Windows high contrast themes are not applied to the app's own colors; the dark or light theme is used instead.
 - The Windows "Text size" setting (Accessibility → Text size) may not apply to all text.

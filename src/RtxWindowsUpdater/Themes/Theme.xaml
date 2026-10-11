@@ -135,6 +135,99 @@
     <!-- ============================================================ -->
     <!--  BUTONLAR                                                      -->
     <!-- ============================================================ -->
+    <!-- Klavye odağı (v2.0.1, erişilebilirlik): FocusVisualStyle YALNIZCA klavyeyle (Tab / ok tuşları) odaklanınca çizilir; fareyle
+         tıklamada görünmez. Çerçeve, denetimin köşe yuvarlaklığına uyan neon bir halkadır ve temayla değişir (DynamicResource). -->
+    <Style x:Key="Focus.Default">
+        <Setter Property="Control.Template">
+            <Setter.Value>
+                <ControlTemplate>
+                    <Border Margin="-2" CornerRadius="6" BorderThickness="2" BorderBrush="{DynamicResource B.NeonBright}" SnapsToDevicePixels="True" />
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+    <Style x:Key="Focus.Ring">
+        <Setter Property="Control.Template">
+            <Setter.Value>
+                <ControlTemplate>
+                    <Border Margin="-3" CornerRadius="14" BorderThickness="2" BorderBrush="{DynamicResource B.NeonBright}" SnapsToDevicePixels="True" />
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+    <Style x:Key="Focus.Pill">
+        <Setter Property="Control.Template">
+            <Setter.Value>
+                <ControlTemplate>
+                    <Border Margin="-3" CornerRadius="16" BorderThickness="2" BorderBrush="{DynamicResource B.NeonBright}" SnapsToDevicePixels="True" />
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+    <Style x:Key="Focus.Round">
+        <Setter Property="Control.Template">
+            <Setter.Value>
+                <ControlTemplate>
+                    <Border Margin="-3" CornerRadius="18" BorderThickness="2" BorderBrush="{DynamicResource B.NeonBright}" SnapsToDevicePixels="True" />
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+    <!-- Yuvarlak düğme (Hız Testi BAŞLAT) -->
+    <Style x:Key="Focus.Circle">
+        <Setter Property="Control.Template">
+            <Setter.Value>
+                <ControlTemplate>
+                    <Ellipse Margin="-5" StrokeThickness="2" Stroke="{DynamicResource B.NeonBright}" SnapsToDevicePixels="True" />
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+    <Style x:Key="Focus.Box">
+        <Setter Property="Control.Template">
+            <Setter.Value>
+                <ControlTemplate>
+                    <Border Margin="-3" CornerRadius="8" BorderThickness="2" BorderBrush="{DynamicResource B.NeonBright}" SnapsToDevicePixels="True" />
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+    <!-- İçe çizilen çerçeve: pencere kenarındaki başlık düğmeleri, kaydırma alanları, tablolar ve kaydırma alanının iki kenarına
+         yaslanan satırlar (bölme menüsü, sunucu listesi). Dışa taşan çerçeve buralarda kırpılırdı. -->
+    <Style x:Key="Focus.Inset">
+        <Setter Property="Control.Template">
+            <Setter.Value>
+                <ControlTemplate>
+                    <Border Margin="2" CornerRadius="8" BorderThickness="2" BorderBrush="{DynamicResource B.NeonBright}" SnapsToDevicePixels="True" />
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+    <!-- Satır biçimli öğeler (işlem günlüğü): çerçeve satırın kendi sınırında. Dışa taşmaz: kaydırma alanı yanlarını kırpardı ve komşu
+         satırların metnini örterdi; metne yer satırın iç boşluğuyla bırakılır (LogItem). -->
+    <Style x:Key="Focus.Row">
+        <Setter Property="Control.Template">
+            <Setter.Value>
+                <ControlTemplate>
+                    <Border Margin="0" CornerRadius="4" BorderThickness="2" BorderBrush="{DynamicResource B.NeonBright}" SnapsToDevicePixels="True" />
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+    <!-- NOT: SystemParameters.FocusVisualStyleKey anahtarıyla "genel varsayılan" tanımlamak İŞE YARAMAZ: WPF, odak stili ayarlanmamış
+         öğede Windows'un tema sözlüğüne bakar, uygulama kaynaklarına değil. Bu yüzden klavyeyle odaklanabilen her stil (ve metin içi
+         Hyperlink) FocusVisualStyle'ı açıkça Focus.* yapar ya da kendi IsKeyboardFocused tetikleyicisiyle odağı gösterir. -->
+    <!-- Kaydırma alanları klavyeyle odaklanır (ok / Page Up / Page Down ile kaydırma): odaklanınca içe neon çerçeve. Windows'un kendi
+         noktalı çerçevesi koyu zeminde görünmüyordu. Yalnızca odak çizimi değişir; şablon Windows'unki kalır. -->
+    <Style TargetType="ScrollViewer">
+        <Setter Property="FocusVisualStyle" Value="{StaticResource Focus.Inset}" />
+    </Style>
+    <!-- Düz öğe listeleri (ItemsControl) kendisi odak almaz: Tab görünmeyen bir duraktan geçmesin (içindeki düğmeler odaklanır).
+         Yalnızca tam olarak ItemsControl türüne uygulanır; ListBox / DataGrid etkilenmez. -->
+    <Style TargetType="ItemsControl">
+        <Setter Property="Focusable" Value="False" />
+    </Style>
+
     <Style x:Key="Btn.Base" TargetType="Button">
         <Setter Property="Foreground" Value="{DynamicResource B.Text}" />
         <Setter Property="FontFamily" Value="{StaticResource F.Text}" />
@@ -143,7 +236,7 @@
         <Setter Property="Cursor" Value="Hand" />
         <Setter Property="Padding" Value="18,0" />
         <Setter Property="Height" Value="44" />
-        <Setter Property="FocusVisualStyle" Value="{x:Null}" />
+        <Setter Property="FocusVisualStyle" Value="{StaticResource Focus.Ring}" />
         <Setter Property="SnapsToDevicePixels" Value="True" />
     </Style>
 
@@ -298,7 +391,7 @@
         <Setter Property="Foreground" Value="{DynamicResource B.Text2}" />
         <Setter Property="FontFamily" Value="{StaticResource F.Icons}" />
         <Setter Property="FontSize" Value="10" />
-        <Setter Property="FocusVisualStyle" Value="{x:Null}" />
+        <Setter Property="FocusVisualStyle" Value="{StaticResource Focus.Inset}" />
         <Setter Property="WindowChrome.IsHitTestVisibleInChrome" Value="True" />
         <Setter Property="Template">
             <Setter.Value>
@@ -342,7 +435,7 @@
         <Setter Property="Foreground" Value="{DynamicResource B.Text}" />
         <Setter Property="FontSize" Value="13.5" />
         <Setter Property="Cursor" Value="Hand" />
-        <Setter Property="FocusVisualStyle" Value="{x:Null}" />
+        <Setter Property="FocusVisualStyle" Value="{StaticResource Focus.Box}" />
         <Setter Property="Template">
             <Setter.Value>
                 <ControlTemplate TargetType="CheckBox">
@@ -565,7 +658,7 @@
         <Setter Property="FontSize" Value="12" />
         <Setter Property="FontWeight" Value="SemiBold" />
         <Setter Property="Cursor" Value="Hand" />
-        <Setter Property="FocusVisualStyle" Value="{x:Null}" />
+        <Setter Property="FocusVisualStyle" Value="{StaticResource Focus.Pill}" />
         <Setter Property="Margin" Value="0,0,6,0" />
         <Setter Property="Template">
             <Setter.Value>
@@ -622,7 +715,7 @@
     <!-- Metin bağlantısı görünümlü düğme ("Otomatik Seç", "Sunucuyu değiştir", koşul bağlantıları) -->
     <Style x:Key="Btn.Link" TargetType="Button">
         <Setter Property="Cursor" Value="Hand" />
-        <Setter Property="FocusVisualStyle" Value="{x:Null}" />
+        <Setter Property="FocusVisualStyle" Value="{StaticResource Focus.Box}" />
         <Setter Property="Foreground" Value="{DynamicResource B.Neon}" />
         <Setter Property="FontSize" Value="13" />
         <Setter Property="Template">
@@ -777,6 +870,7 @@
     <!-- Salt okunur çok satırlı metin (rapor önizlemesi, olay iletisi) -->
     <Style x:Key="Input.ReadOnly" TargetType="TextBox">
         <Setter Property="IsReadOnly" Value="True" />
+        <Setter Property="FocusVisualStyle" Value="{StaticResource Focus.Box}" />
         <Setter Property="Background" Value="{DynamicResource B.ReadOnlyBg}" />
         <Setter Property="Foreground" Value="{DynamicResource B.Text2}" />
         <Setter Property="BorderBrush" Value="{DynamicResource B.Border}" />
@@ -813,6 +907,7 @@
         <Setter Property="SelectionMode" Value="Single" />
         <Setter Property="RowHeight" Value="32" />
         <Setter Property="FontSize" Value="12.5" />
+        <Setter Property="FocusVisualStyle" Value="{StaticResource Focus.Inset}" />
         <Setter Property="VirtualizingPanel.IsVirtualizing" Value="True" />
         <Setter Property="VirtualizingPanel.VirtualizationMode" Value="Recycling" />
     </Style>
@@ -839,7 +934,7 @@
     <Style TargetType="DataGridCell">
         <Setter Property="BorderThickness" Value="0" />
         <Setter Property="Padding" Value="10,0" />
-        <Setter Property="FocusVisualStyle" Value="{x:Null}" />
+        <Setter Property="FocusVisualStyle" Value="{StaticResource Focus.Inset}" />
         <Setter Property="Template">
             <Setter.Value>
                 <ControlTemplate TargetType="DataGridCell">

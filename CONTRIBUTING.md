@@ -24,6 +24,7 @@
    - Sistemi değiştiren hiçbir işlem kullanıcı onayı olmadan çalışmaz; UAC atlatılmaz.
    - Ekranda görünen her metin iki dilde yazılır (`L.T("Türkçe", "English")`, XAML'da `{l:T 'Türkçe', 'English'}`).
    - Renkler tema anahtarlarından gelir; görünümlere sabit renk yazılmaz. Emoji kullanılmaz.
+   - Klavyeyle odaklanabilen her yeni denetim odağı gösterir (`Theme.xaml`'deki `Focus.*` stilleri) ve bir UI Automation adı taşır.
 4. Derleme 0 uyarı ile bitmeli: `dotnet build src\RtxWindowsUpdater\RtxWindowsUpdater.csproj -c Release`.
 5. Testler sistemde gerçek değişiklik yapmamalı (güncelleme, onarım, silme vb.).
 6. Kullanıcıya görünen bir değişiklikse pull request açıklamasına Türkçe ve İngilizce kısa bir sürüm notu yazın. Sürüm numarasını,
@@ -62,6 +63,7 @@ valuable too.
    - Nothing changes the system without the user's approval; UAC is never bypassed.
    - Every user-visible string is written in both languages (`L.T("Türkçe", "English")`, in XAML `{l:T 'Türkçe', 'English'}`).
    - Colors come from theme keys; never hard-code a color in a view. No emoji.
+   - Every new focusable control shows keyboard focus (the `Focus.*` styles in `Theme.xaml`) and has a UI Automation name.
 4. The build must finish with 0 warnings: `dotnet build src\RtxWindowsUpdater\RtxWindowsUpdater.csproj -c Release`.
 5. Tests must not make real changes to the system (updates, repairs, deletions, etc.).
 6. For a user-visible change, add a short release note in Turkish and English to the pull request description. The maintainer prepares

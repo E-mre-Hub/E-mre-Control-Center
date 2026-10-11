@@ -67,7 +67,7 @@
             <Setter Property="Cursor" Value="Hand" />
             <Setter Property="Margin" Value="8,0,0,0" />
             <Setter Property="VerticalAlignment" Value="Center" />
-            <Setter Property="FocusVisualStyle" Value="{x:Null}" />
+            <Setter Property="FocusVisualStyle" Value="{StaticResource Focus.Box}" />
             <Setter Property="ToolTip" Value="{l:T 'Bu işlemi seç', 'Select this task'}" />
             <Setter Property="Template">
                 <Setter.Value>
@@ -189,7 +189,7 @@
             <Setter Property="Width" Value="30" />
             <Setter Property="Height" Value="30" />
             <Setter Property="Cursor" Value="Hand" />
-            <Setter Property="FocusVisualStyle" Value="{x:Null}" />
+            <Setter Property="FocusVisualStyle" Value="{StaticResource Focus.Round}" />
             <Setter Property="ToolTip" Value="{l:T 'Bu kart ne yapar?', 'What does this card do?'}" />
             <Setter Property="Template">
                 <Setter.Value>
@@ -398,10 +398,12 @@
         <!-- Log listesi öğe kabı (seçim vurgusu yok) -->
         <Style x:Key="LogItem" TargetType="ListBoxItem">
             <Setter Property="Padding" Value="0" />
+            <Setter Property="FocusVisualStyle" Value="{StaticResource Focus.Row}" />
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="ListBoxItem">
-                        <ContentPresenter Margin="0,1" />
+                        <!-- 6,2: klavye odağı çerçevesi (Focus.Row, satır sınırında) metnin üstüne binmesin -->
+                        <ContentPresenter Margin="6,2" />
                     </ControlTemplate>
                 </Setter.Value>
             </Setter>
@@ -503,7 +505,7 @@
         </Style>
         <Style x:Key="SectionNavItem" TargetType="ListBoxItem">
             <Setter Property="Cursor" Value="Hand" />
-            <Setter Property="FocusVisualStyle" Value="{x:Null}" />
+            <Setter Property="FocusVisualStyle" Value="{StaticResource Focus.Inset}" />
             <Setter Property="Foreground" Value="{DynamicResource B.Text2}" />
             <Setter Property="FontSize" Value="13.5" />
             <Setter Property="Margin" Value="0,0,0,4" />
@@ -684,7 +686,7 @@
         <!-- BAŞLAT düğmesi (büyük neon halka). Sürekli animasyon yok; parlama statik katmandadır. -->
         <Style x:Key="Btn.SpeedGo" TargetType="Button">
             <Setter Property="Cursor" Value="Hand" />
-            <Setter Property="FocusVisualStyle" Value="{x:Null}" />
+            <Setter Property="FocusVisualStyle" Value="{StaticResource Focus.Circle}" />
             <Setter Property="HorizontalAlignment" Value="Center" />
             <Setter Property="Template">
                 <Setter.Value>
@@ -730,7 +732,7 @@
         <!-- Sunucu listesi satırı ("Istanbul - Turkcell"): seçili sunucuda solda neon çizgi ve dolgu (Speedtest sunucu listesi düzeni) -->
         <Style x:Key="Btn.ServerRow" TargetType="Button">
             <Setter Property="Cursor" Value="Hand" />
-            <Setter Property="FocusVisualStyle" Value="{x:Null}" />
+            <Setter Property="FocusVisualStyle" Value="{StaticResource Focus.Inset}" />
             <Setter Property="Foreground" Value="{DynamicResource B.Text2}" />
             <Setter Property="FontSize" Value="14" />
             <Setter Property="HorizontalContentAlignment" Value="Stretch" />
@@ -1611,7 +1613,7 @@
                                     </DockPanel>
 
                                     <Border Grid.Row="1" Background="{DynamicResource B.DeepBg}" CornerRadius="10" BorderBrush="{DynamicResource B.RowBorder}" BorderThickness="1" Padding="12,8">
-                                        <ListBox x:Name="LogList" ItemsSource="{Binding LogsView}" Background="Transparent" BorderThickness="0"
+                                        <ListBox x:Name="LogList" ItemsSource="{Binding LogsView}" Background="Transparent" BorderThickness="0" FocusVisualStyle="{StaticResource Focus.Inset}"
                                                  ItemContainerStyle="{StaticResource LogItem}"
                                                  ScrollViewer.HorizontalScrollBarVisibility="Disabled"
                                                  VirtualizingPanel.IsVirtualizing="True" VirtualizingPanel.VirtualizationMode="Recycling"
@@ -3164,7 +3166,7 @@
                                                     <TextBlock Text="{l:T 'Çıktı (stdout)', 'Output (stdout)'}" FontSize="11" FontWeight="SemiBold" Foreground="{DynamicResource B.Text3}" Margin="0,10,0,4" />
                                                     <Border Background="{DynamicResource B.DeepBg}" BorderBrush="{DynamicResource B.RowBorder}" BorderThickness="1" CornerRadius="8" Padding="10,8" MaxHeight="220">
                                                         <ScrollViewer VerticalScrollBarVisibility="Auto">
-                                                            <TextBox Text="{Binding Output, Mode=OneWay}" IsReadOnly="True" TextWrapping="Wrap" BorderThickness="0"
+                                                            <TextBox Text="{Binding Output, Mode=OneWay}" IsReadOnly="True" TextWrapping="Wrap" BorderThickness="0" FocusVisualStyle="{StaticResource Focus.Box}"
                                                                      Background="Transparent" Foreground="{DynamicResource B.Text2}" CaretBrush="{DynamicResource B.Neon}"
                                                                      FontFamily="{StaticResource F.Mono}" FontSize="11.5" SelectionBrush="{DynamicResource B.CardBorderHover}" />
                                                         </ScrollViewer>
@@ -3173,7 +3175,7 @@
                                                         <TextBlock Text="{l:T 'Hata çıktısı (stderr)', 'Error output (stderr)'}" FontSize="11" FontWeight="SemiBold" Foreground="{DynamicResource B.Red}" Margin="0,10,0,4" />
                                                         <Border Background="{DynamicResource B.DeepBg}" BorderBrush="#55FF4D61" BorderThickness="1" CornerRadius="8" Padding="10,8" MaxHeight="160">
                                                             <ScrollViewer VerticalScrollBarVisibility="Auto">
-                                                                <TextBox Text="{Binding Error, Mode=OneWay}" IsReadOnly="True" TextWrapping="Wrap" BorderThickness="0"
+                                                                <TextBox Text="{Binding Error, Mode=OneWay}" IsReadOnly="True" TextWrapping="Wrap" BorderThickness="0" FocusVisualStyle="{StaticResource Focus.Box}"
                                                                          Background="Transparent" Foreground="{DynamicResource B.Red}" CaretBrush="{DynamicResource B.Neon}"
                                                                          FontFamily="{StaticResource F.Mono}" FontSize="11.5" SelectionBrush="{DynamicResource B.CardBorderHover}" />
                                                             </ScrollViewer>
@@ -3259,7 +3261,7 @@
                                                 </Grid.ColumnDefinitions>
                                                 <TextBlock Text="&#xE76C;" Style="{StaticResource T.Icon}" FontSize="10" Foreground="{DynamicResource B.Neon}"
                                                            VerticalAlignment="Top" Margin="0,3,10,0" />
-                                                <TextBox Grid.Column="1" Text="{Binding Mode=OneWay}" IsReadOnly="True" TextWrapping="Wrap" BorderThickness="0"
+                                                <TextBox Grid.Column="1" Text="{Binding Mode=OneWay}" IsReadOnly="True" TextWrapping="Wrap" BorderThickness="0" FocusVisualStyle="{StaticResource Focus.Box}"
                                                          Background="Transparent" Foreground="{DynamicResource B.Text2}" FontSize="12" SelectionBrush="{DynamicResource B.CardBorderHover}" />
                                             </Grid>
                                         </DataTemplate>

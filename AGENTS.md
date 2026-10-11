@@ -60,6 +60,16 @@ The SDK version is pinned in `global.json` (.NET 8). Save `.ps1` files as UTF-8 
 All colors come from `Themes/Colors.Dark.xaml` and `Themes/Colors.Light.xaml` (same keys) via `DynamicResource`. Never hard-code a
 color in a view; add a key to both dictionaries instead. Dark is the default.
 
+## Keyboard focus
+
+Every control that can take keyboard focus must show it. Set `FocusVisualStyle` to one of the `Focus.*` styles in `Theme.xaml`
+(drawn only for keyboard focus, in the theme's accent color): `Focus.Ring` / `Pill` / `Round` / `Box` / `Circle` / `Default` draw
+outside the control and should match its corner radius; `Focus.Inset` draws inside (title bar buttons, scroll areas, tables, rows
+that touch the edge of a scroll area, where an outside outline would be clipped); `Focus.Row` is for log lines. Alternatively use an
+`IsKeyboardFocused` trigger that changes a visible neon border. Do not rely on a global `SystemParameters.FocusVisualStyleKey`
+style: WPF ignores application resources for elements without a focus style. Plain `ItemsControl`s are not focusable (implicit
+style), so they never become invisible Tab stops.
+
 ## Privacy and legal
 
 No telemetry, analytics, ads or cookies. If you add a new external service or change what is sent, update both privacy policies,
@@ -87,7 +97,7 @@ repository).
 Keep `README.md` short and user-facing; put technical details in `docs/TEKNIK.md`. Security reporting: [SECURITY.md](SECURITY.md).
 Community rules: [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md). Contribution guide: [CONTRIBUTING.md](CONTRIBUTING.md). Accessibility
 statement: [ACCESSIBILITY.md](ACCESSIBILITY.md) (keep its "known limitations" list accurate when UI behavior changes; new interactive
-controls need a UI Automation name and should show keyboard focus). Bug reports use
+controls need a UI Automation name and a visible keyboard focus, see "Keyboard focus"). Bug reports use
 the issue form in `.github/ISSUE_TEMPLATE/bug_report.yml`; questions and ideas go to the
 [Discussions repository](https://github.com/E-mre-Hub/E-mre_-Discussions/discussions). Pull requests follow
 `.github/PULL_REQUEST_TEMPLATE.md`.

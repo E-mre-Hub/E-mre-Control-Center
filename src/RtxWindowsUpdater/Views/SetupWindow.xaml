@@ -102,9 +102,9 @@
                 <!-- v1.9.0: yasal belgeler (bağlantılar yalnızca izin listesindeki adresler; tarayıcı yönetici yetkisi olmadan açılır) -->
                 <TextBlock x:Name="SetupLegalNote" FontSize="11.5" Foreground="{DynamicResource B.Text3}" TextWrapping="Wrap" TextAlignment="Center" Margin="0,6,0,0">
                     <Run Text="{l:T 'Devam ederek', 'By continuing, you accept the'}" />
-                    <Hyperlink Command="{Binding OpenLegalLinkCommand}" CommandParameter="{x:Static core:AppInfo.TermsUrlLocal}"
+                    <Hyperlink Command="{Binding OpenLegalLinkCommand}" CommandParameter="{x:Static core:AppInfo.TermsUrlLocal}" FocusVisualStyle="{StaticResource Focus.Default}"
                                Foreground="{DynamicResource B.NeonBright}" ToolTip="{x:Static core:AppInfo.TermsUrlLocal}"><Run Text="{l:T 'Kullanım Koşulları', 'Terms of Use'}" /></Hyperlink><Run Text="{l:T '\'nı ve', ' and the'}" />
-                    <Hyperlink Command="{Binding OpenLegalLinkCommand}" CommandParameter="{x:Static core:AppInfo.PrivacyPolicyUrlLocal}"
+                    <Hyperlink Command="{Binding OpenLegalLinkCommand}" CommandParameter="{x:Static core:AppInfo.PrivacyPolicyUrlLocal}" FocusVisualStyle="{StaticResource Focus.Default}"
                                Foreground="{DynamicResource B.NeonBright}" ToolTip="{x:Static core:AppInfo.PrivacyPolicyUrlLocal}"><Run Text="{l:T 'Gizlilik Politikası', 'Privacy Policy'}" /></Hyperlink><Run Text="{l:T '\'nı kabul etmiş olursunuz.', '.'}" />
                 </TextBlock>
             </StackPanel>

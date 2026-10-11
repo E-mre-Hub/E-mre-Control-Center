@@ -7,6 +7,30 @@ E-mre Control Center'ın tüm sürümleri ve değişiklikleri. İndirmek için: 
 > v2.0.0'dan itibaren bölüm iki dillidir: `**English**` satırından öncesi Türkçe, sonrası İngilizce; güncelleme penceresi seçili
 > dildekini gösterir.
 
+### v2.0.1
+
+**Erişilebilirlik: klavye odağı her yerde görünüyor**
+- Tab / Shift+Tab veya ok tuşlarıyla gezinirken odaklanan öğe neon bir çerçeveyle gösterilir: tüm düğmeler, seçim kutuları,
+  filtreler, "?" düğmeleri, sol menü bölmeleri, bağlantılar, tablolar ve tablo hücreleri, işlem günlüğü, kaydırılabilir alanlar,
+  başlık çubuğu düğmeleri ile kurulum, kaldırma ve ilk açılış pencereleri. Çerçeve yalnızca klavyeyle gezinirken görünür; fareyle
+  tıklayınca görünüm değişmez.
+- Çerçeve koyu ve açık temada vurgu rengini kullanır ve denetimin biçimine uyar (yuvarlak BAŞLAT düğmesinde daire; pencere
+  kenarındaki düğmelerde, kaydırılabilir alanlarda ve tablolarda içe çizilir, kırpılmaz).
+- Tab tuşunun hiçbir şey yapmadan üzerinde durduğu görünmez duraklar kaldırıldı (ör. Cihaz Bilgileri'ndeki bilgi listeleri).
+- İşlem günlüğü satırlarına küçük bir iç boşluk eklendi; odak çerçevesi metnin üstüne binmez.
+
+**English**
+
+**Accessibility: keyboard focus is visible everywhere**
+- When you move with Tab / Shift+Tab or the arrow keys, the focused item is shown with a neon outline: all buttons, check boxes,
+  filters, "?" buttons, left menu sections, links, tables and table cells, the operation log, scrollable areas, title bar buttons and
+  the setup, uninstall and first-start windows. The outline only appears while you navigate with the keyboard; clicking with the
+  mouse looks the same as before.
+- The outline uses the accent color in both the dark and the light theme and follows the shape of the control (a circle on the round
+  START button; drawn inside for title bar buttons, scrollable areas and tables so it is never cut off).
+- Invisible Tab stops that did nothing were removed (e.g. the information lists in Device Info).
+- Operation log lines got a little inner spacing so the focus outline does not cover the text.
+
 ### v2.0.0
 
 **Yeni: Türkçe ve İngilizce (English)**
