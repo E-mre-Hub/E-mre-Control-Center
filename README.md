@@ -273,7 +273,8 @@ questions and share ideas in [Discussions](https://github.com/E-mre-Hub/E-mre_-D
 [İndir / Download](https://github.com/E-mre-Hub/E-mre-Control-Center/releases/latest) ·
 [Sürüm geçmişi / Changelog](CHANGELOG.md) · [Teknik belge](docs/TEKNIK.md) · [Güvenlik / Security](SECURITY.md) ·
 [Lisans / License](LICENSE) · [Davranış kuralları / Code of conduct](CODE_OF_CONDUCT.md) ·
-[Katkı / Contributing](CONTRIBUTING.md) · [Issues](https://github.com/E-mre-Hub/E-mre-Control-Center/issues) ·
+[Katkı / Contributing](CONTRIBUTING.md) · [Erişilebilirlik / Accessibility](ACCESSIBILITY.md) ·
+[Issues](https://github.com/E-mre-Hub/E-mre-Control-Center/issues) ·
 [Topluluk / Community](https://github.com/E-mre-Hub/E-mre_-Discussions/discussions)
 
 © 2026 E-mre Control Center

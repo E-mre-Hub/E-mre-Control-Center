@@ -85,7 +85,9 @@ repository).
 ## Documentation
 
 Keep `README.md` short and user-facing; put technical details in `docs/TEKNIK.md`. Security reporting: [SECURITY.md](SECURITY.md).
-Community rules: [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md). Contribution guide: [CONTRIBUTING.md](CONTRIBUTING.md). Bug reports use
+Community rules: [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md). Contribution guide: [CONTRIBUTING.md](CONTRIBUTING.md). Accessibility
+statement: [ACCESSIBILITY.md](ACCESSIBILITY.md) (keep its "known limitations" list accurate when UI behavior changes; new interactive
+controls need a UI Automation name and should show keyboard focus). Bug reports use
 the issue form in `.github/ISSUE_TEMPLATE/bug_report.yml`; questions and ideas go to the
 [Discussions repository](https://github.com/E-mre-Hub/E-mre_-Discussions/discussions). Pull requests follow
 `.github/PULL_REQUEST_TEMPLATE.md`.
