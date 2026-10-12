@@ -7,6 +7,32 @@ E-mre Control Center'ın tüm sürümleri ve değişiklikleri. İndirmek için: 
 > v2.0.0'dan itibaren bölüm iki dillidir: `**English**` satırından öncesi Türkçe, sonrası İngilizce; güncelleme penceresi seçili
 > dildekini gösterir.
 
+### v2.0.2
+
+**Yeni: Çerez Politikası**
+- Genel Ayarlar → Yasal ve Gizlilik bölümüne **Çerez Politikası** kartı eklendi (Türkçe ve English bağlantılarıyla). Politika şunları
+  açıklar: uygulama çerez kullanmaz, bilgisayarınıza çerez kaydetmez ve sizi izlemez; bağlandığı sunucuların gönderdiği teknik çerezler
+  diske yazılmaz, yalnızca bellekte tutulur ve uygulama kapanınca silinir; tarayıcınızda açılan sayfalar o sitelerin kendi
+  politikalarına tabidir.
+- Uygulamanın davranışı değişmedi; Kullanım Koşulları'nı ve Gizlilik Politikası'nı yeniden kabul etmeniz gerekmez.
+
+**Belgeler**
+- Gizlilik Politikası ayrıntılandırıldı: bilgisayarınızda saklanan dil / tema tercihi ve yasal belge kabul kaydı, ağ ve DNS
+  tanılamasının bağlandığı adresler. Toplanan veriler ve bağlanılan şirketler değişmedi.
+
+**English**
+
+**New: Cookie Policy**
+- A **Cookie Policy** card was added to General Settings → Legal and Privacy (with English and Turkish links). The policy explains that
+  the app uses no cookies, stores no cookies on your computer and does not track you; that technical cookies sent by the servers it
+  connects to are never written to disk, are kept only in memory and are discarded when the app closes; and that pages opened in your
+  browser are subject to those sites' own policies.
+- The app's behavior has not changed; you do not need to accept the Terms of Use and Privacy Policy again.
+
+**Documents**
+- The Privacy Policy was made more detailed: the language / theme preference and legal acceptance record stored on your computer, and
+  the addresses used by network and DNS diagnostics. The data collected and the companies connected to are unchanged.
+
 ### v2.0.1
 
 **Erişilebilirlik: klavye odağı her yerde görünüyor**

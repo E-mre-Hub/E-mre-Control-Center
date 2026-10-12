@@ -5,8 +5,8 @@ namespace RtxWindowsUpdater.ViewModels;
 
 /// <summary>
 /// Yasal belgeler (v1.9.0, KULLANICI İSTEĞİ 2026-10-07: "gizlilik politikası, sorumluluk, çerezler, sözleşme – global için"):
-/// Gizlilik Politikası ve Kullanım Koşulları (Türkçe + İngilizce, depo: legal/). Gereksinim sayfasındaki kabul kutusu bu belgeleri de
-/// kapsar; kabul edilen sürüm ve zaman yalnızca yerel olarak (state.json) kaydedilir. Bağlantılar yalnızca izin listesindeki proje
+/// Gizlilik Politikası ve Kullanım Koşulları (Türkçe + İngilizce, depo: legal/); v2.0.2'den beri bilgilendirme amaçlı Çerez Politikası
+/// bağlantısı da (kabul gerektirmez). Gereksinim sayfasındaki kabul kutusu Gizlilik Politikası ile Kullanım Koşulları'nı kapsar; kabul edilen sürüm ve zaman yalnızca yerel olarak (state.json) kaydedilir. Bağlantılar yalnızca izin listesindeki proje
 /// adresleridir ve tarayıcı yönetici yetkisi olmadan açılır (<see cref="ShellOpen"/>).
 /// </summary>
 public sealed partial class MainViewModel

@@ -2189,7 +2189,7 @@
                                                 <TextBlock Margin="0,8,0,0" FontSize="13" Foreground="{DynamicResource B.Text}" TextWrapping="Wrap"
                                                            Text="{l:T 'Hesap istenmez; telemetri, analitik, reklam ve çerez kullanılmaz. İşlem geçmişi, tercihler ve günlükler yalnızca bu bilgisayarda saklanır ve geliştiriciye gönderilmez.', 'No account is required; no telemetry, analytics, ads or cookies are used. The operation history, preferences and logs are stored only on this computer and are never sent to the developer.'}" />
                                                 <TextBlock Style="{StaticResource T.SettingDesc}" Margin="0,6,0,0"
-                                                           Text="{l:T 'Uygulamada çerez veya izleme teknolojisi bulunmadığından çerez onayı gerekmez. Sistem Raporu ve Destek Paketi\'nde bilgisayar adı, kullanıcı adı, IP ve MAC adresleri maskelenir. KVKK ve GDPR kapsamındaki haklarınız politikada açıklanmıştır.', 'There are no cookies or tracking technologies in the app, so no cookie consent is needed. The computer name, user name, IP and MAC addresses are masked in the System Report and Support Package. Your rights under KVKK and GDPR are explained in the policy.'}" />
+                                                           Text="{l:T 'Sistem Raporu ve Destek Paketi\'nde bilgisayar adı, kullanıcı adı, IP ve MAC adresleri maskelenir. KVKK ve GDPR kapsamındaki haklarınız politikada açıklanmıştır.', 'The computer name, user name, IP and MAC addresses are masked in the System Report and Support Package. Your rights under KVKK and GDPR are explained in the policy.'}" />
                                                 <WrapPanel Margin="0,10,0,0">
                                                     <Button x:Name="PrivacyLinkTr" Style="{StaticResource Btn.Link}" Margin="-6,0,8,4" Content="{l:T 'Gizlilik Politikası (Türkçe)', 'Privacy Policy (Turkish)'}"
                                                             Command="{Binding OpenLegalLinkCommand}" CommandParameter="{x:Static core:AppInfo.PrivacyPolicyUrl}"
@@ -2225,6 +2225,34 @@
                                                     <Button x:Name="TermsLinkEn" Style="{StaticResource Btn.Link}" Margin="0,0,8,4" Content="Terms of Use (English)"
                                                             Command="{Binding OpenLegalLinkCommand}" CommandParameter="{x:Static core:AppInfo.TermsUrlEn}"
                                                             ToolTip="{x:Static core:AppInfo.TermsUrlEn}" />
+                                                </WrapPanel>
+                                            </StackPanel>
+                                        </Border>
+                                    </Grid>
+
+                                    <!-- Çerez Politikası (v2.0.2) – yalnızca bilgilendirme: uygulama çerez kullanmaz, ayrıca kabul istenmez -->
+                                    <Grid Margin="0,0,0,16">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="96" />
+                                            <ColumnDefinition Width="*" />
+                                        </Grid.ColumnDefinitions>
+                                        <Border Style="{StaticResource IconTile}">
+                                            <TextBlock Text="&#xED1A;" Style="{StaticResource T.TileIcon}" />
+                                        </Border>
+                                        <Border Grid.Column="1" Style="{StaticResource Card}" Padding="22,16,22,12">
+                                            <StackPanel>
+                                                <TextBlock Text="{l:T 'Çerez Politikası', 'Cookie Policy'}" Style="{StaticResource T.H2}" FontSize="16" />
+                                                <TextBlock Margin="0,8,0,0" FontSize="13" Foreground="{DynamicResource B.Text}" TextWrapping="Wrap"
+                                                           Text="{l:T 'Uygulama çerez kullanmaz, bilgisayarınıza çerez kaydetmez ve sizi izlemez; bu yüzden çerez onay penceresi gösterilmez.', 'The app uses no cookies, stores no cookies on your computer and does not track you, so no cookie consent banner is shown.'}" />
+                                                <TextBlock Style="{StaticResource T.SettingDesc}" Margin="0,6,0,0"
+                                                           Text="{l:T 'Bağlanılan sunucuların gönderdiği teknik çerezler diske yazılmaz; yalnızca bellekte tutulur ve uygulama kapanınca silinir. Tarayıcınızda açılan sayfalar (GitHub, speedtest.net) o sitelerin kendi çerez politikalarına tabidir.', 'Technical cookies sent by the servers the app connects to are never written to disk; they are kept only in memory and discarded when the app closes. Pages opened in your browser (GitHub, speedtest.net) are subject to those sites\' own cookie policies.'}" />
+                                                <WrapPanel Margin="0,10,0,0">
+                                                    <Button x:Name="CookieLinkTr" Style="{StaticResource Btn.Link}" Margin="-6,0,8,4" Content="{l:T 'Çerez Politikası (Türkçe)', 'Cookie Policy (Turkish)'}"
+                                                            Command="{Binding OpenLegalLinkCommand}" CommandParameter="{x:Static core:AppInfo.CookiePolicyUrl}"
+                                                            ToolTip="{x:Static core:AppInfo.CookiePolicyUrl}" />
+                                                    <Button x:Name="CookieLinkEn" Style="{StaticResource Btn.Link}" Margin="0,0,8,4" Content="Cookie Policy (English)"
+                                                            Command="{Binding OpenLegalLinkCommand}" CommandParameter="{x:Static core:AppInfo.CookiePolicyUrlEn}"
+                                                            ToolTip="{x:Static core:AppInfo.CookiePolicyUrlEn}" />
                                                 </WrapPanel>
                                             </StackPanel>
                                         </Border>

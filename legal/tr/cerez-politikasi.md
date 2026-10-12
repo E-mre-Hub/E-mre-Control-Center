@@ -63,5 +63,6 @@ güncellenir ve gerekiyorsa onayınız istenir.
 
 ## 7. Değişiklikler ve iletişim
 
-Bu politika güncellenebilir; güncel sürüm proje deposundaki `legal/` klasöründedir ve önemli değişiklikler sürüm notlarında belirtilir.
+Bu politika güncellenebilir; güncel sürüm proje deposundaki `legal/` klasöründe ve Uygulamanın Genel Ayarlar → Yasal ve Gizlilik
+bölümünde bağlantı olarak bulunur (v2.0.2 ve sonrası). Önemli değişiklikler sürüm notlarında belirtilir.
 Sorularınız için: <https://github.com/E-mre-Hub/E-mre-Control-Center/issues> (lütfen herkese açık bir başlığa kişisel bilgi yazmayın).

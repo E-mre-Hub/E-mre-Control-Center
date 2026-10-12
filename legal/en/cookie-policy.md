@@ -63,6 +63,6 @@ advance and your consent will be requested where required.
 
 ## 7. Changes and contact
 
-This policy may be updated; the current version is kept in the `legal/` folder of the project repository and significant changes are noted
-in the release notes. Questions: <https://github.com/E-mre-Hub/E-mre-Control-Center/issues> (please do not post personal information in a
-public issue).
+This policy may be updated; the current version is kept in the `legal/` folder of the project repository and linked from the App
+(General Settings → Legal and Privacy, version 2.0.2 and later). Significant changes are noted in the release notes.
+Questions: <https://github.com/E-mre-Hub/E-mre-Control-Center/issues> (please do not post personal information in a public issue).

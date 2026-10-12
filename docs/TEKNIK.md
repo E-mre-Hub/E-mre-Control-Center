@@ -73,7 +73,7 @@ Desktop\E-mre Control Center\        ← Proje klasörü (önceki adları: E-mre
 ├── AGENTS.md / CONTEXT.md           ← Katkıda bulunanlar ve yapay zekâ araçları için kurallar ve ürün bağlamı (İngilizce)
 ├── global.json                      ← Derleme için .NET SDK sürümü (8.0.400, latestFeature)
 ├── docs\                            ← TEKNIK.md (bu belge), images\ (README ekran görüntüleri)
-├── legal\                           ← Gizlilik Politikası, Kullanım Koşulları ve Çerez Politikası (tr\ ve en\; uygulama gizlilik ve koşullara bağlantı verir)
+├── legal\                           ← Gizlilik Politikası, Kullanım Koşulları ve Çerez Politikası (tr\ ve en\; uygulama üçüne de bağlantı verir)
 ├── .gitignore / .gitattributes
 ├── .github\
 │   ├── workflows\release.yml        ← Etiket gönderilince EXE'yi derleyip Releases'a ekler
@@ -553,7 +553,7 @@ Kategori her açılışta ilk bölmesiyle açılır.
 | **Temizleme** | **Temizlik** (Windows Geçici Dosyalar, Çöp Kutusu kartları + işlem çubuğu) · **Depolama Analizi** · **İşlem Günlüğü** |
 | **Cihaz Sağlık** | **Sağlık Araçları** (SFC, DISM, MRT kartları + işlem çubuğu) · **Sistem Sağlığı** · **Depolama Sağlığı** · **Olay Günlüğü** · **Çökme Analizi** · **İşlem Günlüğü** |
 | **Hız Testi** | **Hız Testi** (BAŞLAT, seçili sunucu, canlı gösterge, indirme / yükleme, ping, titreşim, paket kaybı, kullanım uygunluğu, ISS ve sunucu, Ookla sonuç sayfası) · **Ağ Merkezi** · **DNS Tanılama** · **Sunucu** (Speedtest by Ookla sunucu listesi: Otomatik Seç, arama, en yakın sunucular; veya Cloudflare) · **Sonuçlar** (geçmiş) · **Yöntem** (nasıl ölçüldüğü) |
-| **Genel Ayarlar** | **Kolay Ayar** (dil: Türkçe / English; görünüm: koyu / açık; açık / kapalı anahtarları: Windows bildirimleri, "Tümünü Güncelle ile Çöp Kutusu'nu boşalt", "Kapatınca arka planda çalışmaya devam et") · **Gizlilik** · **Yönetici Yetkisi** (gerçek durum + yeniden başlatma) · **Günlük Dosyaları** (oturum günlüğü: aç / klasör / dışa aktar; günlük arşivi: 30 günden eskileri onaylı silme, isteğe bağlı otomatik silme; uygulama veri klasörü) · **Yasal ve Gizlilik** (Gizlilik Politikası, Kullanım Koşulları – Türkçe / English, bağlanılan hizmetler, kabul kaydı) |
+| **Genel Ayarlar** | **Kolay Ayar** (dil: Türkçe / English; görünüm: koyu / açık; açık / kapalı anahtarları: Windows bildirimleri, "Tümünü Güncelle ile Çöp Kutusu'nu boşalt", "Kapatınca arka planda çalışmaya devam et") · **Gizlilik** · **Yönetici Yetkisi** (gerçek durum + yeniden başlatma) · **Günlük Dosyaları** (oturum günlüğü: aç / klasör / dışa aktar; günlük arşivi: 30 günden eskileri onaylı silme, isteğe bağlı otomatik silme; uygulama veri klasörü) · **Yasal ve Gizlilik** (Gizlilik Politikası, Kullanım Koşulları, Çerez Politikası (v2.0.2) – Türkçe / English, bağlanılan hizmetler, kabul kaydı) |
 | **Özet** | **Sağlık Özeti** (10 kartın durumu + Sistem Tanılaması + Son İşlem) · **İşlem Geçmişi** · **Bulunan Güncellemeler** · **İşlem Günlüğü** |
 | **Cihaz Bilgileri** | **Cihaz Bilgileri** (İşlemci / Ekran Kartı / Bellek / Depolama / İşletim Sistemi kartları + Uyumluluk) · **Performans** (canlı kullanım, sıcaklık, disk etkinliği ve ağ göstergeleri) · **Batarya** · **Hakkında** |
 | **Sistem Araçları** | **Tek Tıkla Tanıla** · **Başlangıç Uygulamaları** · **Windows Servisleri** · **İşlemler** · **Güvenlik** · **Sistem Raporu** · **Destek Paketi** |

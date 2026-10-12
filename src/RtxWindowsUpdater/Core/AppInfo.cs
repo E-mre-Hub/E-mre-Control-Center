@@ -11,16 +11,21 @@ public static class AppInfo
 {
     public const string Name = "E-mre Control Center";
 
-    /// <summary>Kaynak kod deposu (özel). Windows Uygulamalar kaydında "Destek bağlantısı" ve hız testi Referer başlığı.</summary>
+    /// <summary>Kaynak kod deposu (herkese açık). Windows Uygulamalar kaydında "Destek bağlantısı" ve hız testi Referer başlığı.</summary>
     public const string RepositoryUrl = "https://github.com/E-mre-Hub/E-mre-Control-Center";
 
-    /// <summary>Yasal belgelerin sürümü (Gizlilik Politikası + Kullanım Koşulları; depo: legal/). Değişince kabul yeniden kaydedilir.</summary>
+    /// <summary>
+    /// Kabul edilen yasal belgelerin sürümü (Gizlilik Politikası + Kullanım Koşulları; depo: legal/). Değişince kabul yeniden kaydedilir.
+    /// Çerez Politikası (v2.0.2) yalnızca bilgilendirmedir: uygulama çerez kullanmadığı için ayrıca kabul istenmez.
+    /// </summary>
     public const string LegalVersion = "1.0";
 
     public const string PrivacyPolicyUrl = RepositoryUrl + "/blob/main/legal/tr/gizlilik-politikasi.md";
     public const string TermsUrl = RepositoryUrl + "/blob/main/legal/tr/kullanim-kosullari.md";
     public const string PrivacyPolicyUrlEn = RepositoryUrl + "/blob/main/legal/en/privacy-policy.md";
     public const string TermsUrlEn = RepositoryUrl + "/blob/main/legal/en/terms-of-use.md";
+    public const string CookiePolicyUrl = RepositoryUrl + "/blob/main/legal/tr/cerez-politikasi.md";
+    public const string CookiePolicyUrlEn = RepositoryUrl + "/blob/main/legal/en/cookie-policy.md";
     public const string IssuesUrl = RepositoryUrl + "/issues";
 
     /// <summary>Seçili dildeki belge (gereksinim sayfasında önce bu gösterilir) ve diğer dildeki karşılığı (v2.0.0).</summary>
@@ -30,7 +35,8 @@ public static class AppInfo
     public static string PrivacyPolicyUrlOther => L.En ? PrivacyPolicyUrl : PrivacyPolicyUrlEn;
 
     /// <summary>Uygulamanın açmasına izin verilen yasal / proje adresleri (başka adres açılmaz).</summary>
-    public static IReadOnlyList<string> LegalLinks { get; } = [PrivacyPolicyUrl, TermsUrl, PrivacyPolicyUrlEn, TermsUrlEn, IssuesUrl];
+    public static IReadOnlyList<string> LegalLinks { get; } =
+        [PrivacyPolicyUrl, TermsUrl, PrivacyPolicyUrlEn, TermsUrlEn, CookiePolicyUrl, CookiePolicyUrlEn, IssuesUrl];
 
     /// <summary>
     /// Uygulama içi güncellemenin denetlediği depo: ana depo (2026-09-26'dan beri herkese açık; GitHub Actions her etiketle kurulum
