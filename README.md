@@ -132,6 +132,7 @@ yolla özel olarak bildirin. Güvenlik tasarımının ayrıntıları için: [Tek
 | Belge | Türkçe | English |
 |---|---|---|
 | Gizlilik Politikası | [Oku](legal/tr/gizlilik-politikasi.md) | [Read](legal/en/privacy-policy.md) |
+| Çerez Politikası | [Oku](legal/tr/cerez-politikasi.md) | [Read](legal/en/cookie-policy.md) |
 | Kullanım Koşulları | [Oku](legal/tr/kullanim-kosullari.md) | [Read](legal/en/terms-of-use.md) |
 
 ## Sık sorulan sorular
@@ -255,7 +256,8 @@ kept. To uninstall: Windows Settings → Apps → Installed apps → E-mre Contr
 
 **Safety & privacy:** no account, no telemetry, no analytics, no ads, no cookies. The app does not bypass UAC, does not touch your
 personal folders and does not stop critical Windows services or processes. Settings, history and logs stay on your computer.
-See the [Privacy Policy](legal/en/privacy-policy.md) and the [Terms of Use](legal/en/terms-of-use.md). Download the app only from the
+See the [Privacy Policy](legal/en/privacy-policy.md), the [Cookie Policy](legal/en/cookie-policy.md) and the
+[Terms of Use](legal/en/terms-of-use.md). Download the app only from the
 [official Releases page](https://github.com/E-mre-Hub/E-mre-Control-Center/releases). To report a vulnerability privately, see
 [SECURITY.md](SECURITY.md).
 

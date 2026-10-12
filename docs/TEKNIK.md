@@ -73,7 +73,7 @@ Desktop\E-mre Control Center\        ← Proje klasörü (önceki adları: E-mre
 ├── AGENTS.md / CONTEXT.md           ← Katkıda bulunanlar ve yapay zekâ araçları için kurallar ve ürün bağlamı (İngilizce)
 ├── global.json                      ← Derleme için .NET SDK sürümü (8.0.400, latestFeature)
 ├── docs\                            ← TEKNIK.md (bu belge), images\ (README ekran görüntüleri)
-├── legal\                           ← Gizlilik Politikası + Kullanım Koşulları (tr\ ve en\; uygulama bu dosyalara bağlantı verir)
+├── legal\                           ← Gizlilik Politikası, Kullanım Koşulları ve Çerez Politikası (tr\ ve en\; uygulama gizlilik ve koşullara bağlantı verir)
 ├── .gitignore / .gitattributes
 ├── .github\
 │   ├── workflows\release.yml        ← Etiket gönderilince EXE'yi derleyip Releases'a ekler

@@ -15,7 +15,7 @@ self-contained single-file EXE. The C# namespace and project name are `RtxWindow
 | `src/RtxWindowsUpdater/Services/Diagnostics` | System tools: drivers, network, DNS, storage, events, crashes, services, processes, reports |
 | `src/RtxWindowsUpdater/ViewModels` | `MainViewModel` (partial files), tools, setup / uninstall view models |
 | `src/RtxWindowsUpdater/Views`, `Themes` | XAML windows, converters, `Theme.xaml`, `Colors.Dark.xaml`, `Colors.Light.xaml` |
-| `legal/` | Privacy policy and terms of use (Turkish and English) |
+| `legal/` | Privacy policy, terms of use and cookie policy (Turkish and English) |
 | `tools/Build-Exe.ps1` | Local single-file build (also creates the TR and EN setup copies) |
 | `.github/workflows/release.yml` | Builds and publishes a release when a `vX.Y.Z` tag is pushed |
 
@@ -73,7 +73,8 @@ style), so they never become invisible Tab stops.
 ## Privacy and legal
 
 No telemetry, analytics, ads or cookies. If you add a new external service or change what is sent, update both privacy policies,
-the in-app "Legal and Privacy" text and `AppInfo.LegalVersion`. Never commit secrets, tokens or personal data.
+the in-app "Legal and Privacy" text and `AppInfo.LegalVersion`. If cookie handling changes (e.g. an HTTP client that persists cookies or
+an embedded browser), update both cookie policies too. Never commit secrets, tokens or personal data.
 
 ## Releases
 

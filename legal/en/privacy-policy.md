@@ -50,7 +50,7 @@ internet, visible to the server you connect to. These services are governed by t
 ## 4. Cookies and tracking technologies
 
 The App uses **no cookies, advertising identifiers, fingerprinting, telemetry or analytics tools** and collects no usage statistics.
-The GitHub pages from which the App is downloaded are subject to GitHub's own privacy and cookie policies.
+The GitHub pages from which the App is downloaded are subject to GitHub's own privacy and cookie policies. Details: [Cookie Policy](cookie-policy.md).
 
 ## 5. Purpose and legal basis
 

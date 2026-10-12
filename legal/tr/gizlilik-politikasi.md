@@ -50,7 +50,8 @@ bağlanılan sunucu tarafından görülebilir. Bu hizmetler kendi gizlilik polit
 ## 4. Çerezler ve izleme teknolojileri
 
 Uygulama **çerez, reklam kimliği, parmak izi (fingerprinting), telemetri veya analitik aracı kullanmaz** ve kullanım istatistiği
-toplamaz. Uygulamanın indirildiği GitHub sayfaları GitHub'ın kendi gizlilik ve çerez politikalarına tabidir.
+toplamaz. Uygulamanın indirildiği GitHub sayfaları GitHub'ın kendi gizlilik ve çerez politikalarına tabidir. Ayrıntılar:
+[Çerez Politikası](cerez-politikasi.md).
 
 ## 5. Verilerin kullanım amacı ve hukuki dayanak
 
