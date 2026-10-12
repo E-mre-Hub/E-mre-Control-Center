@@ -210,8 +210,8 @@ powershell -ExecutionPolicy Bypass -File .\tools\Build-Exe.ps1
 - **Katkı:** [CONTRIBUTING.md](CONTRIBUTING.md) (hata bildirimi, pull request, kurallar). Davranış kuralları:
   [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md).
 - **Yeni sürüm:** `RtxWindowsUpdater.csproj` içindeki `<Version>` artırılır, [CHANGELOG.md](CHANGELOG.md)'ye `### vX.Y.Z` bölümü
-  yazılır ve `vX.Y.Z` etiketi gönderilir. GitHub Actions iki kurulum dosyasını (Türkçe ve EN) ve ZIP'i derleyip
-  [Releases](https://github.com/E-mre-Hub/E-mre-Control-Center/releases) sayfasına ekler.
+  yazılır ve `vX.Y.Z` etiketi gönderilir. GitHub Actions Türkçe ve İngilizce kurulum dosyalarını, eski sürümler için
+  uyumluluk kopyasını ve ZIP'i derleyip [Releases](https://github.com/E-mre-Hub/E-mre-Control-Center/releases) sayfasına ekler.
 
 ## Lisans
 
@@ -235,7 +235,7 @@ later in General Settings → Quick Settings.
 **What it does**
 
 - **Updates:** Windows Update, apps (winget), Microsoft Store, NVIDIA driver (official NVIDIA source), Microsoft Defender, Microsoft Edge
-- **Cleanup:** temporary files, Delivery Optimization cache, error reports, DirectX cache, Recycle Bin
+- **Cleanup:** temporary files (user and Windows), Delivery Optimization cache, error reports, DirectX cache, Recycle Bin
 - **Repair:** SFC, DISM, Microsoft Malicious Software Removal Tool (quick scan)
 - **Diagnostics:** one-click diagnosis, drivers, event log, crash analysis, startup apps, services, processes, security status,
   system report (TXT, HTML, JSON) and support package

@@ -43,11 +43,14 @@ kendi bakım araçlarını (SFC, DISM CheckHealth / onayla RestoreHealth, MRT h�
 - **Uygulama içi güncelleme:** yeni sürüm yayınlandığında "Yeni sürüm yayınlandı" penceresi gelir – açılışta ve uygulama açıkken de
   (en geç 5 dakika içinde, yeniden başlatmadan); Güncelle ile indirilir, doğrulanır ve kurulur (zorunlu; bkz.
   [Uygulama içi güncelleme](#uygulama-içi-güncelleme-zorunlu)).
+- **Dil ve tema (v2.0.0):** Türkçe / English ve koyu / açık tema; ilk açılışta seçilir, Genel Ayarlar → Kolay Ayar'dan değiştirilir.
+  **Klavye odağı (v2.0.1):** klavyeyle odaklanan her denetim neon çerçeveyle gösterilir (bkz. [Dil ve tema](#dil-ve-tema-v200)).
 
 - Teknoloji: C# / .NET 8 / WPF, MVVM
 - Çıktı: `E-mre Control Center.exe`: tek dosya, self-contained (hedef bilgisayarda .NET kurulu olması gerekmez). Kurulum dosyası
   aynı EXE'dir; adında "Setup" geçtiği için kurulum ekranıyla açılır.
-- Arayüz: siyah / koyu lacivert, neon mavi vurgular, gölgeli kartlar, animasyonlar, Segoe Fluent ikonları (emoji yok)
+- Arayüz: Türkçe veya English; koyu tema (siyah / koyu lacivert, neon mavi vurgular, gölgeli kartlar) veya açık tema; Segoe Fluent
+  ikonları (emoji yok); klavyeyle gezinirken odaklanan öğede neon çerçeve
 
 > Bu depo **herkese açıktır (public)**: kaynak kod ve Releases'taki kurulum dosyaları herkes tarafından görülebilir ve
 > indirilebilir. Uygulama içi güncelleme de yeni sürümü bu deponun Releases sayfasından okur.
@@ -59,29 +62,43 @@ kendi bakım araçlarını (SFC, DISM CheckHealth / onayla RestoreHealth, MRT h�
 ```
 Desktop\E-mre Control Center\        ← Proje klasörü (önceki adları: E-mre_Hub, E-mre_App)
 ├── E-mre Control Center.exe         ← Son uygulama (yerel derleme çıktısı; depoya konmaz)
-├── README.md
-├── CHANGELOG.md                     ← Sürüm geçmişi (GitHub Actions yayın notunu buradan alır)
+├── E-mre Control Center Setup TR.exe / … Setup EN.exe ← Aynı EXE'nin kurulum adlı kopyaları (yerel derleme; depoya konmaz)
+├── README.md                        ← Kullanıcı sayfası (Türkçe + English)
+├── CHANGELOG.md                     ← Sürüm geçmişi, iki dilli (GitHub Actions yayın notunu buradan alır)
+├── LICENSE                          ← Kaynak görünür, açık kaynak değil (tüm hakları saklı)
+├── SECURITY.md                      ← Desteklenen sürüm ve güvenlik açığı bildirme yolu
+├── CONTRIBUTING.md                  ← Katkı rehberi
+├── CODE_OF_CONDUCT.md               ← Davranış kuralları
+├── ACCESSIBILITY.md                 ← Erişilebilirlik bildirimi (desteklenenler, bilinen sınırlamalar, engel bildirme)
+├── AGENTS.md / CONTEXT.md           ← Katkıda bulunanlar ve yapay zekâ araçları için kurallar ve ürün bağlamı (İngilizce)
+├── global.json                      ← Derleme için .NET SDK sürümü (8.0.400, latestFeature)
 ├── docs\                            ← TEKNIK.md (bu belge), images\ (README ekran görüntüleri)
 ├── legal\                           ← Gizlilik Politikası + Kullanım Koşulları (tr\ ve en\; uygulama bu dosyalara bağlantı verir)
 ├── .gitignore / .gitattributes
-├── .github\workflows\release.yml    ← Etiket gönderilince EXE'yi derleyip Releases'a ekler
+├── .github\
+│   ├── workflows\release.yml        ← Etiket gönderilince EXE'yi derleyip Releases'a ekler
+│   ├── ISSUE_TEMPLATE\              ← Hata bildirme formu (bug_report.yml) + soru / güvenlik yönlendirmeleri (config.yml)
+│   └── PULL_REQUEST_TEMPLATE.md     ← Pull request kontrol listesi
 ├── assets\
 │   ├── E-mreLogo.jpg                ← Orijinal logo (değiştirilmedi)
 │   └── E-mreLogo.ico                ← 16/32/48/64/128/256 px ICO (Create-Icon.ps1 üretir)
 ├── tools\
 │   ├── Create-Icon.ps1              ← JPG → çok boyutlu ICO dönüştürücü
-│   └── Build-Exe.ps1                ← Tek komutla EXE üretimi
+│   └── Build-Exe.ps1                ← Tek komutla EXE + TR / EN kurulum kopyaları (isteğe bağlı imzalama)
 ├── build\publish\                   ← dotnet publish ara çıktısı (depoya konmaz)
 └── src\RtxWindowsUpdater\
-    ├── RtxWindowsUpdater.csproj     ← Proje, ikon, tek dosya yayın ayarları (iç proje adı eski addan kaldı; EXE adı AssemblyName'den)
+    ├── RtxWindowsUpdater.csproj     ← Proje, sürüm, ikon, tek dosya yayın ayarları (iç proje adı eski addan kaldı; EXE adı AssemblyName'den)
     ├── app.manifest                 ← UAC / DPI / Windows 10-11 bildirimi
-    ├── App.xaml(.cs)                ← Giriş noktası (uygulama / kurulum / kaldırma), global hata yakalama, argümanlar
+    ├── App.xaml(.cs)                ← Giriş noktası (uygulama / kurulum / kaldırma), dil ve tema seçimi, global hata yakalama, argümanlar
+    ├── AppLifetime.cs               ← Gerçek çıkış ve aynı yetkiyle yeniden başlatma (bildirim alanından Çıkış, dil değişimi)
     ├── Core\
-    │   ├── AppInfo.cs               ← Uygulama adı (E-mre Control Center), eski adlar, veri klasörü, sürüm, depo adresi
-    │   ├── LaunchMode.cs            ← Açılış biçimi: uygulama / kurulum (dosya adında "Setup") / --install / --uninstall
+    │   ├── AppInfo.cs               ← Uygulama adı (E-mre Control Center), eski adlar, veri klasörü, sürüm, depo ve yasal belge adresleri
+    │   ├── Loc.cs                   ← Dil: L.T("Türkçe", "English"), seçili kültür, dile göre büyük harf (L.Upper), PowerShell «tr|en» seçimi
+    │   ├── GlobalUsings.cs          ← `L` kısaltması (tüm dosyalarda)
+    │   ├── LaunchMode.cs            ← Açılış biçimi: uygulama / kurulum (dosya adında "Setup") / --install / --uninstall; kurulum dili; iletilen dil / tema
     │   ├── ShellLink.cs             ← Windows kısayolu (.lnk) oluşturma ve okuma (IShellLinkW)
     │   ├── SetupLog.cs              ← Kurulum / kaldırma günlüğü (%TEMP%\E-mre Control Center Kurulum.log)
-    │   ├── ProtectedDirectory.cs    ← Yalnızca Yöneticiler + SYSTEM erişimli klasör (kaldırıcı kopyası, indirilen güncelleme)
+    │   ├── ProtectedDirectory.cs    ← Yalnızca Yöneticiler + SYSTEM erişimli klasör (kaldırıcı kopyası, indirilen güncelleme / NVIDIA sürücüsü)
     │   ├── Logger.cs                ← Thread-safe günlük (arayüz + dosya)
     │   ├── ProcessRunner.cs         ← Harici komut çalıştırma: stdout/stderr, zaman aşımı, süreç ağacını sonlandırma
     │   ├── UnelevatedLauncher.cs    ← Yönetici olarak çalışırken bir aracı yönetici yetkisi OLMADAN başlatma (normal kullanıcı belirteci)
@@ -89,19 +106,22 @@ Desktop\E-mre Control Center\        ← Proje klasörü (önceki adları: E-mre
     │   ├── LogArchive.cs            ← Oturum günlüklerinin özeti ve 30 günden eskilerin (onaylı) silinmesi
     │   ├── CmdCommand.cs            ← Güvenli cmd.exe komut satırı (tırnaklama + tehlikeli karakter reddi)
     │   ├── RestartManager.cs        ← Windows Restart Manager API (dosyaları kullanan işlemlerin tespiti)
+    │   ├── FileProbe.cs             ← Geçici dosyanın kullanımda olup olmadığını dosyayı değiştirmeden sorma (+ NTFS değişim zamanı)
     │   ├── PowerShellRunner.cs      ← PowerShell 5.1 betikleri (##LOG / ##RESULT JSON protokolü)
     │   ├── SystemMessages.cs        ← Windows araçlarının mesajlarını sistem dilinde yükler (SFC sonuç tanıma)
     │   ├── ExecutionTrace.cs        ← İşlem sırasında çalışan komutların gerçek stdout/stderr/çıkış kodu kaydı
-    │   ├── Wmi.cs                   ← Ortak WMI sorgusu (zaman aşımı, erişim reddi / desteklenmeyen sınıf → Türkçe gerçek neden)
+    │   ├── Wmi.cs                   ← Ortak WMI sorgusu (zaman aşımı, erişim reddi / desteklenmeyen sınıf → gerçek neden)
     │   ├── StorageInfo.cs           ← Fiziksel diskler + güvenilirlik sayaçları (Performans ve Depolama Sağlığı ortak)
     │   ├── IcmpProbe.cs             ← ICMP ping dizisi (hız testi paket kaybı + Ağ Merkezi ortak)
     │   └── AppSignals.cs            ← Çalışan örneğe "göster" / "kapan" iletisi (ikinci örnek, kurulum / kaldırma)
     ├── Models\Models.cs             ← ComponentStatus, ModuleResult, UpdateItem, RequirementsResult
     ├── Services\
     │   ├── IUpdateModule.cs         ← Check / Update + bakım butonu, çalışan uygulamayı kapatıp yeniden deneme, manuel güncelleme ve ilerleme sözleşmeleri
-    │   ├── SystemRequirementsChecker.cs
+    │   ├── SystemRequirementsChecker.cs ← Windows 11 (derleme 22000+), NVIDIA RTX, yönetici yetkisi
+    │   ├── InternetConnectivity.cs  ← İnternet denetimi (Microsoft bağlantı testi adresleri; Bağlı / Ağ yok / Sınırlı / Erişilemiyor + gerçek neden)
     │   ├── AdminPrivilegeManager.cs
     │   ├── WingetManager.cs         ← + WingetTableParser (dilden bağımsız tablo ayrıştırma)
+    │   ├── EdgeUpdateService.cs     ← Microsoft Edge / WebView2: Edge'in kendi güncelleyicisiyle (Microsoft Edge Update, COM) denetim ve kurulum
     │   ├── WindowsUpdateManager.cs
     │   ├── MicrosoftStoreManager.cs
     │   ├── NvidiaDriverManager.cs
@@ -114,29 +134,46 @@ Desktop\E-mre Control Center\        ← Proje klasörü (önceki adları: E-mre
     │   ├── RecycleBinManager.cs
     │   ├── SelectedOperationsManager.cs ← Kart seçimlerinin merkezi yönetimi
     │   ├── SystemInfoService.cs     ← Cihaz Bilgileri (WMI, kayıt defteri, nvidia-smi, DriveInfo; gruplu alanlar)
-    │   ├── DeviceMonitorService.cs  ← Cihaz Durumu canlı ölçüm (GetSystemTimes, bellek, ACPI termal bölge, NVML, disk sıcaklığı)
+    │   ├── DeviceMonitorService.cs  ← Performans canlı ölçüm (GetSystemTimes, bellek, ACPI termal bölge, NVML, disk sıcaklığı)
     │   ├── SpeedTestService.cs      ← Hız Testi (Cloudflare; TCP gecikme, ICMP paket kaybı, çoklu/tek bağlantı indirme-yükleme)
     │   ├── OoklaSpeedtestService.cs ← Speedtest by Ookla (resmi araç: bul / winget ile kur / yakın sunucular / JSON olaylarıyla test)
-    │   ├── AppStateStore.cs         ← İşlem geçmişi / son sonuçlar / ayarlar / hız testi geçmişi (%LOCALAPPDATA%\…\state.json)
+    │   ├── AppStateStore.cs         ← İşlem geçmişi / son sonuçlar / ayarlar / dil ve tema / hız testi geçmişi (%LOCALAPPDATA%\…\state.json)
+    │   ├── AppPreferences.cs        ← Kurulum ekranı için kayıtlı dil / tema (state.json yalnızca okunur)
     │   ├── NotificationService.cs   ← Windows 11 bildirimleri (toast)
     │   ├── InstallerService.cs      ← Kurulum / güncelleme / kaldırma (Program Files, kısayollar, Uninstall kaydı, doğrulama, geri alma)
     │   ├── FeedbackService.cs       ← Kaldırma geri bildirimi → Google Formu (yanıtlar Google E-Tablolar'da)
-    │   ├── UpdateService.cs         ← Uygulama içi güncelleme: ana deponun GitHub Releases'ı (API) denetimi, indirme + doğrulama (boyut, SHA-256, ürün, sürüm)
+    │   ├── UpdateService.cs         ← Uygulama içi güncelleme: ana deponun GitHub Releases'ı (API) denetimi, dile göre kurulum dosyası seçimi, indirme + doğrulama (boyut, SHA-256, ürün, sürüm)
     │   ├── Diagnostics\            ← v1.8.0 Sistem Tanılama servisleri (yalnızca okuma; değişiklik yapanlar onayla):
     │   │     DiagnosticTypes (CheckState, Nav), WindowsHealthService, DriverService, ApplicationService, StorePackages,
     │   │     StorageHealthService, LargeFileAnalyzer, EventLogService, CrashAnalysisService, NetworkDiagnosticsService, WlanApi,
     │   │     DnsDiagnosticsService, PrivacyService, BatteryService, SecurityStatusService, ProcessService, StartupService,
     │   │     WindowsServiceManager, SystemReportService (+ PersonalDataMask), SupportPackageService, DiagnosticOrchestrator
     │   └── UpdateOrchestrator.cs    ← Güvenli sıra, Tümü / Seçilenler akışları, modül izolasyonu, iptal
-    ├── ViewModels\                  ← MainViewModel (bölme gezinmesi; + MainViewModel.Device: Cihaz bölmeleri, canlı ölçüm; + MainViewModel.Search: ana sayfa araması), TextSearch (Türkçe harf duyarsız arama), SpeedTestViewModel, DeviceViewModels, CategoryViewModel (8 kategori + bölmeler; yalnızca
-    │                                  arayüz düzeni), DialogViewModel, DetailViewModel, ThrottledProgress, kart/satır modelleri, komutlar;
-    │                                  SetupViewModels (kurulum ve kaldırma ekranları), UpdateViewModel (zorunlu güncelleme penceresi)
-    │                                  + MainViewModel.Tools (tanılama bölmeleri, Özet tanılama satırları, araç işlem geçmişi), Tools\ (bölme görünüm modelleri)
-    │                                  + MainViewModel.Logs (günlük arşivi), MainViewModel.Legal (yasal belgeler, kabul kaydı)
-    ├── Views\                       ← MainWindow.xaml(.cs): giriş sayfası, Kontrol Merkezi ana sayfası, kategori ekranları; RingGauge.cs, SpeedGauge.cs (hız göstergesi), CenteredWrapPanel.cs, WaveBackdrop.cs (ana sayfa dalga zemini, statik); Converters.cs;
-    │                                  SetupWindow.xaml (kurulum), UninstallWindow.xaml (kaldırma + geri bildirim), SetupResources.xaml, WindowFrame.cs
-    │                                  Tools\ToolViewsA.xaml / ToolViewsB.xaml (tanılama bölmelerinin şablonları); TrayIcon.cs + TrayController.cs (bildirim alanı simgesi ve menüsü)
-    └── Themes\Theme.xaml            ← Renkler, butonlar, kartlar, animasyonlar, ilerleme çubuğu
+    ├── ViewModels\
+    │   ├── MainViewModel.cs         ← Gereksinimler, kartlar, kategoriler ve bölme gezinmesi, işlem akışları, günlük
+    │   ├── MainViewModel.*.cs       ← Device (Cihaz Bilgileri, canlı ölçüm), Search (ana sayfa araması), Tools (tanılama bölmeleri, Özet tanılama
+    │   │                              satırları, araç işlem geçmişi), Logs (günlük arşivi), Legal (yasal belgeler, kabul kaydı), Internet (internet
+    │   │                              gereksinimi ve kilit ekranı), Exit (işlem sürerken çıkış), Preferences (dil ve tema)
+    │   ├── CategoryViewModel.cs     ← 8 kategori + bölmeler (yalnızca arayüz düzeni)
+    │   ├── SpeedTestViewModel(.Ookla).cs, DeviceViewModels.cs, ItemViewModels.cs (kart / satır modelleri), DialogViewModel.cs,
+    │   │   DetailViewModel.cs, ThrottledProgress.cs, TextSearch.cs (Türkçe harf duyarsız arama), ObservableObject.cs
+    │   ├── SetupViewModels.cs       ← Kurulum ve kaldırma ekranları
+    │   ├── UpdateViewModel.cs       ← Zorunlu güncelleme penceresi ve periyodik denetim
+    │   ├── WelcomeViewModel.cs      ← İlk açılış: dil ve görünüm seçimi
+    │   └── Tools\                   ← Tanılama bölmelerinin görünüm modelleri (ToolViewModel tabanı; DeviceTools, HealthTools, NetworkTools, SystemTools)
+    ├── Views\
+    │   ├── MainWindow.xaml(.cs)     ← Giriş sayfası, Kontrol Merkezi ana sayfası, kategori ekranları, iletişim kutuları ve güncelleme / çevrimdışı ekranları
+    │   ├── WelcomeWindow.xaml       ← İlk açılış: "Dil ve görünüm"
+    │   ├── SetupWindow.xaml, UninstallWindow.xaml (kaldırma + geri bildirim), SetupResources.xaml, WindowFrame.cs
+    │   ├── Tools\ToolViewsA.xaml / ToolViewsB.xaml ← Tanılama bölmelerinin şablonları
+    │   ├── TrayIcon.cs + TrayController.cs ← Bildirim alanı simgesi ve menüsü
+    │   ├── LocExtension.cs          ← XAML'da iki dilli metin: {l:T 'Türkçe', 'English'}
+    │   ├── ThemeManager.cs          ← Koyu / açık tema geçişi
+    │   └── RingGauge.cs, SpeedGauge.cs (hız göstergesi), CenteredWrapPanel.cs, WaveBackdrop.cs (ana sayfa dalga zemini, statik), Converters.cs
+    └── Themes\
+        ├── Theme.xaml               ← Stiller: butonlar, kartlar, animasyonlar, ilerleme çubuğu, klavye odağı çerçeveleri (Focus.*)
+        ├── Colors.Dark.xaml         ← Koyu tema renkleri
+        └── Colors.Light.xaml        ← Açık tema renkleri (aynı anahtarlar)
 ```
 
 UI ile sistem işlemleri ayrıdır: `Services` katmanı WPF'e hiç referans vermez. Arayüz yalnızca
@@ -183,7 +220,7 @@ dotnet build src\RtxWindowsUpdater\RtxWindowsUpdater.csproj -c Release
 dotnet publish src\RtxWindowsUpdater\RtxWindowsUpdater.csproj -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -p:EnableCompressionInSingleFile=true -o build\publish
 ```
 
-Kaynaktan derlemek için (depoya erişimi olan herkes):
+Kaynaktan derlemek için (depo herkese açıktır):
 
 ```bash
 git clone https://github.com/E-mre-Hub/E-mre-Control-Center.git "E-mre Control Center"
@@ -195,25 +232,26 @@ tırnak içinde yazılır). Depo: https://github.com/E-mre-Hub/E-mre-Control-Cen
 
 ### Yeni sürüm yayınlama (depo sahibi)
 
-1. `src\RtxWindowsUpdater\RtxWindowsUpdater.csproj` içindeki `<Version>` değerini artırın (ör. `1.9.3`).
+1. `src\RtxWindowsUpdater\RtxWindowsUpdater.csproj` içindeki `<Version>` değerini artırın (ör. `2.0.2`). Yayınlanmış bir etiket yeniden kullanılmaz veya
+   taşınmaz; her yayın yeni bir sürüm numarası alır.
    [CHANGELOG.md](../CHANGELOG.md)'ye aynı sürümün `### vX.Y.Z` bölümünü yazın (yayın notu ve uygulama içi güncelleme penceresi metni).
 2. Değişiklikleri commit'leyip gönderin, ardından etiket oluşturun:
 
 ```bash
-git tag v1.9.3
+git tag v2.0.2
 ```
 
 ```bash
-git push origin v1.9.3
+git push origin v2.0.2
 ```
 
 3. GitHub Actions (`.github/workflows/release.yml`) EXE'yi Windows sunucusunda derler ve **Releases** sayfasına ekler:
    `E-mre-Control-Center-Setup-TR-vX.Y.Z.exe` (Türkçe kurulum), `E-mre-Control-Center-Setup-EN-vX.Y.Z.exe` (English setup),
    `E-mre-Control-Center-vX.Y.Z.zip` (taşınabilir) ve eski sürümlerin otomatik güncellemesi için aynı EXE'nin eski adlı kopyası
-   `E-mre-Control-Center-Setup-vX.Y.Z.exe` (v1.9.3 ve öncesi yalnızca bu adı arar). Arkadaşlar oradan indirir;
+   `E-mre-Control-Center-Setup-vX.Y.Z.exe` (v1.9.3 ve öncesi yalnızca bu adı arar). Kullanıcılar oradan indirir;
    yüklü uygulamalar bu yayını "Yeni sürüm yayınlandı" olarak görür (v1.7.2 ve sonrası).
-   Etiketteki sürüm (v1.9.3) EXE'nin sürümü olarak kullanılır; csproj'daki `<Version>` ile aynı olmalıdır. Yayının metni yalnızca
-   CHANGELOG.md'deki `### v1.9.3` bölümüdür (uygulamadaki güncelleme penceresinde de bu metin görünür); bu bölüm etiketten önce yazılmalıdır.
+   Etiketteki sürüm (ör. v2.0.2) EXE'nin sürümü olarak kullanılır; csproj'daki `<Version>` ile aynı olmalıdır. Yayının metni yalnızca
+   CHANGELOG.md'deki `### v2.0.2` bölümüdür (uygulamadaki güncelleme penceresinde de bu metin görünür); bu bölüm etiketten önce yazılmalıdır.
 
 Not: Herkese açık depolarda GitHub Actions standart sunucularda ücretsizdir;
 bir derleme yaklaşık 3-5 dakika sürer.
@@ -355,7 +393,7 @@ bulmak için kullanılır:
 | **Winget** | `winget upgrade --source winget` + `winget list --source winget` (güncel paketler). Metin tablosu başlık konumlarından ayrıştırılır (Türkçe/İngilizce çıktıda çalışır). | Kontrolde bulunan liste kullanılır (yeniden liste sorgusu yok); her paket tek tek: `winget upgrade --id <Id> --exact --source <kaynak> --silent --accept-package-agreements`. Sonuç winget'in resmi dönüş kodlarına göre **paket bazında** yorumlanır: paket adı, mevcut → yeni sürüm, Türkçe açıklama, kurulum programının gerçek çıkış kodu (ör. "Installer failed with exit code: 6"), winget kodu + sembolü ve winget'in kendi mesajı. `0x8A15008E` (kurulum teknolojisi farklı) başarısız sayılır; bu paket/sürüm `state.json`'a kaydedilir ve tekrar listelendiğinde (uygulama yeniden açılsa da) otomatik güncellemeye alınmaz, manuel "kaldır + yeniden kur" seçeneği olarak sunulur. Yalnızca `0x8A150109 / 0x8A15010B` "güncellendi – yeniden başlatma gerekli" sayılır. Ardından TEK bir `winget upgrade --source <kaynak>` ile doğrulanır; hâlâ listelenen paket "doğrulanamadı" olur (winget 0 döndürse bile) ve dosyalarını kullanan çalışan uygulama varsa "kapat ve tekrar dene" sunulur. "Açık hedefleme gerekli" (sabitlenmiş) paketler otomatik güncellenmez ve güncelleme sayısına katılmaz; kartta "Otomatik uygulanabilir: N / Manuel: M" olarak ayrı gösterilir. Paket bazlı sonuç (durum, neden, kod + sembol, kurulum programı çıkış kodu, winget mesajı, engelleyen uygulamalar) Detaylı Sonuç panelinde listelenir. Çalışan uygulama nedeniyle başarısız olan paketler onayla yeniden denenebilir (yukarıya bakın). |
 | **Windows Update** | Resmi Windows Update Agent COM API'si: `Microsoft.Update.Session` → `UpdateSearcher.Search("IsInstalled=0 and IsHidden=0 and Type='Software' and BrowseOnly=0")`. Servis devre dışıysa yalnızca raporlanır (ayar değiştirilmez). Bekleyen yeniden başlatma `Microsoft.Update.SystemInfo` ile okunur. | Aynı güncellemeler yeniden doğrulanır → `UpdateDownloader` → `UpdateInstaller`. Güncelleme bazında sonuç kodu ve HRESULT gösterilir. **Otomatik yeniden başlatma yok.** |
 | **Microsoft Store** | Store uygulamasının varlığı (`Get-AppxPackage`) + `winget upgrade --source msstore`. | Paketler winget ile tek tek güncellenir, ardından Store'un kendi taraması `MDM_EnterpriseModernAppManagement_AppManagement01.UpdateScanMethod` ile tetiklenir. |
-| **NVIDIA** | GPU: WMI. Kurulu sürücü: `nvidia-smi` (yoksa WMI sürümünden hesap). NVIDIA App: kayıt defterinden tespit (bilgi). En son sürücü: nvidia.com sürücü sayfasının kullandığı resmi NVIDIA servisleri (`lookupValueSearch.aspx` + `AjaxDriverService DriverManualLookup`, WHQL, DCH, Windows 11). | Yalnızca `https://*.download.nvidia.com` adresinden indirilir, disk alanı kontrol edilir, **Authenticode imzası doğrulanır (NVIDIA Corporation olmalı)**, `-s -noreboot` ile kurulur, ardından sürüm `nvidia-smi` ile yeniden okunarak doğrulanır. Kurulum dosyası `%ProgramData%\E-mre Control Center\Downloads` klasörüne indirilir ve işlem bitince (başarılı ya da değil) silinir. Kartsız modda bu kart hiç çalışmaz. |
+| **NVIDIA** | GPU: WMI. Kurulu sürücü: `nvidia-smi` (yoksa WMI sürümünden hesap). NVIDIA App: kayıt defterinden tespit (bilgi). En son sürücü: nvidia.com sürücü sayfasının kullandığı resmi NVIDIA servisleri (`lookupValueSearch.aspx` + `AjaxDriverService DriverManualLookup`, WHQL, DCH, Windows 11). | Yalnızca `https://*.download.nvidia.com` adresinden indirilir, disk alanı kontrol edilir, **Authenticode imzası doğrulanır (NVIDIA Corporation olmalı)**, `-s -noreboot` ile kurulur, ardından sürüm `nvidia-smi` ile yeniden okunarak doğrulanır. Kurulum dosyası `%ProgramData%` altında bu indirmeye özel bir klasöre (`E-mre Control Center NVIDIA <guid>`; uygulama yönetici olarak çalışırken yalnızca Yöneticiler + SYSTEM erişimli) indirilir ve işlem bitince (başarılı ya da değil) silinir; yarıda kalan eski indirme klasörleri sonraki indirmede temizlenir. Kartsız modda bu kart hiç çalışmaz. |
 | **Defender** | `Get-MpComputerStatus` + Microsoft'un resmi Defender sürüm servisi (`microsoft.com/security/encyclopedia/adlpackages.aspx?action=info&arch=x64`) ile gerçek karşılaştırma. | `Update-MpSignature` (başarısızsa MicrosoftUpdateServer, ardından MMPC kaynağı). Sürüm yeniden okunarak doğrulanır. Defender ayarlarına dokunulmaz. |
 | **Windows Geçici Dosyalar** | Ayarlar → Sistem → Depolama → Geçici dosyalar'daki güvenli kategorilerin gerçek konumları ölçülür: Kullanıcı geçici dosyaları (`%TEMP%`, .NET tek dosya çalışma klasörü hariç), Windows geçici dosyaları (`%WINDIR%\Temp`), Teslim En İyileştirme önbelleği (resmi `Get-DeliveryOptimizationStatus` / `Get-DOConfig` / `Get-DeliveryOptimizationPerfSnap` – Windows'un bildirdiği önbellek boyutu; klasör okunabiliyorsa diskteki gerçek boyutu), Windows hata raporlama dosyaları (`WER\ReportArchive`, `ReportQueue`), DirectX gölgelendirici önbelleği (`%LOCALAPPDATA%\D3DSCache`). Her kategori için ayrı ayrı **Ölçülen**, **Temizlenebilir** ve **Korunan** hesaplanır. Temizlenebilir: son 24 saatte oluşturulmamış, değişmemiş ve klasöre taşınmamış (NTFS değişim zamanı – uygulamalar dosyayı eski tarihiyle Temp'e taşıyabilir), sistem/salt okunur olmayan ve şu anda başka bir uygulama tarafından silinmesine izin vermeden açık tutulmayan dosyalar (dosya silme erişimiyle açılıp hemen kapatılarak sorulur; dosya değişmez); Teslim En İyileştirme'de Windows'un sabitlemediği (IsPinned) ve etkin indirmede olmayan önbellek. Korunan alan (son 24 saat, salt okunur/sistem, **kullanımda – onu kullanan uygulamanın adıyla** (Windows Restart Manager, ör. "kullanımda 103 KB – Microsoft OneDrive"), erişim reddedilen, sabitlenmiş/etkin önbellek, bir önceki temizlikte Windows'un 60 sn içinde silmediği önbellek) asla "temizlenebilir" sayılmaz ve kartta "Ek olarak X korunuyor" diye ayrı yazılır. Bağlantı noktaları izlenmez. Okunamayan konum "0 bayt" değil "Okunamadı" olarak raporlanır. Sonuç: "Temizlenebilir: X" veya "Temizlenecek geçici dosya bulunamadı". | Onay penceresinde tahmini alan ve kategori kutuları (varsayılan işaretli, seçili toplam canlı hesaplanır). Yalnızca işaretli kategoriler temizlenir; kullanımdaki dosyalar atlanır, kök klasörler ve son 24 saatte oluşturulmuş klasörler silinmez; Teslim En İyileştirme için Windows'un resmi `Delete-DeliveryOptimizationCache -Force` komutu (sabitlenmiş dosyalar silinmez; `-IncludePinnedFiles` kullanılmaz); Windows dosyaları arka planda sildiği için silinen dosyaların Windows kaydından çıkması en fazla 60 sn beklenir ve doğrulanır. Temizlikten sonra TÜM kategoriler dosya sisteminden yeniden ölçülür (silme komutunun kendi bildirimi sonuç sayılmaz): **Önce / Sonra / Temizlenen / Kalan / Kullanımda-atlanan / Korunan**. Silme anında kullanımda olduğu için atlanan dosyalar onları kullanan uygulamayla birlikte yazılır; silinebilir olduğu hâlde silinemeyen dosya kaldıysa sonuç "Kısmen temizlendi" (uyarı) olur. Çöp Kutusu bu hesaba dahil değildir. |
 | **Çöp Kutusu** | `SHQueryRecycleBin` (tüm sürücüler). | Yalnızca onayla `SHEmptyRecycleBin`; sonra yeniden sayılarak doğrulanır. |
@@ -376,12 +414,14 @@ Hiçbir hata başarılı gibi gösterilmez; nedeni kartta, sonuç ekranında ve 
 ## 7. Kullanım
 
 1. `E-mre Control Center.exe` dosyasına çift tıklayın (kendi derlemenizde: `Desktop\E-mre Control Center\E-mre Control Center.exe`).
-2. Sistem gereksinimleri (Windows 11, NVIDIA RTX, yönetici) kontrol edilir. Windows 11 değilse uygulama kullanılamaz
+   İlk açılışta **Dil ve görünüm** ekranında Türkçe / English ve koyu / açık tema seçilir.
+2. Sistem gereksinimleri (Windows 11, NVIDIA RTX, yönetici, internet bağlantısı) kontrol edilir. Windows 11 değilse uygulama kullanılamaz
    (devam edilemez). NVIDIA RTX ekran kartı yoksa GPU satırı turuncu uyarı olur ve devam butonu "Kartsız Devam Et" olarak görünür.
 3. Yönetici izni penceresinde "Yönetici olarak başlat" → UAC'de "Evet". "Şimdi değil" derseniz de girebilirsiniz ama tüm kartlar
    kullanım dışı olur; sonradan "Yönetici olarak yeniden başlat" butonuyla (ana sayfa, kategori sol menüsü veya Genel Ayarlar →
    Yönetici Yetkisi) yetki verebilirsiniz.
-4. "Gereksinimleri kabul ediyorum" → "Devam Et" (RTX ekran kartı yoksa "Kartsız Devam Et").
+4. "Gereksinimleri, Kullanım Koşulları'nı ve Gizlilik Politikası'nı kabul ediyorum" kutusu → "Devam Et" (RTX ekran kartı yoksa
+   "Kartsız Devam Et"; internet yoksa ikisi de kapalıdır).
 5. **Tümü:** "Tümünü Kontrol Et" tüm kartları kontrol eder (seçimlere bakılmaz). SFC doğrulaması ve MRT hızlı taraması
    birkaç dakika ile yarım saat arasında sürebilir.
 6. **Seçilenler:** Kartların sağ üstündeki seçim kutularını işaretleyin (seçili kart neon çerçeveyle gösterilir, üstte
@@ -513,7 +553,7 @@ Kategori her açılışta ilk bölmesiyle açılır.
 | **Temizleme** | **Temizlik** (Windows Geçici Dosyalar, Çöp Kutusu kartları + işlem çubuğu) · **Depolama Analizi** · **İşlem Günlüğü** |
 | **Cihaz Sağlık** | **Sağlık Araçları** (SFC, DISM, MRT kartları + işlem çubuğu) · **Sistem Sağlığı** · **Depolama Sağlığı** · **Olay Günlüğü** · **Çökme Analizi** · **İşlem Günlüğü** |
 | **Hız Testi** | **Hız Testi** (BAŞLAT, seçili sunucu, canlı gösterge, indirme / yükleme, ping, titreşim, paket kaybı, kullanım uygunluğu, ISS ve sunucu, Ookla sonuç sayfası) · **Ağ Merkezi** · **DNS Tanılama** · **Sunucu** (Speedtest by Ookla sunucu listesi: Otomatik Seç, arama, en yakın sunucular; veya Cloudflare) · **Sonuçlar** (geçmiş) · **Yöntem** (nasıl ölçüldüğü) |
-| **Genel Ayarlar** | **Kolay Ayar** (açık / kapalı anahtarları: Windows bildirimleri, "Tümünü Güncelle ile Çöp Kutusu'nu boşalt") · **Gizlilik** · **Yönetici Yetkisi** (gerçek durum + yeniden başlatma) · **Günlük Dosyaları** (oturum günlüğü: aç / klasör / dışa aktar; günlük arşivi: 30 günden eskileri onaylı silme, isteğe bağlı otomatik silme; uygulama veri klasörü) · **Yasal ve Gizlilik** (Gizlilik Politikası, Kullanım Koşulları – Türkçe / English, bağlanılan hizmetler, kabul kaydı) |
+| **Genel Ayarlar** | **Kolay Ayar** (dil: Türkçe / English; görünüm: koyu / açık; açık / kapalı anahtarları: Windows bildirimleri, "Tümünü Güncelle ile Çöp Kutusu'nu boşalt", "Kapatınca arka planda çalışmaya devam et") · **Gizlilik** · **Yönetici Yetkisi** (gerçek durum + yeniden başlatma) · **Günlük Dosyaları** (oturum günlüğü: aç / klasör / dışa aktar; günlük arşivi: 30 günden eskileri onaylı silme, isteğe bağlı otomatik silme; uygulama veri klasörü) · **Yasal ve Gizlilik** (Gizlilik Politikası, Kullanım Koşulları – Türkçe / English, bağlanılan hizmetler, kabul kaydı) |
 | **Özet** | **Sağlık Özeti** (10 kartın durumu + Sistem Tanılaması + Son İşlem) · **İşlem Geçmişi** · **Bulunan Güncellemeler** · **İşlem Günlüğü** |
 | **Cihaz Bilgileri** | **Cihaz Bilgileri** (İşlemci / Ekran Kartı / Bellek / Depolama / İşletim Sistemi kartları + Uyumluluk) · **Performans** (canlı kullanım, sıcaklık, disk etkinliği ve ağ göstergeleri) · **Batarya** · **Hakkında** |
 | **Sistem Araçları** | **Tek Tıkla Tanıla** · **Başlangıç Uygulamaları** · **Windows Servisleri** · **İşlemler** · **Güvenlik** · **Sistem Raporu** · **Destek Paketi** |
@@ -632,7 +672,7 @@ bağlantısı bulunur.
   çıkar, devam butonları kapalıdır ve uygulamanın hiçbir işlemi kullanılamaz.
 - Windows 11 uygun ama ekran kartı bulunamadıysa, başka marka (Intel / AMD) bir kart ya da RTX serisi olmayan bir NVIDIA
   kartı (ör. GTX) varsa uygulama engellenmez: GPU satırı algılanan kartla birlikte turuncu uyarı olarak gösterilir ve
-  "Kartsız Devam Et" butonu çıkar ("Gereksinimleri kabul ediyorum" işaretlenmelidir).
+  "Kartsız Devam Et" butonu çıkar (gereksinimler ve yasal belgeler kutusu işaretlenmelidir).
 - Kartsız modda **NVIDIA Driver kartı "Kullanım dışı"** olur: kartın butonu ve seçim kutusu kapalıdır; "Tümünü Kontrol Et",
   "Tümünü Güncelle" ve seçili işlemler bu kartı hiç çalıştırmaz (günlüğe "bu sistemde kullanım dışı, kontrol edilmedi" yazılır).
   Yönetici yetkisiyle diğer 9 kart normal çalışır (yönetici yetkisi yoksa tüm kartlar kullanım dışıdır, aşağıya bakın).
@@ -676,7 +716,7 @@ Bildirim alanındaki **Çıkış** (veya "kapatınca arka planda çalış" kapal
   kartında iki neden birlikte yazar.
 - "Tümünü Kontrol Et", "Seçilenleri Kontrol Et", güncelleme butonları, kart butonları ve seçim kutuları kapalıdır; Sistem Sağlık Özeti
   "Yönetici yetkisi yok – tüm işlemler kullanım dışı" gösterir. Sistem Bilgileri, geçmiş sonuçlar (Detaylı Sonuç) ve günlük yine görüntülenebilir.
-- Yönetici yetkisi gerektirmeyenler normal çalışır: **Hız Testi**, **Cihaz Bilgileri** (Cihaz Durumu'nda disk sıcaklığı yönetici
+- Yönetici yetkisi gerektirmeyenler normal çalışır: **Hız Testi**, **Cihaz Bilgileri** (Performans bölmesinde disk sıcaklığı yönetici
   yetkisi gerektirir; yetki yoksa "okunamıyor" ve nedeni yazar), ana sayfa araması ve Genel Ayarlar.
 - **"Yönetici olarak yeniden başlat"** (ana sayfa, kategori sol menüsü, Genel Ayarlar → Yönetici Yetkisi) uygulamayı UAC onayıyla
   yönetici olarak yeniden açar. Yetki yalnızca bu yolla alınır; UAC hiçbir şekilde atlatılmaz.
@@ -692,7 +732,7 @@ eski klasörlerde kalır (`%LOCALAPPDATA%\E-mre Hub\Logs\`, `%LOCALAPPDATA%\RTX 
 - **Son İşlem**: her işlem bitince gerçek sonuçlardan hesaplanan kısa özet. Kontrol: "10 kontrol tamamlandı · 3 güncelleme
   bulundu (Winget 2, Microsoft Defender 1) · 1 manuel güncelleme (otomatik uygulanmaz) · 1 uyarı · 0 hata · …".
   Güncelleme: "4 işlem · 2 başarılı · 1 uyarı · 1 hata · Winget: 2 paket güncellenemedi · Süre: 21 sn".
-  Tüm işlemler Özet → "Son İşlemler" bölmesinde listelenir (son 50).
+  Tüm işlemler Özet → **İşlem Geçmişi** bölmesinde listelenir (son 50).
 - **Cihaz Bilgileri** (Cihaz Bilgileri kategorisi → Cihaz Bilgileri): solda büyük donanım ikonu, sağda bilgi kartı:
   **İşlemci** (model, çekirdek / iş parçacığı, temel saat hızı), **Ekran Kartı** (tüm kartlar, NVIDIA modeli ve sürücüsü, ekran kartı belleği),
   **Bellek** (toplam / kullanılabilir, modüller: adet × boyut, üretici / parça no, hız), **Depolama** (fiziksel diskler: model · SSD/HDD ·
@@ -703,7 +743,7 @@ eski klasörlerde kalır (`%LOCALAPPDATA%\E-mre Hub\Logs\`, `%LOCALAPPDATA%\RTX 
   olarak gösterilir). Değişmeyen bilgiler (işletim sistemi, CPU, RAM, GPU) oturumda bir kez okunur; "Yenile" butonu
   yalnızca sürücü sürümü, disk alanı ve çalışma süresini yeniden okur. Ekran kartı listesi (WMI) gereksinim kontrolü,
   Sistem Bilgileri ve NVIDIA kartı arasında paylaşılır; yönetici yetkisi açılışta bir kez doğrulanır.
-- **Cihaz Durumu** (canlı): halka göstergeler; yalnızca bu bölme açıkken 2 saniyede bir ölçülür; başka bölmeye veya ana sayfaya geçince durur.
+- **Performans** (canlı; eski adı Cihaz Durumu): halka göstergeler; yalnızca bu bölme açıkken 2 saniyede bir ölçülür; başka bölmeye veya ana sayfaya geçince durur.
 
   | Gösterge | Kaynak |
   |---|---|
@@ -716,7 +756,9 @@ eski klasörlerde kalır (`%LOCALAPPDATA%\E-mre Hub\Logs\`, `%LOCALAPPDATA%\RTX 
 
   Okunamayan değer tahmin edilmez: gösterge "—" ve "okunamıyor" yazar, nedeni üzerine gelince görünür (ör. "Disk sıcaklığı yönetici
   yetkisi gerektirir", "Bu ekran kartı fan hızını bildirmiyor"). Sıcaklık 80 °C ve üstünde turuncu, 90 °C ve üstünde kırmızı gösterilir.
-- **Hakkında**: sürüm, dil, veri klasörü, günlük dosyası, kaynak kod adresi.- **Son çalıştırılma**: her kartta "Son kontrol / Son tarama / Son güncelleme: tarih saat" (gerçek bitiş zamanı).
+- **Hakkında**: sürüm, kurulum durumu (yüklü / taşınabilir), güncelleme durumu ve **Şimdi denetle**, dil, veri klasörü, günlük dosyası,
+  kaynak kod adresi.
+- **Son çalıştırılma**: her kartta "Son kontrol / Son tarama / Son güncelleme: tarih saat" (gerçek bitiş zamanı).
   Önceki oturumdan kalan sonuç "önceki oturum" olarak işaretlenir; kartın bu oturumdaki durumu yine "çalıştırılmadı" kalır.
 - **Detaylı Sonuç** (kartın liste ikonlu butonu): işlem türü, bitiş zamanı, çalışma süresi, çalıştırılan her komut
   (komut satırı, Exit Code, süre, stdout, stderr), Windows API / NVIDIA / Microsoft servis yanıtları ve öğe tablosu.
@@ -815,9 +857,9 @@ eski klasörlerde kalır (`%LOCALAPPDATA%\E-mre Hub\Logs\`, `%LOCALAPPDATA%\RTX 
   karşılaştırılamazsa sonuç "Güncel (Defender'ın kendi bilgisine göre)" olarak yazılır ve nedeni gösterilir.
 
 - **İşlemci sıcaklığı ve sistem fan hızı** Windows'un standart arayüzlerinde yoktur; bu değerleri üretici yazılımları (ör. dizüstü
-  kontrol merkezleri) kendi sürücüleriyle okur. E-mre Control Center sürücü kurmaz: Cihaz Durumu'nda işlemci için ACPI termal bölge
+  kontrol merkezleri) kendi sürücüleriyle okur. E-mre Control Center sürücü kurmaz: Performans bölmesinde işlemci için ACPI termal bölge
   sıcaklığını (bildiriliyorsa) gösterir, fan hızını bildirilmiyorsa "okunamıyor" olarak açıklar.
-- Cihaz Durumu açıkken NVIDIA ekran kartı değerleri okunduğu için Optimus dizüstülerde NVIDIA kartı uyanık kalır; bölme kapanınca
+- Performans bölmesi açıkken NVIDIA ekran kartı değerleri okunduğu için Optimus dizüstülerde NVIDIA kartı uyanık kalır; bölme kapanınca
   NVML serbest bırakılır ve kart yeniden uyku durumuna geçebilir. Kart uykudan yeni uyanırken ilk ölçümde kullanım okunamayabilir.
 - **Hız Testi:** Cloudflare'de sunucu seçilemez (veri merkezini ISS'nin yönlendirmesi belirler). Ookla aracı yalnızca en yakın ~12
   sunucuyu listeler; speedtest.net'teki daha uzun listede görünen bazı sunucular (ör. başka şehirlerdeki ISS sunucuları) bu listede
@@ -874,6 +916,9 @@ eski klasörlerde kalır (`%LOCALAPPDATA%\E-mre Hub\Logs\`, `%LOCALAPPDATA%\RTX 
 - MRT, Windows Update ile aylık dağıtılan bir araçtır (KB890830). Sistemde yoksa MRT kartı "Tarama başarısız – MRT.exe bulunamadı" gösterir.
 - Çöp Kutusu, UAC'yi onaylayan kullanıcı hesabının çöp kutusudur (standart kullanıcı + başka bir yönetici parolası
   kullanılırsa o yönetici hesabının çöp kutusu olur).
+- **Erişilebilirlik:** uygulama Windows Ekran Okuyucusu / NVDA ile sistematik olarak test edilmedi; Windows yüksek karşıtlık temaları
+  uygulamanın renklerine uygulanmaz; "Metin boyutu" ayarı her metne uygulanmayabilir. Ayrıntı ve engel bildirme:
+  [ACCESSIBILITY.md](../ACCESSIBILITY.md).
 - **Kurulum:** kurulum dosyası da imzasızdır (SmartScreen ve UAC "Bilinmeyen yayıncı"). Kurulum tüm kullanıcılar için Program Files'a
   yapılır ve yönetici izni gerektirir; kullanıcı başına (izinsiz) kurulum yoktur. Kaldırmada kullanımdaki dosyalar (ör. açık kalan
   bir kopyanın geçici dosyaları) ve kaldırıcının geçici kopyası bilgisayar yeniden başlatılınca silinir. "Ayarlarımı… sil" seçeneği,

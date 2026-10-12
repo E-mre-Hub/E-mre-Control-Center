@@ -28,7 +28,8 @@ Proje sahibi bu kurallara uymayan yorumları düzenleyebilir veya silebilir, kon
 engelleyebilir.
 
 Kurala aykırı bir durumu bildirmek için [Issues](https://github.com/E-mre-Hub/E-mre-Control-Center/issues) sayfasında ayrıntı ve
-kişisel bilgi vermeden "Davranış bildirimi" başlıklı bir konu açın; size özel bir iletişim yolu bildirilir. Ciddi durumlarda GitHub'ın
+kişisel bilgi vermeden "Davranış bildirimi" başlıklı bir konu açın; size özel bir iletişim yolu bildirilir. Uygunsuz bir yorumu,
+yorumun **…** menüsündeki **Report content** ile doğrudan depo yöneticisine de bildirebilirsiniz. Ciddi durumlarda GitHub'ın
 **Report abuse** (kötüye kullanımı bildir) özelliğini de kullanabilirsiniz. Bildirimi yapan kişinin bilgileri gizli tutulur.
 
 ### Kapsam
@@ -61,7 +62,8 @@ The repository owner may edit or remove comments that break these rules, lock co
 
 To report a problem, open an issue titled "Conduct report" on the
 [Issues](https://github.com/E-mre-Hub/E-mre-Control-Center/issues) page without any details or personal information; a private contact
-will be provided. For serious cases you can also use GitHub's **Report abuse** feature. The identity of the person reporting is kept
+will be provided. You can also report an inappropriate comment directly to the repository maintainers with **Report content** in the
+comment's **…** menu. For serious cases you can also use GitHub's **Report abuse** feature. The identity of the person reporting is kept
 confidential.
 
 ### Scope

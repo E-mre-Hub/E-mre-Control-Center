@@ -52,3 +52,4 @@ The interface is available in Turkish and English, with dark and light themes.
 ## Status
 
 The current version and its changes are in [CHANGELOG.md](CHANGELOG.md). Security reporting: [SECURITY.md](SECURITY.md).
+Accessibility statement: [ACCESSIBILITY.md](ACCESSIBILITY.md).

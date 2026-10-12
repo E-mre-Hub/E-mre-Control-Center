@@ -1,6 +1,7 @@
 # E-mre Control Center – Privacy Policy
 
-**Version:** 1.0 · **Effective date:** October 7, 2026 · [Türkçe sürüm](../tr/gizlilik-politikasi.md)
+**Version:** 1.0 · **Effective date:** October 7, 2026 · **Last updated:** October 12, 2026 (explanations made more detailed; the data
+collected and the companies connected to are unchanged) · [Türkçe sürüm](../tr/gizlilik-politikasi.md)
 
 This policy explains what information **E-mre Control Center** (the "App"), a maintenance and update utility for Windows, processes,
 where it is stored and when the App connects to third parties. In short: **the App requires no account, does not collect information
@@ -18,10 +19,10 @@ The App stores the following data **only on your computer** and does not send it
 
 | Data | Location | Contents |
 |---|---|---|
-| Settings and history | `%LOCALAPPDATA%\E-mre Control Center\state.json` | Preferences (notifications, tray, log setting, etc.), a summary of check / update operations, speed test history (up to 50 results; **IP addresses are not stored**), the date you accepted Ookla's terms |
+| Settings and history | `%LOCALAPPDATA%\E-mre Control Center\state.json` | Preferences (language, theme, notifications, tray, log setting, etc.), the document version and date on which you accepted the Terms of Use and Privacy Policy, a summary of check / update operations, speed test history (up to 50 results; **IP addresses are not stored**), the date you accepted Ookla's terms |
 | Session logs | `%LOCALAPPDATA%\E-mre Control Center\Logs\` | Details of operations: commands, result codes, package names, file paths (paths may contain your Windows user name) |
 | Setup log | `%TEMP%\E-mre Control Center Kurulum.log` | Installation / uninstallation steps |
-| Temporary downloads | App-specific folders under `C:\ProgramData\…` or `%TEMP%\…` | App update and NVIDIA driver installers; deleted after installation |
+| Temporary downloads | App-specific folders under `C:\ProgramData\…` or `%TEMP%\…` | App update and NVIDIA driver installers; deleted after installation (the app update installer when the new version first starts) |
 
 - Logs are deleted only at your request (General Settings → Log Files; optionally, logs older than 30 days at startup).
 - **System Report** and **Support Package** files are created only when you ask, at a location you choose. In these files the computer
@@ -37,13 +38,13 @@ internet, visible to the server you connect to. These services are governed by t
 | Service | When | Information sent |
 |---|---|---|
 | **GitHub** (api.github.com, github.com) | Update check at startup and every 5 minutes while the App is running; downloading the installer when you click "Update" | A user agent containing the App version (`E-mre-Control-Center/x.y.z`); no account or personal information |
-| **Microsoft connectivity test** (msftconnecttest.com, msftncsi.com) | To verify the internet connection | A standard request; no content is sent |
+| **Microsoft connectivity test** (msftconnecttest.com, msftncsi.com, www.microsoft.com) | To verify the internet connection; the Network Center test also tries an HTTPS connection to www.microsoft.com | A standard request; no content is sent |
 | **Microsoft services** (Windows Update, winget, Microsoft Store, Microsoft Defender, Microsoft Edge Update) | When you start a check / update | Performed by Windows' own components and subject to Microsoft's privacy statement. For Defender, Microsoft's public version page is read |
 | **App publishers** | When an app is updated via winget | The installer is downloaded by winget from the publisher's server (e.g. discord.com) |
 | **NVIDIA** (nvidia.com, gfwsl.geforce.com, download.nvidia.com) | When the NVIDIA card is checked / the driver is updated | Graphics card model, Windows version and language (to find the right driver) |
 | **Cloudflare** (speed.cloudflare.com, 1.1.1.1) | When you run a speed test or network diagnostics | Test traffic. Cloudflare returns your public IP address and ISP so they can be shown on screen; the IP address is not stored |
-| **DNS diagnostics** | When you start the DNS test | Queries to your configured DNS servers for well-known domains (microsoft.com, cloudflare.com, google.com, wikipedia.org) |
-| **Speedtest by Ookla** (optional) | Only if you choose the Ookla provider and accept Ookla's terms | The test is run with Ookla's official tool; results are sent to Ookla and governed by Ookla's [Privacy Policy](https://www.speedtest.net/about/privacy) and [Terms of Use](https://www.speedtest.net/about/terms). You can withdraw your acceptance in the App |
+| **DNS diagnostics** | When you start the DNS test or the Network Center test | Queries to your configured DNS servers for well-known domains (microsoft.com, cloudflare.com, google.com, wikipedia.org), plus the test domain dnssec-failed.org, whose signature is deliberately broken, to check DNSSEC validation |
+| **Speedtest by Ookla** (optional) | Only if you choose the Ookla provider and accept Ookla's terms | The test is run with Ookla's official tool; results are sent to Ookla and governed by Ookla's [Privacy Policy](https://www.speedtest.net/about/privacy) and [Terms of Use](https://www.speedtest.net/about/terms). The tool is installed from Ookla's server via winget on first use, with your approval. You can withdraw your acceptance in the App |
 | **Google Forms** (optional) | Only if you choose to send feedback while uninstalling | The uninstall reasons you select, the message you type, the App version and the Windows version. **Your name, e-mail address, computer name or user name are not sent.** Please do not type personal information in the message |
 
 ## 4. Cookies and tracking technologies
@@ -83,4 +84,4 @@ guarantee 100% security.
 ## 10. Changes
 
 This policy may be updated. The current version is always available in the `legal/` folder of the project repository and linked from
-the App (General Settings → Yasal ve Gizlilik / Legal and Privacy). Significant changes are noted in the release notes.
+the App (General Settings → Legal and Privacy). Significant changes are noted in the release notes.

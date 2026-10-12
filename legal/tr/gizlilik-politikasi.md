@@ -1,6 +1,7 @@
 # E-mre Control Center – Gizlilik Politikası
 
-**Sürüm:** 1.0 · **Yürürlük tarihi:** 7 Ekim 2026 · [English version](../en/privacy-policy.md)
+**Sürüm:** 1.0 · **Yürürlük tarihi:** 7 Ekim 2026 · **Son güncelleme:** 12 Ekim 2026 (açıklamalar ayrıntılandırıldı; toplanan veriler
+ve bağlanılan şirketler değişmedi) · [English version](../en/privacy-policy.md)
 
 Bu politika, Windows için bakım ve güncelleme uygulaması **E-mre Control Center**'ın ("Uygulama") hangi bilgileri işlediğini,
 nerede sakladığını ve hangi durumlarda üçüncü taraflara bağlandığını açıklar. Kısaca: **Uygulama hesap istemez, sizi tanımlayan
@@ -18,10 +19,10 @@ Uygulama aşağıdaki verileri **yalnızca bilgisayarınızda** saklar; gelişti
 
 | Veri | Konum | İçerik |
 |---|---|---|
-| Ayarlar ve işlem geçmişi | `%LOCALAPPDATA%\E-mre Control Center\state.json` | Tercihler (bildirimler, bildirim alanı, günlük ayarı vb.), yapılan kontrol / güncelleme işlemlerinin özeti, hız testi geçmişi (en fazla 50 sonuç; **IP adresi kaydedilmez**), Ookla koşullarının kabul tarihi |
+| Ayarlar ve işlem geçmişi | `%LOCALAPPDATA%\E-mre Control Center\state.json` | Tercihler (dil, tema, bildirimler, bildirim alanı, günlük ayarı vb.), Kullanım Koşulları ve Gizlilik Politikası'nı kabul ettiğiniz belge sürümü ve tarih, yapılan kontrol / güncelleme işlemlerinin özeti, hız testi geçmişi (en fazla 50 sonuç; **IP adresi kaydedilmez**), Ookla koşullarının kabul tarihi |
 | Oturum günlükleri | `%LOCALAPPDATA%\E-mre Control Center\Logs\` | Yapılan işlemlerin ayrıntıları: komutlar, sonuç kodları, paket adları, dosya yolları (Windows kullanıcı adınızı içeren yollar olabilir) |
 | Kurulum günlüğü | `%TEMP%\E-mre Control Center Kurulum.log` | Kurulum / kaldırma adımları |
-| Geçici indirmeler | `C:\ProgramData\…` veya `%TEMP%\…` altında, bu uygulamaya özel klasörler | Uygulama güncellemesi ve NVIDIA sürücüsü kurulum dosyaları; kurulumdan sonra silinir |
+| Geçici indirmeler | `C:\ProgramData\…` veya `%TEMP%\…` altında, bu uygulamaya özel klasörler | Uygulama güncellemesi ve NVIDIA sürücüsü kurulum dosyaları; kurulumdan sonra silinir (uygulama güncellemesinin dosyası, yeni sürüm ilk açıldığında) |
 
 - Günlükler yalnızca sizin isteğinizle silinir (Genel Ayarlar → Günlük Dosyaları; isteğe bağlı olarak 30 günden eskileri açılışta).
 - **Sistem Raporu** ve **Destek Paketi** yalnızca siz istediğinizde, seçtiğiniz konuma oluşturulur. Bu dosyalarda bilgisayar adı,
@@ -37,13 +38,13 @@ bağlanılan sunucu tarafından görülebilir. Bu hizmetler kendi gizlilik polit
 | Hizmet | Ne zaman | Gönderilen bilgi |
 |---|---|---|
 | **GitHub** (api.github.com, github.com) | Açılışta ve uygulama açıkken 5 dakikada bir yeni sürüm denetimi; "Güncelle"ye basınca kurulum dosyasının indirilmesi | Uygulama sürümünü içeren tarayıcı kimliği (`E-mre-Control-Center/x.y.z`); hesap / kişisel bilgi yok |
-| **Microsoft bağlantı testi** (msftconnecttest.com, msftncsi.com) | İnternet bağlantısını doğrulamak için | Standart bir istek; içerik gönderilmez |
+| **Microsoft bağlantı testi** (msftconnecttest.com, msftncsi.com, www.microsoft.com) | İnternet bağlantısını doğrulamak için; Ağ Merkezi testinde ayrıca www.microsoft.com'a HTTPS erişim denemesi | Standart bir istek; içerik gönderilmez |
 | **Microsoft hizmetleri** (Windows Update, winget, Microsoft Store, Microsoft Defender, Microsoft Edge Update) | Siz kontrol / güncelleme başlattığınızda | Bu işlemler Windows'un kendi bileşenleri tarafından yapılır ve Microsoft'un gizlilik bildirimine tabidir. Defender için Microsoft'un herkese açık sürüm sayfası okunur |
 | **Uygulama yayıncıları** | winget ile bir uygulama güncellendiğinde | Kurulum dosyası, uygulamayı yayınlayan şirketin sunucusundan (ör. discord.com) winget tarafından indirilir |
 | **NVIDIA** (nvidia.com, gfwsl.geforce.com, download.nvidia.com) | NVIDIA kartı kontrol edildiğinde / sürücü güncellendiğinde | Ekran kartı modeli, Windows sürümü ve dil (en uygun sürücüyü bulmak için) |
 | **Cloudflare** (speed.cloudflare.com, 1.1.1.1) | Hız testi ve ağ tanılaması yaptığınızda | Test trafiği. Cloudflare, görünen IP adresinizi ve internet sağlayıcınızı ekranda göstermek için döndürür; IP adresi kaydedilmez |
-| **DNS tanılaması** | DNS testini başlattığınızda | Yapılandırılmış DNS sunucularınıza bilinen alan adları (microsoft.com, cloudflare.com, google.com, wikipedia.org) için sorgu |
-| **Speedtest by Ookla** (isteğe bağlı) | Yalnızca Ookla altyapısını seçip Ookla'nın koşullarını kabul ederseniz | Hız testi Ookla'nın resmi aracıyla yapılır; sonuçlar Ookla'ya iletilir ve Ookla'nın [Gizlilik Politikası](https://www.speedtest.net/about/privacy) ile [Kullanım Koşulları](https://www.speedtest.net/about/terms)'na tabidir. Kabulünüzü uygulamadan geri alabilirsiniz |
+| **DNS tanılaması** | DNS testini veya Ağ Merkezi testini başlattığınızda | Yapılandırılmış DNS sunucularınıza bilinen alan adları (microsoft.com, cloudflare.com, google.com, wikipedia.org) için sorgu; DNSSEC doğrulamasını sınamak için ayrıca imzası bilerek bozuk bırakılmış test alan adı dnssec-failed.org |
+| **Speedtest by Ookla** (isteğe bağlı) | Yalnızca Ookla altyapısını seçip Ookla'nın koşullarını kabul ederseniz | Hız testi Ookla'nın resmi aracıyla yapılır; sonuçlar Ookla'ya iletilir ve Ookla'nın [Gizlilik Politikası](https://www.speedtest.net/about/privacy) ile [Kullanım Koşulları](https://www.speedtest.net/about/terms)'na tabidir. Araç ilk kullanımda sizin onayınızla winget ile Ookla'nın sunucusundan kurulur. Kabulünüzü uygulamadan geri alabilirsiniz |
 | **Google Forms** (isteğe bağlı) | Yalnızca uygulamayı kaldırırken geri bildirim göndermeyi seçerseniz | Seçtiğiniz kaldırma nedenleri, yazdığınız mesaj, uygulama sürümü ve Windows sürümü. **Adınız, e-posta adresiniz, bilgisayar adınız veya kullanıcı adınız gönderilmez.** Mesaj alanına kişisel bilgi yazmamanızı rica ederiz |
 
 ## 4. Çerezler ve izleme teknolojileri

@@ -10,4 +10,5 @@ Bağlandığı hizmetler (GitHub, Microsoft, NVIDIA, Cloudflare, isteğe bağlı
 · The app requires no account and uses no telemetry, analytics, advertising or cookies; its data stays on your computer. The services it
 connects to are listed in the privacy policy.
 
-Sürüm / Version 1.0 · 7 Ekim 2026 / October 7, 2026
+Sürüm / Version 1.0 · 7 Ekim 2026 / October 7, 2026 · Gizlilik Politikası son güncelleme / Privacy Policy last updated:
+12 Ekim 2026 / October 12, 2026
