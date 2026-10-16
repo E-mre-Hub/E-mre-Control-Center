@@ -42,7 +42,8 @@ jobs:
           $setup = "E-mre-Control-Center-Setup-TR$suffix.exe"
           $setupEn = "E-mre-Control-Center-Setup-EN$suffix.exe"
           $setupLegacy = "E-mre-Control-Center-Setup$suffix.exe"
-          Compress-Archive -Path 'E-mre Control Center.exe' -DestinationPath $zip -Force
+          # ZIP: program + lisans ve üçüncü taraf bildirimleri (EXE içindeki .NET / WPF / WinRT bileşenleri MIT bildirimi ister).
+          Compress-Archive -Path 'E-mre Control Center.exe', 'LICENSE', 'THIRD-PARTY-NOTICES.md' -DestinationPath $zip -Force
           Copy-Item 'E-mre Control Center.exe' $setup -Force
           Copy-Item 'E-mre Control Center.exe' $setupEn -Force
           Copy-Item 'E-mre Control Center.exe' $setupLegacy -Force
@@ -77,7 +78,9 @@ jobs:
       # GitHub'ın otomatik notları ("Full Changelog" bağlantısı) eklenmez; güncelleme penceresinde yalnızca bu not görünür.
       - name: GitHub Release oluştur
         if: startsWith(github.ref, 'refs/tags/v')
-        uses: softprops/action-gh-release@v2
+        # Yayına yazma yetkisi olan üçüncü taraf eylem commit kimliğine sabitlenir (etiket sonradan değiştirilemesin).
+        # 3bb12739... = v2.6.2 (2026-10-16'da "v2" etiketinin gösterdiği commit; davranış önceki @v2 ile aynı).
+        uses: softprops/action-gh-release@3bb12739c298aeb8a4eeaf626c5b8d85266b0e65 # v2.6.2
         with:
           name: E-mre Control Center ${{ github.ref_name }}
           body_path: release-notes.md

@@ -35,7 +35,8 @@ kendi üreticilerine bildirin) ve zaten yönetici yetkisiyle çalışan kötü a
 ### Güvenli indirme
 
 Uygulamayı yalnızca resmi sayfadan indirin: <https://github.com/E-mre-Hub/E-mre-Control-Center/releases>. Başka sitelerdeki
-kopyalar değiştirilmiş olabilir.
+kopyalar değiştirilmiş olabilir. Releases sayfasında her dosyanın SHA-256 özeti görünür; indirdiğiniz dosyanınkini PowerShell'de
+`Get-FileHash <dosya> -Algorithm SHA256` ile karşılaştırabilirsiniz.
 
 ### Uygulamanın güvenlik tasarımı (özet)
 
@@ -47,7 +48,31 @@ kopyalar değiştirilmiş olabilir.
   boyut, ürün adı ve sürüm.
 - Kurulum, onarım ve silme işlemleri yalnızca kullanıcının onayıyla çalışır.
 
-Ayrıntılar: [Teknik belge](docs/TEKNIK.md).
+Ayrıntılar: [Teknik belge](docs/TEKNIK.md), [Mimari](ARCHITECTURE.md) (İngilizce).
+
+### Uygulanan önlemler ve doğrulama
+
+- **Hesap, oturum, çerez:** uygulamada hesap, oturum açma veya sunucu tarafı yoktur; yetki Windows yönetici izniyle (UAC) sınırlıdır.
+  Çerez kullanılmaz ([Çerez Politikası](legal/tr/cerez-politikasi.md)).
+- **Girdi ve komut güvenliği:** komut satırları güvenli biçimde kurulur, kabuk özel karakterleri içeren argümanlar reddedilir, winget
+  paket kimlikleri doğrulanır; uygulama yalnızca izin listesindeki web adreslerini açar.
+- **Gizli bilgiler:** depoda ve uygulamada şifre, anahtar veya token yoktur. Yayın iş akışı yalnızca GitHub'ın kendi geçici belirtecini
+  (`contents: write` yetkisiyle) kullanır; yayına yazan üçüncü taraf eylem bir commit kimliğine sabitlenmiştir. GitHub gizli bilgi
+  taraması ve gönderim koruması açıktır. 16 Ekim 2026'da Git geçmişinin tamamı (33 commit) bilinen anahtar, token ve özel anahtar
+  desenleri için tarandı; bulgu yok.
+- **Bağımlılıklar:** tek NuGet paketi vardır (System.Management 8.0.0). `dotnet list package --vulnerable` (16 Ekim 2026) bilinen açık
+  bildirmedi; Dependabot uyarıları açıktır. Lisanslar: [THIRD-PARTY-NOTICES.md](THIRD-PARTY-NOTICES.md).
+- **Günlükler:** yalnızca bilgisayarda kalır; dosya yollarında Windows kullanıcı adı geçebilir. Sistem Raporu ve Destek Paketi'nde
+  bilgisayar adı, kullanıcı adı, IP ve MAC adresleri maskelenir.
+- **Testler:** proje sahibinin yerel testleri güvensiz adres ve şemaların, tehlikeli komut argümanlarının reddini ve indirme
+  doğrulamasının hatalı özet, boyut, ürün veya sürümde dosyayı reddettiğini sınar ([TESTING.md](TESTING.md)).
+
+### Bilinen eksikler
+
+- Program dosyası bir kod imzalama sertifikasıyla imzalı değildir: Windows SmartScreen uyarısı ve izin penceresinde "Bilinmeyen
+  yayıncı" görünür. Dosyanın bütünlüğü yukarıdaki SHA-256 özetiyle doğrulanabilir.
+- Speedtest by Ookla'nın Windows aracı üreticisi tarafından imzalanmamıştır; güven, winget'in özet doğrulamasına dayanır.
+- Bağımsız bir güvenlik denetimi yapılmadı; yazılım malzeme listesi (SBOM) yayınlanmıyor.
 
 ## English
 
@@ -82,7 +107,8 @@ those to their vendors) and computers that already run malware with administrato
 ### Safe download
 
 Download the app only from the official page: <https://github.com/E-mre-Hub/E-mre-Control-Center/releases>. Copies on other sites
-may have been modified.
+may have been modified. The Releases page shows the SHA-256 digest of every file; compare it with the digest of your download in
+PowerShell: `Get-FileHash <file> -Algorithm SHA256`.
 
 ### Security design (summary)
 
@@ -94,4 +120,28 @@ may have been modified.
   app updates.
 - Installation, repair and deletion run only with the user's approval.
 
-Details (Turkish): [Technical document](docs/TEKNIK.md).
+Details: [Architecture](ARCHITECTURE.md), [Technical document](docs/TEKNIK.md) (Turkish).
+
+### Measures in place and how they are verified
+
+- **Accounts, sessions, cookies:** the app has no accounts, sign-in or server side; privileges are limited to the Windows administrator
+  permission (UAC). No cookies are used ([Cookie Policy](legal/en/cookie-policy.md)).
+- **Input and command safety:** command lines are built safely, arguments containing shell metacharacters are rejected, winget
+  package IDs are validated, and the app opens only allowlisted web addresses.
+- **Secrets:** the repository and the app contain no passwords, keys or tokens. The release workflow uses only GitHub's temporary token
+  (with `contents: write`); the third-party action that writes the release is pinned to a commit. GitHub secret scanning and push
+  protection are enabled. On 2026-10-16 the entire Git history (33 commits) was scanned for known key, token and private key
+  patterns; nothing was found.
+- **Dependencies:** there is one NuGet package (System.Management 8.0.0). `dotnet list package --vulnerable` (2026-10-16) reported no
+  known vulnerabilities; Dependabot alerts are enabled. Licenses: [THIRD-PARTY-NOTICES.md](THIRD-PARTY-NOTICES.md).
+- **Logs:** stay on the computer; file paths may contain the Windows user name. The System Report and Support Package mask the computer
+  name, user name, IP and MAC addresses.
+- **Tests:** the maintainer's local tests check that unsafe addresses and schemes and dangerous command arguments are rejected and that
+  download verification rejects a wrong digest, size, product or version ([TESTING.md](TESTING.md)).
+
+### Known gaps
+
+- The executable is not signed with a code signing certificate: Windows SmartScreen warns and the permission prompt shows "Unknown
+  publisher". File integrity can be checked with the SHA-256 digest above.
+- Ookla's Speedtest CLI for Windows is not signed by its vendor; trust relies on winget's hash verification.
+- No independent security audit has been performed; no software bill of materials (SBOM) is published.

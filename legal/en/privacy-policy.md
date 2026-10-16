@@ -1,6 +1,6 @@
 # E-mre Control Center – Privacy Policy
 
-**Version:** 1.0 · **Effective date:** October 7, 2026 · **Last updated:** October 12, 2026 (explanations made more detailed; the data
+**Version:** 1.0 · **Effective date:** October 7, 2026 · **Last updated:** October 16, 2026 (explanations made more detailed; the data
 collected and the companies connected to are unchanged) · [Türkçe sürüm](../tr/gizlilik-politikasi.md)
 
 This policy explains what information **E-mre Control Center** (the "App"), a maintenance and update utility for Windows, processes,
@@ -33,7 +33,8 @@ The App stores the following data **only on your computer** and does not send it
 ## 3. Services the App connects to
 
 To perform its functions the App connects to the services below. With every connection your IP address is, by the nature of the
-internet, visible to the server you connect to. These services are governed by their own privacy policies.
+internet, visible to the server you connect to. These services are governed by their own privacy policies, and their servers may be located
+outside Türkiye.
 
 | Service | When | Information sent |
 |---|---|---|
@@ -62,7 +63,8 @@ The GitHub pages from which the App is downloaded are subject to GitHub's own pr
 
 - Local data stays on your computer until you delete it or uninstall the App together with its data.
 - Feedback responses are kept in the developer's Google Sheets account for as long as needed to improve the App. Responses are not linked
-  to your identity, so individual responses cannot be attributed to you.
+  to your identity, so individual responses cannot be attributed to you. Google's servers may be located outside Türkiye; if you choose to
+  send feedback, your response is transferred to them.
 
 ## 7. Your rights (GDPR and KVKK)
 

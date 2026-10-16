@@ -74,14 +74,26 @@ style), so they never become invisible Tab stops.
 
 No telemetry, analytics, ads or cookies. If you add a new external service or change what is sent, update both privacy policies,
 the in-app "Legal and Privacy" text and `AppInfo.LegalVersion`. If cookie handling changes (e.g. an HTTP client that persists cookies or
-an embedded browser), update both cookie policies too. Never commit secrets, tokens or personal data.
+an embedded browser), update both cookie policies too. If you add or update a bundled dependency, update
+[THIRD-PARTY-NOTICES.md](THIRD-PARTY-NOTICES.md). Never commit secrets, tokens or personal data. Do not fill in legal facts (controller
+identity, retention periods, legal bases) by guessing; record open questions in [CONTEXT.md](CONTEXT.md#open-decisions).
+
+## Configuration and secrets
+
+- The app reads no configuration from environment variables or `.env` files; do not add a configuration system or `.env` files unless
+  a real need exists. Constants live in `Core/AppInfo.cs`; user settings in `state.json`.
+- The repository contains no secrets. GitHub secret scanning and push protection are enabled; keep it that way and never paste real
+  tokens, passwords or personal data into code, examples, logs or documentation.
+- Third-party GitHub Actions that receive a write token are pinned to a full commit SHA (with the version in a comment).
+- Never rewrite Git history, force-push or delete tags.
 
 ## Releases
 
 1. Bump `<Version>` in `RtxWindowsUpdater.csproj`.
 2. Add a `### vX.Y.Z` section at the **top** of `CHANGELOG.md`: Turkish first, then a line containing only `**English**`, then
    English (the in-app update window shows the user's language).
-3. The maintainer commits, pushes and tags `vX.Y.Z`. Never reuse or move a published tag; every release gets a new version.
+3. The maintainer commits, pushes and tags `vX.Y.Z` (agents do so only when the maintainer explicitly asks). Never reuse or move a
+   published tag; every release gets a new version.
 
 The release publishes `E-mre-Control-Center-Setup-TR-vX.Y.Z.exe`, `E-mre-Control-Center-Setup-EN-vX.Y.Z.exe`, the ZIP and a
 compatibility copy `E-mre-Control-Center-Setup-vX.Y.Z.exe`. Keep the compatibility copy: v1.9.3 and earlier only look for that name
@@ -91,11 +103,23 @@ when updating.
 
 Tests must never perform real system changes (updates, `sfc /scannow`, Recycle Bin, temp cleanup, installs). Deletion logic is tested
 only in folders the test created. The maintainer runs the UI and service test harnesses locally (they are not part of this
-repository).
+repository). What to check and how to report it: [TESTING.md](TESTING.md).
+
+## Working method
+
+- Before a change: read the files involved and their callers, check `git status`, and keep any uncommitted work of the maintainer.
+- After a change: build with 0 warnings, run the checks that apply, and update the documents the change affects (README, CHANGELOG
+  for a release, ARCHITECTURE, DESIGN_SYSTEM, ACCESSIBILITY, SECURITY, the legal documents, docs/TEKNIK.md).
+- Report only what you actually did and ran; say clearly what failed, what could not be run and what is unverified.
+- Never invent features, links, versions, test results or legal facts. No emoji in code, UI or documentation.
+- If a task is interrupted, record what was done and what remains under "Next steps" in [CONTEXT.md](CONTEXT.md).
 
 ## Documentation
 
-Keep `README.md` short and user-facing; put technical details in `docs/TEKNIK.md`. Security reporting: [SECURITY.md](SECURITY.md).
+Keep `README.md` short and user-facing; put technical details in `docs/TEKNIK.md`. The full document map is in
+[CONTEXT.md](CONTEXT.md#document-map): requirements [PRD.md](PRD.md), architecture [ARCHITECTURE.md](ARCHITECTURE.md), design
+[DESIGN_SYSTEM.md](DESIGN_SYSTEM.md), conventions [CODE_STYLE.md](CODE_STYLE.md), testing [TESTING.md](TESTING.md). Security
+reporting: [SECURITY.md](SECURITY.md).
 Community rules: [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md). Contribution guide: [CONTRIBUTING.md](CONTRIBUTING.md). Accessibility
 statement: [ACCESSIBILITY.md](ACCESSIBILITY.md) (keep its "known limitations" list accurate when UI behavior changes; new interactive
 controls need a UI Automation name and a visible keyboard focus, see "Keyboard focus"). Bug reports use

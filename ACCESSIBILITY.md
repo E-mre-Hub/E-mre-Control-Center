@@ -34,6 +34,28 @@ bilinen sınırlamaları ve bir engelle karşılaşırsanız nasıl bildireceği
 - Uygulama Windows Ekran Okuyucusu ve NVDA ile sistematik olarak test edilmedi; bazı öğeler eksik veya genel bir adla okunabilir.
 - Windows'un yüksek karşıtlık temaları uygulamanın kendi renklerine uygulanmaz; koyu veya açık tema kullanılır.
 - Windows'un "Metin boyutu" ayarı (Erişilebilirlik → Metin boyutu) tüm metinlere uygulanmayabilir.
+- Renk kontrastı ölçüldü ve bazı yerlerde WCAG AA sınırının (normal metin için 4,5:1) altında: birincil düğmelerdeki beyaz yazı
+  degradenin açık mavi başlangıcında (koyu temada 2,28:1, açık temada 2,70:1), açık temada bağlantı rengi (3,97:1) ile yeşil ve turuncu
+  durum metinleri (3,37:1 ve 3,81:1), koyu temada günlük saat damgaları (2,47:1). Ana metinler 5:1'in üzerindedir. Ayrıntı:
+  [DESIGN_SYSTEM.md](DESIGN_SYSTEM.md#contrast-measured).
+- Windows'un "Animasyon efektleri" ayarı kapatılsa da kısa geçiş animasyonları (sayfa açılışı, kart üzerine gelme) oynar.
+
+### WCAG ile ilişkisi
+
+Uygulama bir web sitesi değil, masaüstü uygulamasıdır; WCAG 2.2 ölçütleri masaüstüne uyarlanarak değerlendirildi. Resmî bir
+uygunluk denetimi yapılmadı; aşağıdaki tablo bir uygunluk beyanı değildir.
+
+| Ölçüt | Durum | Dayanak |
+|---|---|---|
+| 1.4.1 Renk kullanımı | Karşılanıyor | Her durum rengi metinle birlikte gösterilir |
+| 1.4.3 Kontrast (asgari) | Kısmen | Ölçüldü; yukarıdaki istisnalar dışında 4,5:1 ve üzeri |
+| 1.4.4 Metin boyutlandırma | Kısmen | Ekran ölçeklendirme desteklenir; "Metin boyutu" her metne uygulanmayabilir |
+| 2.1.1 Klavye | Kısmen doğrulandı | Ana akışlar klavyeyle kullanılır; tüm akışlar elle denenmedi |
+| 2.2.1 Zamanlama | Karşılanıyor | Süre sınırı yok |
+| 2.3.1 Üç parlama | Karşılanıyor | Yanıp sönen içerik yok |
+| 2.4.7 Odak görünür | Doğrulandı | Otomatik denetim: odaklanabilen her denetim klavye odağını gösteriyor (koyu ve açık tema) |
+| 3.1.1 Sayfanın dili | Karşılanıyor | Türkçe veya English seçilir; tüm metinler seçilen dilde |
+| 4.1.2 Ad, rol, değer | Kısmen | Çoğu denetimin UI Automation adı var; ekran okuyucuyla sistematik test yok |
 
 ### Engel bildirme
 
@@ -78,6 +100,28 @@ limitations and how to report a barrier.
 - The app has not been systematically tested with Windows Narrator and NVDA; some elements may be read with a missing or generic name.
 - Windows high contrast themes are not applied to the app's own colors; the dark or light theme is used instead.
 - The Windows "Text size" setting (Accessibility → Text size) may not apply to all text.
+- Color contrast was measured and is below the WCAG AA threshold (4.5:1 for normal text) in some places: white text on primary buttons
+  at the light blue start of the gradient (2.28:1 dark, 2.70:1 light), the light theme link color (3.97:1) and green and orange status
+  text (3.37:1 and 3.81:1), and log timestamps in the dark theme (2.47:1). Main text is above 5:1. Details:
+  [DESIGN_SYSTEM.md](DESIGN_SYSTEM.md#contrast-measured).
+- Short transition animations (page entrance, card hover) still play when the Windows "Animation effects" setting is turned off.
+
+### Relation to WCAG
+
+The app is a desktop application, not a website; WCAG 2.2 criteria were assessed as adapted to a desktop app. No formal conformance
+audit has been performed; the table below is not a conformance claim.
+
+| Criterion | Status | Basis |
+|---|---|---|
+| 1.4.1 Use of Color | Met | Every status color comes with text |
+| 1.4.3 Contrast (Minimum) | Partly | Measured; 4.5:1 or more except the cases listed above |
+| 1.4.4 Resize Text | Partly | Display scaling is supported; "Text size" may not apply to all text |
+| 2.1.1 Keyboard | Partly verified | Main flows work with the keyboard; not every flow was tested manually |
+| 2.2.1 Timing Adjustable | Met | No time limits |
+| 2.3.1 Three Flashes | Met | No flashing content |
+| 2.4.7 Focus Visible | Verified | Automated audit: every focusable control shows keyboard focus (dark and light theme) |
+| 3.1.1 Language of Page | Met | English or Turkish is chosen; all text appears in that language |
+| 4.1.2 Name, Role, Value | Partly | Most controls have a UI Automation name; no systematic screen reader testing |
 
 ### Reporting a barrier
 

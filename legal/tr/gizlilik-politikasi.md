@@ -1,6 +1,6 @@
 # E-mre Control Center – Gizlilik Politikası
 
-**Sürüm:** 1.0 · **Yürürlük tarihi:** 7 Ekim 2026 · **Son güncelleme:** 12 Ekim 2026 (açıklamalar ayrıntılandırıldı; toplanan veriler
+**Sürüm:** 1.0 · **Yürürlük tarihi:** 7 Ekim 2026 · **Son güncelleme:** 16 Ekim 2026 (açıklamalar ayrıntılandırıldı; toplanan veriler
 ve bağlanılan şirketler değişmedi) · [English version](../en/privacy-policy.md)
 
 Bu politika, Windows için bakım ve güncelleme uygulaması **E-mre Control Center**'ın ("Uygulama") hangi bilgileri işlediğini,
@@ -33,7 +33,8 @@ Uygulama aşağıdaki verileri **yalnızca bilgisayarınızda** saklar; gelişti
 ## 3. Uygulamanın bağlandığı hizmetler
 
 Uygulama, işlevlerini yerine getirmek için aşağıdaki hizmetlere bağlanır. Her bağlantıda IP adresiniz, internetin doğası gereği
-bağlanılan sunucu tarafından görülebilir. Bu hizmetler kendi gizlilik politikalarına tabidir.
+bağlanılan sunucu tarafından görülebilir. Bu hizmetler kendi gizlilik politikalarına tabidir ve sunucuları Türkiye dışında
+bulunabilir.
 
 | Hizmet | Ne zaman | Gönderilen bilgi |
 |---|---|---|
@@ -64,7 +65,8 @@ toplamaz. Uygulamanın indirildiği GitHub sayfaları GitHub'ın kendi gizlilik 
 
 - Yerel veriler siz silene veya Uygulamayı verileriyle birlikte kaldırana kadar bilgisayarınızda kalır.
 - Geri bildirim yanıtları, Uygulamanın geliştirilmesi için gerekli olduğu sürece geliştiricinin Google E-Tablolar hesabında saklanır.
-  Yanıtlar kimliğinizle ilişkilendirilmediği için tek tek size ait olduğu belirlenemez.
+  Yanıtlar kimliğinizle ilişkilendirilmediği için tek tek size ait olduğu belirlenemez. Google'ın sunucuları Türkiye dışında
+  bulunabilir; geri bildirim göndermeyi seçtiğinizde yanıtınız bu sunuculara aktarılır.
 
 ## 7. Haklarınız (KVKK ve GDPR)
 

@@ -205,9 +205,11 @@ powershell -ExecutionPolicy Bypass -File .\tools\Build-Exe.ps1
 
 - **Teknik belge:** [docs/TEKNIK.md](docs/TEKNIK.md): mimari, klasör yapısı, güvenlik tasarımı, araçların sonuçlarının nasıl okunduğu,
   dil ve tema altyapısı, bilinen sınırlamalar.
+- **İngilizce geliştirici belgeleri:** [ARCHITECTURE.md](ARCHITECTURE.md) (mimari), [DESIGN_SYSTEM.md](DESIGN_SYSTEM.md) (tasarım
+  sistemi), [CODE_STYLE.md](CODE_STYLE.md) (kod stili), [TESTING.md](TESTING.md) (test), [PRD.md](PRD.md) (gereksinimler).
 - **Sürüm geçmişi:** [CHANGELOG.md](CHANGELOG.md).
 - **Katkı ve yapay zekâ araçları için:** [AGENTS.md](AGENTS.md) (kurallar, derleme, dil / tema) ve [CONTEXT.md](CONTEXT.md)
-  (ürünün amacı ve temel kararlar). Derleme SDK sürümü `global.json`'da sabittir.
+  (ürünün amacı, temel kararlar, güncel durum ve açık kararlar). Derleme SDK sürümü `global.json`'da sabittir.
 - **Katkı:** [CONTRIBUTING.md](CONTRIBUTING.md) (hata bildirimi, pull request, kurallar). Davranış kuralları:
   [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md).
 - **Yeni sürüm:** `RtxWindowsUpdater.csproj` içindeki `<Version>` artırılır, [CHANGELOG.md](CHANGELOG.md)'ye `### vX.Y.Z` bölümü
@@ -218,7 +220,8 @@ powershell -ExecutionPolicy Bypass -File .\tools\Build-Exe.ps1
 
 Kaynak kodu herkese açık olarak incelenebilir ama **açık kaynak değildir**; tüm hakları saklıdır ([LICENSE](LICENSE)). Uygulamanın
 kullanımı [Kullanım Koşulları](legal/tr/kullanim-kosullari.md)'na tabidir. Uygulamanın kullandığı üçüncü taraf hizmetler ve araçlar
-(ör. Speedtest by Ookla) kendi koşullarına tabidir.
+(ör. Speedtest by Ookla) kendi koşullarına tabidir. EXE içindeki üçüncü taraf bileşenlerin lisansları:
+[THIRD-PARTY-NOTICES.md](THIRD-PARTY-NOTICES.md).
 
 ---
 
@@ -261,8 +264,10 @@ See the [Privacy Policy](legal/en/privacy-policy.md), the [Cookie Policy](legal/
 [official Releases page](https://github.com/E-mre-Hub/E-mre-Control-Center/releases). To report a vulnerability privately, see
 [SECURITY.md](SECURITY.md).
 
-**License:** source-available, not open source; all rights reserved ([LICENSE](LICENSE)). Contributors and AI agents: see
-[AGENTS.md](AGENTS.md) and [CONTEXT.md](CONTEXT.md). Code of conduct: [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md).
+**License:** source-available, not open source; all rights reserved ([LICENSE](LICENSE)). Bundled third-party components:
+[THIRD-PARTY-NOTICES.md](THIRD-PARTY-NOTICES.md). Contributors and AI agents: see [AGENTS.md](AGENTS.md) and [CONTEXT.md](CONTEXT.md);
+developer documents: [ARCHITECTURE.md](ARCHITECTURE.md), [DESIGN_SYSTEM.md](DESIGN_SYSTEM.md), [CODE_STYLE.md](CODE_STYLE.md),
+[TESTING.md](TESTING.md), [PRD.md](PRD.md). Code of conduct: [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md).
 
 **Feedback:** report bugs with the [bug report form](https://github.com/E-mre-Hub/E-mre-Control-Center/issues/new/choose); ask
 questions and share ideas in [Discussions](https://github.com/E-mre-Hub/E-mre_-Discussions/discussions). Contributing:
@@ -276,6 +281,7 @@ questions and share ideas in [Discussions](https://github.com/E-mre-Hub/E-mre_-D
 [Sürüm geçmişi / Changelog](CHANGELOG.md) · [Teknik belge](docs/TEKNIK.md) · [Güvenlik / Security](SECURITY.md) ·
 [Lisans / License](LICENSE) · [Davranış kuralları / Code of conduct](CODE_OF_CONDUCT.md) ·
 [Katkı / Contributing](CONTRIBUTING.md) · [Erişilebilirlik / Accessibility](ACCESSIBILITY.md) ·
+[Mimari / Architecture](ARCHITECTURE.md) · [Üçüncü taraf bildirimleri / Third-party notices](THIRD-PARTY-NOTICES.md) ·
 [Issues](https://github.com/E-mre-Hub/E-mre-Control-Center/issues) ·
 [Topluluk / Community](https://github.com/E-mre-Hub/E-mre_-Discussions/discussions)
 

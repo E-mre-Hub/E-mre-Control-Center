@@ -2,7 +2,9 @@
 
 Bu belge geliştiriciler ve ayrıntıyı merak eden kullanıcılar içindir: mimari, klasör yapısı, derleme ve yayınlama, güvenlik tasarımı,
 araçların sonuçlarının nasıl okunduğu, ekranların ayrıntılı açıklaması ve bilinen sınırlamalar. Kurulum ve kullanım için
-[README](../README.md), değişiklikler için [CHANGELOG](../CHANGELOG.md).
+[README](../README.md), değişiklikler için [CHANGELOG](../CHANGELOG.md). Kısa İngilizce özetler: [ARCHITECTURE](../ARCHITECTURE.md)
+(mimari), [DESIGN_SYSTEM](../DESIGN_SYSTEM.md) (renk, yazı tipi, bileşen), [CODE_STYLE](../CODE_STYLE.md) (kod stili),
+[TESTING](../TESTING.md) (test yöntemi ve son sonuçlar), [PRD](../PRD.md) (gereksinimler ve doğrulama durumu).
 
 ## Genel bakış
 
@@ -66,11 +68,16 @@ Desktop\E-mre Control Center\        ← Proje klasörü (önceki adları: E-mre
 ├── README.md                        ← Kullanıcı sayfası (Türkçe + English)
 ├── CHANGELOG.md                     ← Sürüm geçmişi, iki dilli (GitHub Actions yayın notunu buradan alır)
 ├── LICENSE                          ← Kaynak görünür, açık kaynak değil (tüm hakları saklı)
-├── SECURITY.md                      ← Desteklenen sürüm ve güvenlik açığı bildirme yolu
+├── THIRD-PARTY-NOTICES.md           ← EXE'ye gömülü üçüncü taraf bileşenlerin lisans bildirimleri (.NET, WPF, WinRT, System.Management)
+├── SECURITY.md                      ← Desteklenen sürüm, güvenlik açığı bildirme yolu, uygulanan önlemler ve bilinen eksikler
 ├── CONTRIBUTING.md                  ← Katkı rehberi
 ├── CODE_OF_CONDUCT.md               ← Davranış kuralları
 ├── ACCESSIBILITY.md                 ← Erişilebilirlik bildirimi (desteklenenler, bilinen sınırlamalar, engel bildirme)
-├── AGENTS.md / CONTEXT.md           ← Katkıda bulunanlar ve yapay zekâ araçları için kurallar ve ürün bağlamı (İngilizce)
+├── AGENTS.md / CONTEXT.md           ← Katkıda bulunanlar ve yapay zekâ araçları için kurallar; ürün bağlamı, güncel durum, açık kararlar (İngilizce)
+├── PRD.md                           ← Ürün gereksinimleri ve her birinin doğrulama durumu (İngilizce)
+├── ARCHITECTURE.md                  ← Katmanlar, veri akışı, güvenlik sınırları, derleme ve yayın (İngilizce)
+├── DESIGN_SYSTEM.md                 ← Renk anahtarları, yazı tipleri, bileşen stilleri, odak, ölçülmüş karşıtlık (İngilizce)
+├── CODE_STYLE.md / TESTING.md       ← Kod yazım kuralları; test yöntemi, son sonuçlar ve kapsanmayanlar (İngilizce)
 ├── global.json                      ← Derleme için .NET SDK sürümü (8.0.400, latestFeature)
 ├── docs\                            ← TEKNIK.md (bu belge), images\ (README ekran görüntüleri)
 ├── legal\                           ← Gizlilik Politikası, Kullanım Koşulları ve Çerez Politikası (tr\ ve en\; uygulama üçüne de bağlantı verir)
@@ -247,7 +254,8 @@ git push origin v2.0.2
 
 3. GitHub Actions (`.github/workflows/release.yml`) EXE'yi Windows sunucusunda derler ve **Releases** sayfasına ekler:
    `E-mre-Control-Center-Setup-TR-vX.Y.Z.exe` (Türkçe kurulum), `E-mre-Control-Center-Setup-EN-vX.Y.Z.exe` (English setup),
-   `E-mre-Control-Center-vX.Y.Z.zip` (taşınabilir) ve eski sürümlerin otomatik güncellemesi için aynı EXE'nin eski adlı kopyası
+   `E-mre-Control-Center-vX.Y.Z.zip` (taşınabilir; 2.0.2'den sonraki yayından itibaren EXE'nin yanında `LICENSE` ve
+   `THIRD-PARTY-NOTICES.md` de bulunur) ve eski sürümlerin otomatik güncellemesi için aynı EXE'nin eski adlı kopyası
    `E-mre-Control-Center-Setup-vX.Y.Z.exe` (v1.9.3 ve öncesi yalnızca bu adı arar). Kullanıcılar oradan indirir;
    yüklü uygulamalar bu yayını "Yeni sürüm yayınlandı" olarak görür (v1.7.2 ve sonrası).
    Etiketteki sürüm (ör. v2.0.2) EXE'nin sürümü olarak kullanılır; csproj'daki `<Version>` ile aynı olmalıdır. Yayının metni yalnızca
@@ -917,7 +925,9 @@ eski klasörlerde kalır (`%LOCALAPPDATA%\E-mre Hub\Logs\`, `%LOCALAPPDATA%\RTX 
 - Çöp Kutusu, UAC'yi onaylayan kullanıcı hesabının çöp kutusudur (standart kullanıcı + başka bir yönetici parolası
   kullanılırsa o yönetici hesabının çöp kutusu olur).
 - **Erişilebilirlik:** uygulama Windows Ekran Okuyucusu / NVDA ile sistematik olarak test edilmedi; Windows yüksek karşıtlık temaları
-  uygulamanın renklerine uygulanmaz; "Metin boyutu" ayarı her metne uygulanmayabilir. Ayrıntı ve engel bildirme:
+  uygulamanın renklerine uygulanmaz; "Metin boyutu" ayarı her metne uygulanmayabilir; bazı ikincil metinler ve durum renkleri
+  WCAG AA karşıtlık oranının altındadır (ölçümler [DESIGN_SYSTEM.md](../DESIGN_SYSTEM.md#contrast-measured)); Windows'un
+  "Animasyon efektleri" ayarı uygulanmaz. Ayrıntı ve engel bildirme:
   [ACCESSIBILITY.md](../ACCESSIBILITY.md).
 - **Kurulum:** kurulum dosyası da imzasızdır (SmartScreen ve UAC "Bilinmeyen yayıncı"). Kurulum tüm kullanıcılar için Program Files'a
   yapılır ve yönetici izni gerektirir; kullanıcı başına (izinsiz) kurulum yoktur. Kaldırmada kullanımdaki dosyalar (ör. açık kalan

@@ -12,5 +12,5 @@ Bağlandığı hizmetler (GitHub, Microsoft, NVIDIA, Cloudflare, isteğe bağlı
 connects to are listed in the privacy policy.
 
 - Gizlilik Politikası ve Kullanım Koşulları / Privacy Policy and Terms of Use: sürüm / version 1.0 · 7 Ekim 2026 / October 7, 2026
-  (gizlilik politikası son güncelleme / privacy policy last updated: 12 Ekim 2026 / October 12, 2026)
+  (gizlilik politikası son güncelleme / privacy policy last updated: 16 Ekim 2026 / October 16, 2026)
 - Çerez Politikası / Cookie Policy: sürüm / version 1.0 · 12 Ekim 2026 / October 12, 2026

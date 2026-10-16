@@ -10,8 +10,22 @@
 - [ ] Yeni düğme ve seçimler klavye odağını gösteriyor, UI Automation adı var / New buttons and choices show keyboard focus and have a UI Automation name
 - [ ] Sonuçlar gerçek; başarısız işlem başarılı gösterilmiyor / Results are real; failures are never shown as success
 - [ ] Sistemi değiştiren bir işlem kullanıcı onayı olmadan çalışmıyor / Nothing changes the system without user approval
+- [ ] Koyu ve açık temada denendi / Checked in the dark and the light theme
 - [ ] Şifre, anahtar veya kişisel bilgi yok / No passwords, keys or personal data
+- [ ] Etkilenen belgeler güncellendi (README, ARCHITECTURE, ACCESSIBILITY, SECURITY, yasal belgeler) / Affected documents are updated (README, ARCHITECTURE, ACCESSIBILITY, SECURITY, legal documents)
 - [ ] Kullanıcıya görünen değişiklik için sürüm notu aşağıda / Release note for user-visible changes is below
+
+## Nasıl denendi? / How was it tested?
+
+<!-- Çalıştırdığınız denetimleri ve GERÇEK sonuçlarını yazın; çalıştırmadığınızı "yapılmadı" diye belirtin (bkz. TESTING.md). / List the checks you ran and their REAL results; mark what you did not run as "not run" (see TESTING.md). -->
+
+## Güvenlik ve gizlilik etkisi / Security and privacy impact
+
+<!-- Yeni bir dış bağlantı, yükseltilmiş yetkiyle çalışan işlem, yeni veri veya dosya silme var mı? Yoksa "Yok" yazın. / Any new external connection, elevated operation, new data or file deletion? If none, write "None". -->
+
+## Ekran görüntüleri / Screenshots
+
+<!-- Arayüz değiştiyse önce / sonra görüntüleri (kişisel bilgileri gizleyin). / Before and after images if the UI changed (hide personal data). -->
 
 ## Sürüm notu / Release note
 
